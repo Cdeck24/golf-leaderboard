@@ -336,21 +336,28 @@
         }
 
         async function fetchBatchViaWorker(urls) {
-            const queryParams = new URLSearchParams();
-            urls.forEach(url => queryParams.append('url', url));
-            const urlString = config.workerProxy + '?' + queryParams.toString();
-            
-            const res = await fetch(urlString, {
-                headers: {
-                    'real-auth-info': config.REAL_AUTH_TOKEN,
-                    'real-device-name': 'Chrome on Web',
-                    'real-device-type': 'desktop_web',
-                    'real-device-uuid': DEVICE_UUID,
-                    'real-request-token': generateRequestToken(),
-                    'real-version': config.REAL_VERSION
-                }
-            });
-            return res.json();
+            try {
+                const queryParams = new URLSearchParams();
+                urls.forEach(url => queryParams.append('url', url));
+                const urlString = config.workerProxy + '?' + queryParams.toString();
+                
+                const res = await fetch(urlString, {
+                    headers: {
+                        'real-auth-info': config.REAL_AUTH_TOKEN,
+                        'real-device-name': 'Chrome on Web',
+                        'real-device-type': 'desktop_web',
+                        'real-device-uuid': DEVICE_UUID,
+                        'real-request-token': generateRequestToken(),
+                        'real-version': config.REAL_VERSION
+                    }
+                });
+                
+                if (!res.ok) throw new Error(`Worker HTTP ${res.status}`);
+                return await res.json();
+            } catch (err) {
+                console.error("Worker fetch failed:", err);
+                throw err;
+            }
         }
 
         window.switchTab = (tabName) => {
@@ -405,23 +412,34 @@
             draftContainer.innerHTML = '<div style="text-align:center; padding: 1.5rem; color: var(--text-muted);">Syncing live draft...</div>';
 
             try {
-                // Construct URL - ensuring IDs are clean
                 const draftId = String(user.golfId).trim();
                 const userId = String(user.userId).trim();
+
+                if (!draftId || !userId) {
+                    throw new Error("Missing Golf ID or User ID");
+                }
+
                 const url = `https://web.realsports.io/games/playerratingcontest/${draftId}/view/${userId}?contestType=sport&source=home`;
-                
-                console.log("Fetching draft from:", url);
+                console.log(`Fetching draft for ${user.username}:`, url);
                 
                 const batch = await fetchBatchViaWorker([url]);
-                const resItem = batch ? batch[0] : null;
+                
+                if (!batch || !Array.isArray(batch) || batch.length === 0) {
+                    throw new Error("Worker returned empty response");
+                }
+
+                const resItem = batch[0];
 
                 if (resItem && resItem.status === 200) {
-                    const data = JSON.parse(base64ToText(resItem.body));
+                    const decodedBody = base64ToText(resItem.body);
+                    if (!decodedBody) throw new Error("API returned empty body");
+                    
+                    const data = JSON.parse(decodedBody);
                     draftsCache[user.userId] = data.lineup || [];
                     renderDraft(draftsCache[user.userId], draftContainer);
                 } else {
-                    const statusText = resItem ? resItem.status : 'Empty Response';
-                    throw new Error(`Worker returned status ${statusText}`);
+                    const statusText = resItem ? resItem.status : 'Unknown status';
+                    throw new Error(`RealApp API status: ${statusText}`);
                 }
             } catch (e) {
                 console.error("Draft load error:", e);
@@ -476,14 +494,17 @@
 
                 mainTr.onclick = () => {
                     const isOpen = mainTr.classList.contains('open');
-                    document.querySelectorAll('.main-row').forEach(r => r.classList.remove('open'));
-                    document.querySelectorAll('.draft-row').forEach(r => r.classList.remove('open'));
+                    document.querySelectorAll('.main-row').forEach(r => { if(r !== mainTr) r.classList.remove('open'); });
+                    document.querySelectorAll('.draft-row').forEach(r => { if(r !== draftTr) r.classList.remove('open'); });
                     
                     if (!isOpen) {
                         mainTr.classList.add('open');
                         draftTr.classList.add('open');
                         if (user.golfId && user.userId) fetchDraftForUser(user, draftContent);
                         else draftContent.innerHTML = '<div style="text-align:center; color:var(--text-muted); padding:1.5rem;">User missing required Golf ID or User ID.</div>';
+                    } else {
+                        mainTr.classList.remove('open');
+                        draftTr.classList.remove('open');
                     }
                 };
 
@@ -517,15 +538,14 @@
                 const parsedData = parseCSV(text);
                 if (parsedData.length < 2) return [];
 
+                // More robust header matching
                 const headers = parsedData[0].map(h => h.toLowerCase().trim());
-                
-                // Aggressive header matching
-                const uIdx = headers.findIndex(h => h.includes('username'));
-                const uidIdx = headers.findIndex(h => h.includes('user id') || h.includes('userid'));
-                const gidIdx = headers.findIndex(h => h.includes('golf id') || h.includes('golfid'));
+                const uIdx = headers.findIndex(h => h === 'username');
+                const uidIdx = headers.findIndex(h => h === 'user id');
+                const gidIdx = headers.findIndex(h => h === 'golf id');
 
                 if (uIdx === -1 || uidIdx === -1) {
-                    console.error("CSV Headers found:", headers);
+                    console.error("Critical headers missing in CSV. Found:", headers);
                     return [];
                 }
 
@@ -534,13 +554,21 @@
                     username: row[uIdx] ? row[uIdx].trim() : '',
                     golfId: gidIdx !== -1 ? row[gidIdx].trim() : ''
                 })).filter(u => u.username && u.userId);
-            } catch (error) { return []; }
+            } catch (error) {
+                console.error("fetchUsers failed:", error);
+                return [];
+            }
         }
 
         async function initApp() {
-            document.getElementById('loading-indicator').style.display = 'block';
+            const indicator = document.getElementById('loading-indicator');
+            if (indicator) indicator.style.display = 'block';
+
             users = await fetchUsers();
-            document.getElementById('loading-indicator').style.display = 'none';
+            console.log(`Loaded ${users.length} users.`);
+
+            if (indicator) indicator.style.display = 'none';
+            
             renderPool();
             renderLineup();
             renderLeaderboard();
