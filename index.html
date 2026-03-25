@@ -71,8 +71,8 @@
 
       .content-view {
           max-width: 1100px;
-          margin: 3rem auto;
-          padding: 0 1.5rem;
+          margin: 2rem auto;
+          padding: 0 1rem;
           animation: fadeIn 0.4s ease-out;
       }
 
@@ -111,8 +111,8 @@
           letter-spacing: 0.05em;
       }
 
-      .golf-table-container { overflow-x: auto; }
-      .golf-table { width: 100%; border-collapse: collapse; text-align: left; }
+      .golf-table-container { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+      .golf-table { width: 100%; border-collapse: collapse; text-align: left; min-width: 500px; }
       
       .golf-table th {
           background: rgba(0,0,0,0.3);
@@ -135,7 +135,7 @@
 
       .main-row { cursor: pointer; transition: all 0.2s ease; }
       .main-row:hover { background: rgba(255, 255, 255, 0.07) !important; }
-      .main-row.open { background: rgba(197, 160, 89, 0.08); }
+      .main-row.open { background: rgba(197, 160, 89, 0.12); }
       
       .toggle-icon { 
           font-size: 0.6rem; 
@@ -147,60 +147,74 @@
       }
       .main-row.open .toggle-icon { transform: rotate(180deg); opacity: 1; }
 
-      .draft-row { display: none; background: rgba(0,0,0,0.4); }
+      .draft-row { display: none; background: rgba(0,0,0,0.5); }
       .draft-row.open { display: table-row; }
       
+      /* Horizontal Lineup Scrolling */
       .draft-content { 
-          padding: 1.5rem 3rem; 
-          min-height: 100px;
+          display: flex;
+          gap: 12px;
+          padding: 1.5rem; 
+          overflow-x: auto;
+          scrollbar-width: none; /* Firefox */
+          -ms-overflow-style: none;  /* IE/Edge */
           border-left: 4px solid var(--border-gold);
       }
+      .draft-content::-webkit-scrollbar { display: none; } /* Chrome/Safari */
 
       .draft-item { 
+          flex: 0 0 100px;
           display: flex; 
-          justify-content: space-between; 
+          flex-direction: column;
           align-items: center; 
-          padding: 0.75rem 0; 
-          border-bottom: 1px solid rgba(255,255,255,0.05); 
+          text-align: center;
+          background: rgba(255,255,255,0.05);
+          padding: 12px 8px;
+          border-radius: 8px;
+          border: 1px solid rgba(255,255,255,0.1);
       }
-      .draft-item:last-child { border-bottom: none; }
       
-      .draft-item-info { display: flex; align-items: center; gap: 16px; }
       .draft-item-avatar { 
-          width: 40px; 
-          height: 40px; 
+          width: 50px; 
+          height: 50px; 
           border-radius: 50%; 
-          border: 2px solid var(--golf-green-dark); 
+          border: 2px solid var(--border-gold); 
           background: #000;
-          box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+          margin-bottom: 8px;
       }
       .draft-item-name { 
           color: var(--text-main); 
-          font-weight: 600; 
-          font-size: 0.95rem; 
+          font-weight: 700; 
+          font-size: 0.75rem;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          width: 100%;
+          margin-bottom: 4px;
       }
       .draft-item-score { 
           font-weight: 800; 
-          font-size: 1.1rem; 
+          font-size: 1rem; 
           color: var(--gold-light); 
       }
       .draft-item-mult { 
-          font-size: 0.6rem; 
+          font-size: 0.55rem; 
           background: var(--golf-green-dark); 
-          padding: 2px 8px; 
+          padding: 1px 6px; 
           border-radius: 100px; 
           border: 1px solid var(--border-gold); 
           color: var(--gold-light); 
           font-weight: 900;
           text-transform: uppercase;
+          margin-bottom: 4px;
       }
 
-      .col-pos { width: 80px; text-align: center; font-weight: 800; color: var(--gold-light); font-size: 1.1rem; }
+      .col-pos { width: 60px; text-align: center; font-weight: 800; color: var(--gold-light); font-size: 1.1rem; }
       .col-player { font-weight: 700; color: var(--text-main); font-size: 1.1rem; }
-      .col-score { width: 100px; text-align: center; font-weight: 800; font-size: 1.2rem; border-left: 1px solid rgba(255,255,255,0.05); }
-      .col-thru { width: 90px; text-align: center; font-weight: 600; color: var(--text-muted); font-size: 0.85rem; }
+      .col-score { width: 90px; text-align: center; font-weight: 800; font-size: 1.2rem; border-left: 1px solid rgba(255,255,255,0.05); }
+      .col-thru { width: 70px; text-align: center; font-weight: 600; color: var(--text-muted); font-size: 0.8rem; }
 
-      .score-under { color: #ff4d4d; } /* Traditional Leaderboard Red */
+      .score-under { color: #ff4d4d; }
       .score-even { color: var(--golf-green-bright); }
       .score-over { color: var(--text-main); }
 
@@ -209,11 +223,14 @@
       
       /* Mobile optimization */
       @media (max-width: 600px) {
-          .golf-table td, .golf-table th { padding: 0.75rem 1rem; }
-          .col-pos { width: 50px; font-size: 0.9rem; }
-          .col-player { font-size: 0.9rem; }
-          .col-score { font-size: 1rem; width: 70px; }
-          .draft-content { padding: 1rem 1.5rem; }
+          .golf-table td, .golf-table th { padding: 0.8rem 1rem; }
+          .col-pos { width: 45px; font-size: 0.95rem; }
+          .col-player { font-size: 0.95rem; }
+          .col-score { font-size: 1.1rem; width: 75px; }
+          .col-thru { width: 60px; font-size: 0.75rem; }
+          .draft-content { padding: 1rem; gap: 8px; }
+          .draft-item { flex: 0 0 85px; padding: 10px 5px; }
+          .draft-item-avatar { width: 40px; height: 40px; }
           h1 { font-size: 1.6rem; }
       }
     </style>
@@ -233,8 +250,11 @@
     <div id="leaderboard-view" class="content-view">
         <div class="leaderboard-panel">
             <div class="leaderboard-header">
-                <span><span style="margin-right: 8px;">⛳</span>Live Standings</span>
-                <span id="sync-status" style="font-size: 0.75rem; font-weight: 700; color: var(--gold-light); opacity: 0.8;">Loading...</span>
+                <span><span style="margin-right: 8px;">⛳</span>Standings</span>
+                <div style="text-align: right;">
+                    <div id="sync-status" style="font-size: 0.7rem; font-weight: 700; color: var(--gold-light); opacity: 0.8;">Loading...</div>
+                    <div id="avg-score-display" style="font-size: 0.6rem; color: var(--text-muted); font-weight: 400; margin-top: 2px; text-transform: uppercase;">Avg: -</div>
+                </div>
             </div>
             <div class="golf-table-container">
                 <table class="golf-table">
@@ -265,7 +285,6 @@
         const DEVICE_UUID = crypto.randomUUID();
         let users = [];
 
-        // --- AUTH HELPERS ---
         function generateRequestToken() {
             const timestampMs = Date.now();
             // @ts-ignore
@@ -309,12 +328,10 @@
             }
         }
 
-        // --- UTILS ---
         const findIndex = (h, n) => { for(const name of n) { const i=h.findIndex(x=>x.toLowerCase().trim()===name.toLowerCase()); if(i!==-1)return i;} return -1; };
 
-        function formatScore(score) {
-            const num = parseFloat(score);
-            if (isNaN(num)) return score;
+        function formatRelativeScore(score) {
+            const num = Math.round(score);
             if (num < 0) return `<span class="score-under">${num}</span>`;
             if (num === 0) return `<span class="score-even">E</span>`;
             return `<span class="score-over">+${num}</span>`;
@@ -325,21 +342,32 @@
             if (!tbody) return;
             tbody.innerHTML = '';
 
-            // Sort by score (asc)
-            const sortedUsers = [...users].sort((a, b) => (parseFloat(a.totalScore) || 0) - (parseFloat(b.totalScore) || 0));
+            const syncedPlayers = users.filter(u => u.hasData);
+            const totalPoints = syncedPlayers.reduce((acc, u) => acc + u.actualTotalPoints, 0);
+            const avgPoints = syncedPlayers.length > 0 ? (totalPoints / syncedPlayers.length) : 0;
 
-            sortedUsers.forEach((user) => {
+            document.getElementById('avg-score-display').innerText = `Field Avg: ${avgPoints.toFixed(1)} pts`;
+
+            const sortedUsers = [...users].sort((a, b) => b.actualTotalPoints - a.actualTotalPoints);
+
+            sortedUsers.forEach((user, idx) => {
+                const relativeTotal = user.hasData ? (avgPoints - user.actualTotalPoints) : 0;
+                const relativeToday = user.hasData ? (user.actualTodayPoints - (avgPoints/6)) : 0;
+
                 const mainTr = document.createElement('tr');
                 mainTr.className = 'main-row';
+                
+                const rankDisplay = user.hasData ? (idx + 1) : '-';
+
                 mainTr.innerHTML = `
-                    <td class="col-pos">${user.rank || '-'}</td>
+                    <td class="col-pos">${rankDisplay}</td>
                     <td class="col-player">
                         ${user.username} 
                         <span class="toggle-icon">▼</span>
                     </td>
-                    <td class="col-score">${formatScore(user.totalScore || 0)}</td>
+                    <td class="col-score">${user.hasData ? formatRelativeScore(relativeTotal) : '-'}</td>
                     <td class="col-thru">${user.thru || '-'}</td>
-                    <td class="col-score">${formatScore(user.todayScore || 0)}</td>
+                    <td class="col-score">${user.hasData ? formatRelativeScore(relativeToday) : '-'}</td>
                 `;
 
                 const draftTr = document.createElement('tr');
@@ -355,7 +383,7 @@
                     if (!isOpen) {
                         mainTr.classList.add('open');
                         draftTr.classList.add('open');
-                        renderDraft(user.lineup, draftContent);
+                        renderDraft(user.lineup, draftContent, avgPoints / 6);
                     } else {
                         mainTr.classList.remove('open');
                         draftTr.classList.remove('open');
@@ -367,24 +395,22 @@
             });
         }
 
-        function renderDraft(lineupData, container) {
+        function renderDraft(lineupData, container, slotAvg) {
             if (!lineupData || lineupData.length === 0) {
-                container.innerHTML = '<div style="text-align:center; padding: 2rem; color: var(--text-muted); font-size: 0.9rem; font-style: italic;">No active lineup found or live sync pending...</div>';
+                container.innerHTML = '<div style="text-align:center; flex: 1; padding: 2rem; color: var(--text-muted); font-size: 0.9rem; font-style: italic;">Syncing lineup...</div>';
                 return;
             }
 
-            container.innerHTML = lineupData.map(g => `
+            container.innerHTML = lineupData.map(g => {
+                const golferRelScore = slotAvg - (parseFloat(g.score) || 0);
+                return `
                 <div class="draft-item">
-                    <div class="draft-item-info">
-                        <img src="${g.avatar ? `https://media.realapp.link/assets/players/default/large/${g.avatar}.webp` : 'https://placehold.co/40x40/222/fff?text=?'}" class="draft-item-avatar" onerror="this.src='https://placehold.co/40x40/111/fff?text=?'">
-                        <div>
-                            <span class="draft-item-name">${g.displayName}</span>
-                            <span class="draft-item-mult" style="margin-left: 8px;">${g.multiplierDisplay || (g.multiplier + 'x')}</span>
-                        </div>
-                    </div>
-                    <span class="draft-item-score">${formatScore(g.score || 0)}</span>
+                    <span class="draft-item-mult">${g.multiplierDisplay || (g.multiplier + 'x')}</span>
+                    <img src="${g.avatar ? `https://media.realapp.link/assets/players/default/large/${g.avatar}.webp` : 'https://placehold.co/40x40/222/fff?text=?'}" class="draft-item-avatar" onerror="this.src='https://placehold.co/40x40/111/fff?text=?'">
+                    <span class="draft-item-name">${g.displayName}</span>
+                    <span class="draft-item-score">${formatRelativeScore(golferRelScore)}</span>
                 </div>
-            `).join('');
+            `}).join('');
         }
 
         async function loadAllUserScores() {
@@ -410,19 +436,18 @@
                         const user = chunk[idx].user;
                         if (res.status === 200) {
                             const data = JSON.parse(base64ToText(res.body));
-                            user.totalScore = data.info?.rankDisplayInfos?.[0]?.scoreDisplay || '0';
-                            user.rank = data.info?.rankDisplayInfos?.[0]?.rankDisplay || '-';
+                            const scoreStr = data.info?.rankDisplayInfos?.[0]?.scoreDisplay || '0';
+                            user.actualTotalPoints = parseFloat(scoreStr.replace(/[^0-9.]/g, '')) || 0;
                             user.lineup = data.lineup || [];
-                            user.todayScore = user.lineup.reduce((acc, g) => acc + (parseFloat(g.score) || 0), 0);
+                            user.actualTodayPoints = user.lineup.reduce((acc, g) => acc + (parseFloat(g.score) || 0), 0);
+                            user.hasData = true;
                         }
                         loaded++;
                     });
-                    if (statusEl) statusEl.innerText = `SYNCING... ${loaded}/${chunk.length + queue.length + loaded}`;
+                    if (statusEl) statusEl.innerText = `${loaded}/${chunk.length + queue.length + loaded} SYNCED`;
                     renderLeaderboard();
-                } catch (e) {
-                    console.error("Batch load failed", e);
-                }
-                await new Promise(r => setTimeout(r, 300));
+                } catch (e) { console.error("Batch load failed", e); }
+                await new Promise(r => setTimeout(r, 200));
             }
             if (statusEl) statusEl.innerText = '● LIVE SYNC';
         }
@@ -463,10 +488,11 @@
                     userId: row[uidIdx] ? row[uidIdx].trim() : '',
                     username: row[uIdx] ? row[uIdx].trim() : '',
                     golfId: gidIdx !== -1 ? row[gidIdx].trim() : '',
-                    totalScore: '0',
-                    rank: '-',
+                    actualTotalPoints: 0,
+                    actualTodayPoints: 0,
+                    rankStr: '-',
                     thru: '-',
-                    todayScore: '0',
+                    hasData: false,
                     lineup: []
                 })).filter(u => u.username && u.userId);
             } catch (error) { return []; }
