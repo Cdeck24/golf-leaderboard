@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Golf OTD Guide - Lineup Builder</title>
+    <title>Golf Plug Leaderboard</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
       :root {
@@ -46,126 +46,18 @@
       .sub-nav-btn {
         background: transparent;
         border: none;
-        color: var(--text-muted);
+        color: var(--gold-light);
         font-size: 1rem;
         font-weight: 600;
         padding: 0.5rem 1rem;
-        cursor: pointer;
-        border-bottom: 2px solid transparent;
-        transition: all 0.3s ease;
+        border-bottom: 2px solid var(--gold-mid);
       }
 
-      .sub-nav-btn:hover { color: var(--text-main); }
-      .sub-nav-btn.active { color: var(--gold-light); border-bottom: 2px solid var(--gold-mid); }
-
       .content-view {
-          display: none;
           max-width: 1200px;
           margin: 2rem auto;
           padding: 0 1rem;
           animation: fadeIn 0.3s ease-out;
-      }
-      
-      .content-view.active { display: grid; }
-
-      #builder-view {
-          grid-template-columns: 1fr;
-          gap: 2rem;
-      }
-
-      @media (min-width: 768px) {
-          #builder-view { grid-template-columns: 1fr 1fr; }
-      }
-
-      .panel {
-          background: var(--bg-navy-light);
-          border: 1px solid var(--border-subtle);
-          border-radius: 12px;
-          padding: 1.5rem;
-          display: flex;
-          flex-direction: column;
-          height: 80vh;
-      }
-
-      .panel-header {
-          font-size: 1.2rem;
-          font-weight: 700;
-          color: var(--gold-light);
-          margin-bottom: 1rem;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-      }
-
-      .search-box {
-          width: 100%;
-          padding: 0.75rem 1rem;
-          background: rgba(0,0,0,0.3);
-          border: 1px solid var(--border-subtle);
-          border-radius: 8px;
-          color: var(--text-main);
-          margin-bottom: 1rem;
-          font-size: 1rem;
-      }
-      .search-box:focus { outline: none; border-color: var(--gold-mid); }
-
-      .scrollable-list {
-          flex: 1;
-          overflow-y: auto;
-          display: flex;
-          flex-direction: column;
-          gap: 0.75rem;
-          padding-right: 0.5rem;
-      }
-
-      .scrollable-list::-webkit-scrollbar { width: 6px; }
-      .scrollable-list::-webkit-scrollbar-track { background: transparent; }
-      .scrollable-list::-webkit-scrollbar-thumb { background: var(--border-subtle); border-radius: 3px; }
-
-      .player-card {
-          background: rgba(0,0,0,0.2);
-          border: 1px solid var(--border-subtle);
-          border-radius: 8px;
-          padding: 1rem;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          transition: background 0.2s;
-      }
-      .player-card:hover { background: rgba(255,255,255,0.05); }
-
-      .player-info { display: flex; flex-direction: column; }
-      .player-name { font-weight: 600; font-size: 1rem; color: var(--text-main); }
-      .player-stats { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem; }
-      
-      .action-btn {
-          background: var(--bg-card);
-          border: 1px solid var(--border-gold);
-          color: var(--gold-light);
-          border-radius: 6px;
-          padding: 0.5rem 1rem;
-          cursor: pointer;
-          font-weight: bold;
-          transition: all 0.2s;
-      }
-      .action-btn:hover { background: var(--gold-mid); color: var(--bg-navy); }
-      .action-btn.remove { border-color: var(--danger); color: var(--danger); }
-      .action-btn.remove:hover { background: var(--danger); color: #fff; }
-
-      .multiplier-badge {
-          background: var(--bg-navy);
-          color: var(--gold-light);
-          border: 1px solid var(--border-gold);
-          border-radius: 12px;
-          padding: 0.1rem 0.5rem;
-          font-size: 0.75rem;
-          font-weight: bold;
-          margin-left: 0.5rem;
-      }
-
-      .captain-slot {
-          border: 2px solid var(--border-gold);
-          background: rgba(212, 175, 55, 0.05);
       }
 
       #loading-indicator {
@@ -247,38 +139,18 @@
 <body>
 
     <header>
-        <h1>Golf OTD Guide</h1>
+        <h1>Golf Plug Leaderboard</h1>
         <div class="sub-nav-container">
-            <button class="sub-nav-btn active" id="tab-builder" onclick="switchTab('builder')">Lineup Builder</button>
-            <button class="sub-nav-btn" id="tab-leaderboard" onclick="switchTab('leaderboard')">Live Leaderboard</button>
-            <button class="sub-nav-btn" id="tab-saved" onclick="switchTab('saved')">Saved Lineups</button>
+            <button class="sub-nav-btn">Live Leaderboard</button>
         </div>
     </header>
 
-    <div id="builder-view" class="content-view active">
-        <div class="panel">
-            <div class="panel-header"><span>Player Pool</span></div>
-            <input type="text" id="player-search" class="search-box" placeholder="Search golfers...">
-            <div id="loading-indicator">Syncing User Data...</div>
-            <div class="scrollable-list" id="player-pool-list"></div>
-        </div>
-        <div class="panel">
-            <div class="panel-header"><span>Your Lineup</span><span id="salary-rem">Rem: $50,000</span></div>
-            <div class="scrollable-list" id="current-lineup-list"></div>
-        </div>
-    </div>
-
-    <div id="saved-view" class="content-view">
-        <div class="panel" style="height: auto;">
-            <div class="panel-header">My Saved Lineups</div>
-            <p style="color: var(--text-muted); text-align: center; padding: 2rem;">No saved lineups yet.</p>
-        </div>
-    </div>
+    <div id="loading-indicator">Syncing Live Data...</div>
 
     <div id="leaderboard-view" class="content-view">
         <div class="leaderboard-panel">
             <div class="leaderboard-header">
-                <span>🏆 Live Tournament Leaderboard</span>
+                <span>🏆 Live Tournament Rankings</span>
                 <span id="sync-status" style="font-size: 0.9rem; font-weight: 400; color: var(--gold-light);">Syncing...</span>
             </div>
             <div class="golf-table-container">
@@ -299,7 +171,7 @@
     </div>
 
     <script>
-        // --- AUTH & CONFIGURATION (Mached to RDA Site) ---
+        // --- AUTH & CONFIGURATION ---
         const config = {
             usersDataUrl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRNfMOTfQ4xpIILu_IPjjOAZjUq2Tfp1UqEMOVnR2Qyz-H572bmiIWbC-GuUlEW7ogM8TUNLFWw5xz3/pub?gid=0&single=true&output=csv', 
             workerProxy: 'https://rda-worker.coledecker04.workers.dev/',
@@ -308,19 +180,7 @@
         };
 
         const DEVICE_UUID = crypto.randomUUID();
-        
-        let golfers = [
-            { id: 1, name: "Scottie Scheffler", salary: 11500, points: 95.5 },
-            { id: 2, name: "Rory McIlroy", salary: 11000, points: 91.2 },
-            { id: 3, name: "Jon Rahm", salary: 10800, points: 89.8 },
-            { id: 4, name: "Xander Schauffele", salary: 10500, points: 85.0 },
-            { id: 5, name: "Viktor Hovland", salary: 10200, points: 83.5 },
-            { id: 6, name: "Ludvig Aberg", salary: 9100, points: 77.2 }
-        ];
-        
         let users = [];
-        let lineup = [];
-        const MAX_SALARY = 50000;
 
         // --- AUTH HELPERS ---
         function generateRequestToken() {
@@ -376,44 +236,6 @@
             if (num === 0) return `<span class="score-even">E</span>`;
             return `<span class="score-over">+${num}</span>`;
         }
-
-        window.switchTab = (tabName) => {
-            document.querySelectorAll('.content-view').forEach(el => el.classList.remove('active'));
-            document.getElementById(`${tabName}-view`).classList.add('active');
-            document.querySelectorAll('.sub-nav-btn').forEach(btn => btn.classList.remove('active'));
-            document.getElementById(`tab-${tabName}`).classList.add('active');
-        };
-
-        // --- CORE LOGIC ---
-        function renderPool(filterText = "") {
-            const poolEl = document.getElementById('player-pool-list');
-            if (!poolEl) return;
-            poolEl.innerHTML = '';
-            golfers.filter(g => !lineup.some(l => l.id === g.id) && g.name.toLowerCase().includes(filterText.toLowerCase())).forEach(g => {
-                const el = document.createElement('div');
-                el.className = 'player-card';
-                el.innerHTML = `<div class="player-info"><span class="player-name">${g.name}</span><span class="player-stats">Sal: $${g.salary.toLocaleString()}</span></div><button class="action-btn" onclick="addPlayer(${g.id})">ADD</button>`;
-                poolEl.appendChild(el);
-            });
-        }
-
-        function renderLineup() {
-            const lineupEl = document.getElementById('current-lineup-list');
-            if (!lineupEl) return;
-            lineupEl.innerHTML = '';
-            let currentSalary = lineup.reduce((sum, p) => sum + p.salary, 0);
-            document.getElementById('salary-rem').innerText = `Rem: $${(MAX_SALARY - currentSalary).toLocaleString()}`;
-            lineup.forEach((g, index) => {
-                const isCaptain = index === 0;
-                const el = document.createElement('div');
-                el.className = isCaptain ? 'player-card captain-slot' : 'player-card';
-                el.innerHTML = `<div class="player-info"><span class="player-name">${g.name} ${isCaptain ? '<span class="multiplier-badge">1.5x CPT</span>' : ''}</span><span class="player-stats">Sal: $${g.salary.toLocaleString()}</span></div><button class="action-btn remove" onclick="removePlayer(${g.id})">Drop</button>`;
-                lineupEl.appendChild(el);
-            });
-        }
-
-        window.addPlayer = (id) => { const player = golfers.find(g => g.id === id); if (player) { lineup.push(player); renderPool(document.getElementById('player-search').value); renderLineup(); } };
-        window.removePlayer = (id) => { lineup = lineup.filter(g => g.id !== id); renderPool(document.getElementById('player-search').value); renderLineup(); };
 
         function renderLeaderboard() {
             const tbody = document.getElementById('leaderboard-tbody');
@@ -574,11 +396,7 @@
             users = await fetchUsers();
             if (indicator) indicator.style.display = 'none';
             
-            renderPool();
-            renderLineup();
             renderLeaderboard();
-            
-            // Start high-speed background sync
             loadAllUserScores();
         }
 
