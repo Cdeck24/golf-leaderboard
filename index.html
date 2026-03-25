@@ -405,22 +405,26 @@
             draftContainer.innerHTML = '<div style="text-align:center; padding: 1.5rem; color: var(--text-muted);">Syncing live draft...</div>';
 
             try {
-                // Construct the exact URL per requirement
-                const url = `https://web.realsports.io/games/playerratingcontest/${user.golfId}/view/${user.userId}?contestType=sport&source=home`;
-                console.log(`Fetching draft for ${user.username}: ${url}`);
+                // Construct URL - ensuring IDs are clean
+                const draftId = String(user.golfId).trim();
+                const userId = String(user.userId).trim();
+                const url = `https://web.realsports.io/games/playerratingcontest/${draftId}/view/${userId}?contestType=sport&source=home`;
+                
+                console.log("Fetching draft from:", url);
                 
                 const batch = await fetchBatchViaWorker([url]);
-                const resItem = batch[0];
+                const resItem = batch ? batch[0] : null;
 
                 if (resItem && resItem.status === 200) {
                     const data = JSON.parse(base64ToText(resItem.body));
                     draftsCache[user.userId] = data.lineup || [];
                     renderDraft(draftsCache[user.userId], draftContainer);
                 } else {
-                    throw new Error(`API Error: ${resItem ? resItem.status : 'Unknown'}`);
+                    const statusText = resItem ? resItem.status : 'Empty Response';
+                    throw new Error(`Worker returned status ${statusText}`);
                 }
             } catch (e) {
-                console.error("Draft fetch failed:", e);
+                console.error("Draft load error:", e);
                 draftContainer.innerHTML = `<div style="text-align:center; padding: 1.5rem; color: var(--danger);">Failed to load live draft: ${e.message}</div>`;
             }
         }
@@ -450,11 +454,6 @@
             if (!tbody) return;
             tbody.innerHTML = '';
 
-            if (users.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 2rem; color: var(--text-muted);">No users loaded from CSV.</td></tr>`;
-                return;
-            }
-
             users.forEach((user, index) => {
                 const mainTr = document.createElement('tr');
                 mainTr.className = 'main-row';
@@ -477,19 +476,14 @@
 
                 mainTr.onclick = () => {
                     const isOpen = mainTr.classList.contains('open');
-                    
-                    // Close other rows to keep it clean
                     document.querySelectorAll('.main-row').forEach(r => r.classList.remove('open'));
                     document.querySelectorAll('.draft-row').forEach(r => r.classList.remove('open'));
                     
                     if (!isOpen) {
                         mainTr.classList.add('open');
                         draftTr.classList.add('open');
-                        if (user.golfId && user.userId) {
-                            fetchDraftForUser(user, draftContent);
-                        } else {
-                            draftContent.innerHTML = '<div style="text-align:center; color:var(--text-muted); padding:1.5rem;">User ID or Golf ID missing in CSV.</div>';
-                        }
+                        if (user.golfId && user.userId) fetchDraftForUser(user, draftContent);
+                        else draftContent.innerHTML = '<div style="text-align:center; color:var(--text-muted); padding:1.5rem;">User missing required Golf ID or User ID.</div>';
                     }
                 };
 
@@ -524,15 +518,14 @@
                 if (parsedData.length < 2) return [];
 
                 const headers = parsedData[0].map(h => h.toLowerCase().trim());
-                console.log("CSV Headers found:", headers);
-
-                // Exact header matching based on working version
-                const uIdx = headers.findIndex(h => h === 'username');
-                const uidIdx = headers.findIndex(h => h === 'user id');
-                const gidIdx = headers.findIndex(h => h === 'golf id');
+                
+                // Aggressive header matching
+                const uIdx = headers.findIndex(h => h.includes('username'));
+                const uidIdx = headers.findIndex(h => h.includes('user id') || h.includes('userid'));
+                const gidIdx = headers.findIndex(h => h.includes('golf id') || h.includes('golfid'));
 
                 if (uIdx === -1 || uidIdx === -1) {
-                    console.error("Critical headers missing in CSV.");
+                    console.error("CSV Headers found:", headers);
                     return [];
                 }
 
@@ -541,21 +534,13 @@
                     username: row[uIdx] ? row[uIdx].trim() : '',
                     golfId: gidIdx !== -1 ? row[gidIdx].trim() : ''
                 })).filter(u => u.username && u.userId);
-            } catch (error) {
-                console.error("fetchUsers failed:", error);
-                return [];
-            }
+            } catch (error) { return []; }
         }
 
         async function initApp() {
-            const indicator = document.getElementById('loading-indicator');
-            if (indicator) indicator.style.display = 'block';
-
+            document.getElementById('loading-indicator').style.display = 'block';
             users = await fetchUsers();
-            console.log("Users loaded:", users.length);
-
-            if (indicator) indicator.style.display = 'none';
-            
+            document.getElementById('loading-indicator').style.display = 'none';
             renderPool();
             renderLineup();
             renderLeaderboard();
