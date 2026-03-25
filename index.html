@@ -7,7 +7,7 @@
     <style>
       :root {
         /* Professional Golf Palette */
-        --golf-green-dark: #0b3d2c; /* Classic Masters Green */
+        --golf-green-dark: #0b3d2c;
         --golf-green-mid: #145943;
         --golf-green-bright: #2ecc71;
         --golf-fairway: #1a3a2a;
@@ -54,7 +54,7 @@
           max-width: 1100px;
           margin: 2rem auto 0 auto;
           padding: 0 1rem;
-          display: none; /* Hidden until loaded */
+          display: none;
           animation: fadeIn 0.6s ease-out;
       }
 
@@ -133,6 +133,28 @@
           align-items: center;
           text-transform: uppercase;
           letter-spacing: 0.05em;
+      }
+
+      .header-actions {
+          display: flex;
+          align-items: center;
+          gap: 15px;
+      }
+
+      .export-btn {
+          background: rgba(197, 160, 89, 0.2);
+          border: 1px solid var(--border-gold);
+          color: var(--gold-light);
+          font-size: 0.65rem;
+          padding: 4px 10px;
+          border-radius: 4px;
+          cursor: pointer;
+          font-weight: 700;
+          transition: all 0.2s;
+      }
+      .export-btn:hover {
+          background: var(--border-gold);
+          color: #000;
       }
 
       .golf-table-container { overflow-x: auto; -webkit-overflow-scrolling: touch; }
@@ -255,6 +277,7 @@
           .draft-item-avatar { width: 44px; height: 44px; }
           h1 { font-size: 1.6rem; }
           .banner-name { font-size: 1.1rem; }
+          .header-actions { flex-direction: column; gap: 5px; align-items: flex-end; }
       }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/hashids@2.2.10/dist/hashids.min.js"></script>
@@ -267,7 +290,7 @@
 
     <div id="tournament-banner">
         <div class="banner-content">
-            <div class="banner-label">Active Tournament</div>
+            <div class="banner-label" id="display-banner-label">Tournament Status</div>
             <div class="banner-name" id="display-tournament-name">Loading Schedule...</div>
             <div class="banner-course" id="display-course-name">-</div>
         </div>
@@ -278,10 +301,13 @@
     <div id="leaderboard-view" class="content-view">
         <div class="leaderboard-panel">
             <div class="leaderboard-header">
-                <span><span style="margin-right: 8px;">⛳</span>Live Standings</span>
-                <div style="text-align: right;">
-                    <div id="sync-status" style="font-size: 0.7rem; font-weight: 700; color: var(--gold-light); opacity: 0.8;">Loading...</div>
-                    <div id="par-score-display" style="font-size: 0.6rem; color: var(--text-muted); font-weight: 400; margin-top: 2px; text-transform: uppercase;">Even Line: -</div>
+                <span><span style="margin-right: 8px;">⛳</span>Leaderboard</span>
+                <div class="header-actions">
+                    <button class="export-btn" onclick="exportScoresToCSV()">Export Scores</button>
+                    <div style="text-align: right;">
+                        <div id="sync-status" style="font-size: 0.7rem; font-weight: 700; color: var(--gold-light); opacity: 0.8;">Loading...</div>
+                        <div id="par-score-display" style="font-size: 0.6rem; color: var(--text-muted); font-weight: 400; margin-top: 2px; text-transform: uppercase;">Even Line: -</div>
+                    </div>
                 </div>
             </div>
             <div class="golf-table-container">
@@ -313,10 +339,10 @@
 
         const DEVICE_UUID = crypto.randomUUID();
         let users = [];
+        let currentProcessedUsers = []; // Stores the sorted list for export
 
         function generateRequestToken() {
             const timestampMs = Date.now();
-            // @ts-ignore
             const hasher = new Hashids("realwebapp", 16);
             return hasher.encode(timestampMs);
         }
@@ -388,15 +414,15 @@
 
             document.getElementById('par-score-display').innerText = `Even Line: ${medianTotal ? medianTotal.toFixed(1) : '-'} pts`;
 
-            const usersWithScores = users.map(user => ({
+            currentProcessedUsers = users.map(user => ({
                 ...user,
                 golfTotal: user.hasData ? calculateGolfScore(user.actualTotalPoints, totalPointsArray) : 999,
                 golfToday: user.hasData ? calculateGolfScore(user.actualTodayPoints, todayPointsArray) : 0
             }));
 
-            usersWithScores.sort((a, b) => a.golfTotal - b.golfTotal);
+            currentProcessedUsers.sort((a, b) => a.golfTotal - b.golfTotal);
 
-            usersWithScores.forEach((user, idx) => {
+            currentProcessedUsers.forEach((user, idx) => {
                 const mainTr = document.createElement('tr');
                 mainTr.className = 'main-row';
                 const rankDisplay = user.hasData ? (idx + 1) : '-';
@@ -489,6 +515,38 @@
             if (statusEl) statusEl.innerText = '● LIVE UPDATES';
         }
 
+        function exportScoresToCSV() {
+            if (currentProcessedUsers.length === 0) return;
+            
+            const rows = [
+                ["Pos", "Username", "Real ID", "Total Golf Score", "Today Golf Score", "Raw Points"]
+            ];
+
+            currentProcessedUsers.forEach((u, index) => {
+                if (!u.hasData) return;
+                rows.push([
+                    index + 1,
+                    u.username,
+                    u.userId,
+                    u.golfTotal,
+                    u.golfToday,
+                    u.actualTotalPoints
+                ]);
+            });
+
+            let csvContent = "data:text/csv;charset=utf-8," 
+                + rows.map(e => e.join(",")).join("\n");
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            const dateStr = new Date().toISOString().split('T')[0];
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `golf_plug_scores_${dateStr}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
         function parseCSV(text) {
             const lines = text.split(/\r?\n/);
             return lines.map(line => {
@@ -515,44 +573,68 @@
                 if (rows.length < 2) return;
 
                 const headers = rows[0].map(h => h.toLowerCase().trim());
-                const dateIdx = headers.indexOf('date');
-                const tournIdx = headers.indexOf('tournament');
-                const courseIdx = headers.indexOf('course');
+                const dateIdx = headers.findIndex(h => h.includes('date'));
+                const tournIdx = headers.findIndex(h => h.includes('tourn'));
+                const courseIdx = headers.findIndex(h => h.includes('course'));
 
-                const today = new Date();
-                // Get month/day for matching (supports 3/25, 03/25, etc)
-                const currentMonth = today.getMonth() + 1;
-                const currentDay = today.getDate();
+                if (dateIdx === -1 || tournIdx === -1) return;
 
-                let activeTournament = null;
+                const now = new Date();
+                const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                const dayOfWeek = now.getDay(); // 0: Sun, 1: Mon, ..., 3: Wed, ..., 6: Sat
 
-                // Simple date matching: look for today's entry or the most recent past entry
+                let currentTournRow = null;
+                let nextTournRow = null;
+
+                // Loop to find current and next
                 for (let i = 1; i < rows.length; i++) {
                     const row = rows[i];
-                    const dateStr = row[dateIdx] || "";
-                    const parts = dateStr.split('/');
-                    if (parts.length >= 2) {
-                        const m = parseInt(parts[0]);
-                        const d = parseInt(parts[1]);
-                        
-                        // If exact match
-                        if (m === currentMonth && d === currentDay) {
-                            activeTournament = { name: row[tournIdx], course: row[courseIdx] };
-                            break;
-                        }
-                        
-                        // Fallback: Use the last tournament found if we've passed its date
-                        // (Assuming CSV is sorted by date)
-                        const rowDate = new Date(today.getFullYear(), m - 1, d);
-                        if (rowDate <= today) {
-                            activeTournament = { name: row[tournIdx], course: row[courseIdx] };
-                        }
+                    if (!row[dateIdx]) continue;
+                    
+                    const dateStr = row[dateIdx].trim();
+                    const dateParts = dateStr.split('/');
+                    if (dateParts.length < 2) continue;
+
+                    let year = today.getFullYear();
+                    const startDate = new Date(year, parseInt(dateParts[0]) - 1, parseInt(dateParts[1]));
+                    
+                    // We assume tournament rows are chronological.
+                    // If start date is in the past or today, it's the "most recent" candidate
+                    if (startDate <= today) {
+                        currentTournRow = { row, startDate };
+                    } else if (!nextTournRow) {
+                        nextTournRow = { row, startDate };
                     }
                 }
 
-                if (activeTournament) {
-                    document.getElementById('display-tournament-name').innerText = activeTournament.name;
-                    document.getElementById('display-course-name').innerText = activeTournament.course;
+                if (!currentTournRow) return;
+
+                // Logic: 
+                // Wednesday (3) - Sunday (0): Show as Live.
+                // Monday (1) - Tuesday (2): Show as Past.
+                // On Wednesday, shift to the upcoming one if available.
+
+                let display = null;
+                const daysDiff = Math.floor((today - currentTournRow.startDate) / (1000 * 60 * 60 * 24));
+
+                // If it's Wednesday AND there is a next tournament starting today or very soon, shift
+                if (dayOfWeek === 3 && nextTournRow && Math.floor((nextTournRow.startDate - today) / (1000 * 60 * 60 * 24)) <= 0) {
+                    display = { name: nextTournRow.row[tournIdx], course: nextTournRow.row[courseIdx] || '-', label: 'Live Tournament' };
+                } else if (dayOfWeek === 1 || dayOfWeek === 2) {
+                    // Mon or Tue: Show the most recent as "Past"
+                    display = { name: currentTournRow.row[tournIdx], course: currentTournRow.row[courseIdx] || '-', label: 'Past Tournament' };
+                } else if (dayOfWeek >= 3 || dayOfWeek === 0) {
+                    // Wed - Sun: Show current as Live
+                    display = { name: currentTournRow.row[tournIdx], course: currentTournRow.row[courseIdx] || '-', label: 'Live Tournament' };
+                } else {
+                    // Fallback
+                    display = { name: currentTournRow.row[tournIdx], course: currentTournRow.row[courseIdx] || '-', label: 'Tournament Info' };
+                }
+
+                if (display) {
+                    document.getElementById('display-tournament-name').innerText = display.name;
+                    document.getElementById('display-course-name').innerText = display.course;
+                    document.getElementById('display-banner-label').innerText = display.label;
                     document.getElementById('tournament-banner').style.display = 'block';
                 }
             } catch (e) {
@@ -577,8 +659,6 @@
                     golfId: gidIdx !== -1 ? row[gidIdx].trim() : '',
                     actualTotalPoints: 0,
                     actualTodayPoints: 0,
-                    rankStr: '-',
-                    thru: '-',
                     hasData: false,
                     lineup: []
                 })).filter(u => u.username && u.userId);
@@ -589,8 +669,7 @@
             const indicator = document.getElementById('loading-indicator');
             if (indicator) indicator.style.display = 'block';
 
-            // Fetch schedule first
-            fetchTournamentSchedule();
+            await fetchTournamentSchedule();
 
             users = await fetchUsers();
             if (indicator) indicator.style.display = 'none';
