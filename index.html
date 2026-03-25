@@ -241,6 +241,7 @@
       @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
       @keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
     </style>
+    <!-- Required for Hashids Token Generation -->
     <script src="https://cdn.jsdelivr.net/npm/hashids@2.2.10/dist/hashids.min.js"></script>
 </head>
 <body>
@@ -278,7 +279,7 @@
         <div class="leaderboard-panel">
             <div class="leaderboard-header">
                 <span>🏆 Live Tournament Leaderboard</span>
-                <span style="font-size: 0.9rem; font-weight: 400; color: var(--gold-light);">RealApp Live Sync</span>
+                <span id="sync-status" style="font-size: 0.9rem; font-weight: 400; color: var(--gold-light);">Syncing...</span>
             </div>
             <div class="golf-table-container">
                 <table class="golf-table">
@@ -298,6 +299,7 @@
     </div>
 
     <script>
+        // --- AUTH & CONFIGURATION (Mached to RDA Site) ---
         const config = {
             usersDataUrl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRNfMOTfQ4xpIILu_IPjjOAZjUq2Tfp1UqEMOVnR2Qyz-H572bmiIWbC-GuUlEW7ogM8TUNLFWw5xz3/pub?gid=0&single=true&output=csv', 
             workerProxy: 'https://rda-worker.coledecker04.workers.dev/',
@@ -306,6 +308,7 @@
         };
 
         const DEVICE_UUID = crypto.randomUUID();
+        
         let golfers = [
             { id: 1, name: "Scottie Scheffler", salary: 11500, points: 95.5 },
             { id: 2, name: "Rory McIlroy", salary: 11000, points: 91.2 },
@@ -316,12 +319,13 @@
         ];
         
         let users = [];
-        let draftsCache = {}; 
         let lineup = [];
         const MAX_SALARY = 50000;
 
+        // --- AUTH HELPERS ---
         function generateRequestToken() {
             const timestampMs = Date.now();
+            // @ts-ignore
             const hasher = new Hashids("realwebapp", 16);
             return hasher.encode(timestampMs);
         }
@@ -337,33 +341,40 @@
         }
 
         async function fetchBatchViaWorker(urls) {
-            try {
-                const queryParams = new URLSearchParams();
-                for (const url of urls) queryParams.append('url', url);
-                const urlString = config.workerProxy.endsWith('?') ? config.workerProxy + queryParams.toString() : config.workerProxy + '?' + queryParams.toString();
-                
-                const fetchOptions = {
-                    headers: {
-                        'real-auth-info': config.REAL_AUTH_TOKEN,
-                        'real-device-name': 'Chrome on Web',
-                        'real-device-type': 'desktop_web',
-                        'real-device-uuid': DEVICE_UUID,
-                        'real-request-token': generateRequestToken(),
-                        'real-version': config.REAL_VERSION
-                    }
-                };
-                
-                const res = await fetch(urlString, fetchOptions);
-                if (!res.ok) {
-                    const text = await res.text();
-                    console.error(`[Worker Proxy] Returned Error ${res.status}:`, text);
-                    throw new Error(`Worker returned HTTP ${res.status}`);
+            const queryParams = new URLSearchParams();
+            for (const url of urls) queryParams.append('url', url);
+            const urlString = config.workerProxy.endsWith('?') ? config.workerProxy + queryParams.toString() : config.workerProxy + '?' + queryParams.toString();
+            
+            const fetchOptions = {
+                headers: {
+                    'real-auth-info': config.REAL_AUTH_TOKEN,
+                    'real-device-name': 'Chrome on Web',
+                    'real-device-type': 'desktop_web',
+                    'real-device-uuid': DEVICE_UUID,
+                    'real-request-token': generateRequestToken(),
+                    'real-version': config.REAL_VERSION
                 }
+            };
+            
+            try {
+                const res = await fetch(urlString, fetchOptions);
+                if (!res.ok) throw new Error(`Worker Error: ${res.status}`);
                 return await res.json();
             } catch (err) {
-                console.error("[Worker Proxy] Fetch completely failed:", err);
+                console.error("[Worker Proxy] Fetch failed:", err);
                 throw err;
             }
+        }
+
+        // --- UTILS ---
+        const findIndex = (h, n) => { for(const name of n) { const i=h.findIndex(x=>x.toLowerCase().trim()===name.toLowerCase()); if(i!==-1)return i;} return -1; };
+
+        function formatScore(score) {
+            const num = parseFloat(score);
+            if (isNaN(num)) return score;
+            if (num < 0) return `<span class="score-under">${num}</span>`;
+            if (num === 0) return `<span class="score-even">E</span>`;
+            return `<span class="score-over">+${num}</span>`;
         }
 
         window.switchTab = (tabName) => {
@@ -373,6 +384,7 @@
             document.getElementById(`tab-${tabName}`).classList.add('active');
         };
 
+        // --- CORE LOGIC ---
         function renderPool(filterText = "") {
             const poolEl = document.getElementById('player-pool-list');
             if (!poolEl) return;
@@ -403,59 +415,56 @@
         window.addPlayer = (id) => { const player = golfers.find(g => g.id === id); if (player) { lineup.push(player); renderPool(document.getElementById('player-search').value); renderLineup(); } };
         window.removePlayer = (id) => { lineup = lineup.filter(g => g.id !== id); renderPool(document.getElementById('player-search').value); renderLineup(); };
 
-        function formatScore(score) {
-            if (score < 0) return `<span class="score-under">${score}</span>`;
-            if (score === 0) return `<span class="score-even">E</span>`;
-            return `<span class="score-over">+${score}</span>`;
-        }
+        function renderLeaderboard() {
+            const tbody = document.getElementById('leaderboard-tbody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
 
-        async function fetchDraftForUser(user, draftContainer) {
-            if (draftsCache[user.userId]) {
-                renderDraft(draftsCache[user.userId], draftContainer);
-                return;
-            }
+            // Sort by score
+            const sortedUsers = [...users].sort((a, b) => (parseFloat(a.totalScore) || 0) - (parseFloat(b.totalScore) || 0));
 
-            draftContainer.innerHTML = '<div style="text-align:center; padding: 1.5rem; color: var(--text-muted);">Syncing live draft...</div>';
+            sortedUsers.forEach((user) => {
+                const mainTr = document.createElement('tr');
+                mainTr.className = 'main-row';
+                mainTr.innerHTML = `
+                    <td class="col-pos">${user.rank || '-'}</td>
+                    <td class="col-player">
+                        ${user.username} 
+                        <span class="toggle-icon">▼</span>
+                    </td>
+                    <td class="col-score">${formatScore(user.totalScore || 0)}</td>
+                    <td class="col-thru">${user.thru || '-'}</td>
+                    <td class="col-score">${formatScore(user.todayScore || 0)}</td>
+                `;
 
-            try {
-                const draftId = String(user.golfId).trim();
-                const userId = String(user.userId).trim();
+                const draftTr = document.createElement('tr');
+                draftTr.className = 'draft-row';
+                draftTr.innerHTML = `<td colspan="5" style="padding: 0;"><div class="draft-content"></div></td>`;
+                const draftContent = draftTr.querySelector('.draft-content');
 
-                if (!draftId || !userId) {
-                    throw new Error("Missing Golf ID or User ID");
-                }
-
-                const url = `https://web.realsports.io/games/playerratingcontest/${draftId}/view/${userId}?contestType=sport&source=home`;
-                console.log(`Fetching draft for ${user.username}:`, url);
-                
-                const batch = await fetchBatchViaWorker([url]);
-                
-                if (!batch || !Array.isArray(batch) || batch.length === 0) {
-                    throw new Error("Worker returned empty response");
-                }
-
-                const resItem = batch[0];
-
-                if (resItem && resItem.status === 200) {
-                    const decodedBody = base64ToText(resItem.body);
-                    if (!decodedBody) throw new Error("API returned empty body");
+                mainTr.onclick = () => {
+                    const isOpen = mainTr.classList.contains('open');
+                    document.querySelectorAll('.main-row').forEach(r => { if(r !== mainTr) r.classList.remove('open'); });
+                    document.querySelectorAll('.draft-row').forEach(r => { if(r !== draftTr) r.classList.remove('open'); });
                     
-                    const data = JSON.parse(decodedBody);
-                    draftsCache[user.userId] = data.lineup || [];
-                    renderDraft(draftsCache[user.userId], draftContainer);
-                } else {
-                    const statusText = resItem ? resItem.status : 'Unknown status';
-                    throw new Error(`RealApp API status: ${statusText}`);
-                }
-            } catch (e) {
-                console.error("Draft load error:", e);
-                draftContainer.innerHTML = `<div style="text-align:center; padding: 1.5rem; color: var(--danger);">Failed to load live draft: ${e.message}</div>`;
-            }
+                    if (!isOpen) {
+                        mainTr.classList.add('open');
+                        draftTr.classList.add('open');
+                        renderDraft(user.lineup, draftContent);
+                    } else {
+                        mainTr.classList.remove('open');
+                        draftTr.classList.remove('open');
+                    }
+                };
+
+                tbody.appendChild(mainTr);
+                tbody.appendChild(draftTr);
+            });
         }
 
         function renderDraft(lineupData, container) {
             if (!lineupData || lineupData.length === 0) {
-                container.innerHTML = '<div style="text-align:center; padding: 2rem;">No golfers drafted.</div>';
+                container.innerHTML = '<div style="text-align:center; padding: 2rem; color: var(--text-muted);">No golfers drafted or live sync failed.</div>';
                 return;
             }
 
@@ -473,50 +482,44 @@
             `).join('');
         }
 
-        function renderLeaderboard() {
-            const tbody = document.getElementById('leaderboard-tbody');
-            if (!tbody) return;
-            tbody.innerHTML = '';
-
-            users.forEach((user, index) => {
-                const mainTr = document.createElement('tr');
-                mainTr.className = 'main-row';
-                mainTr.innerHTML = `
-                    <td class="col-pos">T${index + 1}</td>
-                    <td class="col-player">
-                        ${user.username} 
-                        <span style="font-size:0.7rem; color:var(--text-muted); font-weight:normal; margin-left:8px;">${user.golfId ? 'Live Sync' : 'No Draft'}</span>
-                        <span class="toggle-icon">▼</span>
-                    </td>
-                    <td class="col-score">${formatScore(0)}</td>
-                    <td class="col-thru">-</td>
-                    <td class="col-score">${formatScore(0)}</td>
-                `;
-
-                const draftTr = document.createElement('tr');
-                draftTr.className = 'draft-row';
-                draftTr.innerHTML = `<td colspan="5" style="padding: 0;"><div class="draft-content"></div></td>`;
-                const draftContent = draftTr.querySelector('.draft-content');
-
-                mainTr.onclick = () => {
-                    const isOpen = mainTr.classList.contains('open');
-                    document.querySelectorAll('.main-row').forEach(r => { if(r !== mainTr) r.classList.remove('open'); });
-                    document.querySelectorAll('.draft-row').forEach(r => { if(r !== draftTr) r.classList.remove('open'); });
-                    
-                    if (!isOpen) {
-                        mainTr.classList.add('open');
-                        draftTr.classList.add('open');
-                        if (user.golfId && user.userId) fetchDraftForUser(user, draftContent);
-                        else draftContent.innerHTML = '<div style="text-align:center; color:var(--text-muted); padding:1.5rem;">User missing required Golf ID or User ID.</div>';
-                    } else {
-                        mainTr.classList.remove('open');
-                        draftTr.classList.remove('open');
-                    }
-                };
-
-                tbody.appendChild(mainTr);
-                tbody.appendChild(draftTr);
+        async function loadAllUserScores() {
+            const queue = [];
+            users.forEach(u => {
+                if (u.golfId && u.userId) {
+                    queue.push({
+                        url: `https://web.realsports.io/games/playerratingcontest/${u.golfId}/view/${u.userId}?contestType=sport&source=home`,
+                        user: u
+                    });
+                }
             });
+
+            const chunkSize = 3;
+            let loaded = 0;
+            const statusEl = document.getElementById('sync-status');
+
+            while (queue.length > 0) {
+                const chunk = queue.splice(0, chunkSize);
+                try {
+                    const results = await fetchBatchViaWorker(chunk.map(c => c.url));
+                    results.forEach((res, idx) => {
+                        const user = chunk[idx].user;
+                        if (res.status === 200) {
+                            const data = JSON.parse(base64ToText(res.body));
+                            user.totalScore = data.info?.rankDisplayInfos?.[0]?.scoreDisplay || '0';
+                            user.rank = data.info?.rankDisplayInfos?.[0]?.rankDisplay || '-';
+                            user.lineup = data.lineup || [];
+                            user.todayScore = user.lineup.reduce((acc, g) => acc + (g.score || 0), 0);
+                        }
+                        loaded++;
+                    });
+                    if (statusEl) statusEl.innerText = `Syncing... ${loaded}/${chunk.length + queue.length + loaded}`;
+                    renderLeaderboard();
+                } catch (e) {
+                    console.error("Batch load failed", e);
+                }
+                await new Promise(r => setTimeout(r, 300));
+            }
+            if (statusEl) statusEl.innerText = 'Live Sync';
         }
 
         function parseCSV(text) {
@@ -544,25 +547,24 @@
                 const parsedData = parseCSV(text);
                 if (parsedData.length < 2) return [];
 
-                const headers = parsedData[0].map(h => h.toLowerCase().trim());
-                const uIdx = headers.findIndex(h => h === 'username');
-                const uidIdx = headers.findIndex(h => h === 'user id');
-                const gidIdx = headers.findIndex(h => h === 'golf id');
+                const headers = parsedData[0];
+                const uIdx = findIndex(headers, ['username']);
+                const uidIdx = findIndex(headers, ['user id', 'userid']);
+                const gidIdx = findIndex(headers, ['golf id', 'golfid']);
 
-                if (uIdx === -1 || uidIdx === -1) {
-                    console.error("Critical headers missing in CSV. Found:", headers);
-                    return [];
-                }
+                if (uIdx === -1 || uidIdx === -1) return [];
 
                 return parsedData.slice(1).map(row => ({
                     userId: row[uidIdx] ? row[uidIdx].trim() : '',
                     username: row[uIdx] ? row[uIdx].trim() : '',
-                    golfId: gidIdx !== -1 ? row[gidIdx].trim() : ''
+                    golfId: gidIdx !== -1 ? row[gidIdx].trim() : '',
+                    totalScore: '0',
+                    rank: '-',
+                    thru: '-',
+                    todayScore: '0',
+                    lineup: []
                 })).filter(u => u.username && u.userId);
-            } catch (error) {
-                console.error("fetchUsers failed:", error);
-                return [];
-            }
+            } catch (error) { return []; }
         }
 
         async function initApp() {
@@ -570,13 +572,14 @@
             if (indicator) indicator.style.display = 'block';
 
             users = await fetchUsers();
-            console.log(`Loaded ${users.length} users.`);
-
             if (indicator) indicator.style.display = 'none';
             
             renderPool();
             renderLineup();
             renderLeaderboard();
+            
+            // Start high-speed background sync
+            loadAllUserScores();
         }
 
         initApp();
