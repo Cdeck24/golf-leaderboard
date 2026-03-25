@@ -65,6 +65,7 @@
           border-radius: 6px;
           cursor: pointer;
           transition: all 0.2s ease;
+          text-align: center;
       }
 
       .nav-tab.active {
@@ -90,8 +91,8 @@
       }
 
       .banner-label { font-size: 0.55rem; text-transform: uppercase; letter-spacing: 0.2em; color: var(--gold-light); font-weight: 800; margin-bottom: 0.5rem; }
-      .banner-name { font-size: 1.3rem; font-weight: 900; color: #fff; margin-bottom: 0.25rem; line-height: 1.2; }
-      .banner-course { font-size: 0.85rem; color: var(--text-muted); font-weight: 500; }
+      .banner-name { font-size: 1.2rem; font-weight: 900; color: #fff; margin-bottom: 0.25rem; line-height: 1.2; }
+      .banner-course { font-size: 0.8rem; color: var(--text-muted); font-weight: 500; }
 
       .content-view {
           max-width: 800px;
@@ -102,7 +103,6 @@
 
       .content-view.active { display: block; animation: fadeIn 0.4s ease-out; }
 
-      /* --- Leaderboard Tables --- */
       .leaderboard-panel {
           background: rgba(255, 255, 255, 0.03);
           border: 1px solid rgba(255, 255, 255, 0.1);
@@ -127,6 +127,7 @@
           border-radius: 4px;
           font-weight: 800;
           text-transform: uppercase;
+          cursor: pointer;
       }
 
       .status-text { text-align: right; font-size: 0.6rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
@@ -144,9 +145,9 @@
       }
       .golf-table td { padding: 1.1rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.02); font-size: 0.95rem; }
 
-      .col-pos { width: 50px; text-align: center; color: var(--border-gold); font-weight: 900; }
-      .col-player { font-weight: 700; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-      .col-score { width: 70px; text-align: center; font-weight: 800; font-size: 1rem; }
+      .col-pos { width: 45px; text-align: center; color: var(--border-gold); font-weight: 900; }
+      .col-player { width: auto; font-weight: 700; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .col-score { width: 65px; text-align: center; font-weight: 800; font-size: 1rem; }
 
       .main-row { cursor: pointer; transition: background 0.2s; }
       .main-row:hover { background: rgba(255, 255, 255, 0.05); }
@@ -154,39 +155,65 @@
       .toggle-icon { font-size: 0.5rem; color: var(--text-muted); margin-left: 4px; opacity: 0.5; transition: transform 0.3s; }
       .main-row.open .toggle-icon { transform: rotate(180deg); }
 
-      /* Expanded Scorecard */
       .draft-row { display: none; background: rgba(0,0,0,0.5); }
       .draft-row.open { display: table-row; }
-      .expanded-container { padding: 1.25rem; border-left: 3px solid var(--border-gold); }
+      .expanded-container { padding: 0.75rem; border-left: 3px solid var(--border-gold); }
       
       .round-breakdown {
           display: grid;
           grid-template-columns: repeat(4, 1fr);
-          gap: 10px;
-          margin-bottom: 1.5rem;
-          background: rgba(255,255,255,0.03);
+          gap: 6px;
+          margin-bottom: 0.75rem;
+          background: rgba(0,0,0,0.3);
           padding: 10px;
           border-radius: 8px;
           border: 1px solid rgba(255,255,255,0.05);
       }
       .round-slot { text-align: center; }
-      .round-label { font-size: 0.55rem; text-transform: uppercase; font-weight: 800; color: var(--text-muted); display: block; margin-bottom: 2px; }
-      .round-val { font-size: 0.9rem; font-weight: 900; color: var(--gold-light); }
+      .round-label { font-size: 0.5rem; text-transform: uppercase; font-weight: 800; color: var(--text-muted); display: block; margin-bottom: 2px; }
+      .round-val { font-size: 0.85rem; font-weight: 900; color: var(--gold-light); }
 
-      .draft-list { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 5px; scrollbar-width: none; }
-      .draft-list::-webkit-scrollbar { display: none; }
+      /* Centered Grid for 5 Golfers */
+      .draft-grid { 
+          display: flex;
+          flex-wrap: wrap;
+          justify-content: center;
+          gap: 8px;
+      }
 
       .draft-item { 
-          flex: 0 0 110px; display: flex; flex-direction: column; align-items: center; text-align: center;
-          background: rgba(255, 255, 255, 0.03); padding: 12px 8px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.05);
+          flex: 0 0 calc(33.33% - 6px);
+          display: flex; 
+          flex-direction: column; 
+          align-items: center; 
+          text-align: center;
+          background: rgba(255, 255, 255, 0.03); 
+          padding: 8px 4px; 
+          border-radius: 8px; 
+          border: 1px solid rgba(255, 255, 255, 0.05);
+          min-width: 90px;
       }
-      .draft-item-avatar { width: 50px; height: 50px; border-radius: 50%; border: 2px solid var(--border-gold); background: #000; margin-bottom: 8px; }
-      .draft-item-name { color: var(--text-main); font-weight: 700; font-size: 0.7rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; }
-      .draft-item-score { font-weight: 800; font-size: 0.9rem; color: var(--gold-light); }
+      .draft-item-avatar { 
+          width: 36px; 
+          height: 36px; 
+          border-radius: 50%; 
+          border: 1.5px solid var(--border-gold); 
+          background: #000; 
+          margin-bottom: 6px; 
+      }
+      .draft-item-name { 
+          color: var(--text-main); 
+          font-weight: 700; 
+          font-size: 0.6rem; 
+          white-space: nowrap; 
+          overflow: hidden; 
+          text-overflow: ellipsis; 
+          width: 100%; 
+      }
+      .draft-item-score { font-weight: 800; font-size: 0.8rem; color: var(--gold-light); }
 
-      /* --- Schedule & Archive Cards --- */
-      .schedule-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100%, 1fr)); gap: 12px; }
-      
+      /* Schedule & Archive Cards */
+      .schedule-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
       .schedule-card {
           background: rgba(255, 255, 255, 0.04);
           border: 1px solid rgba(255, 255, 255, 0.1);
@@ -195,13 +222,12 @@
           cursor: pointer;
           transition: all 0.2s ease;
           position: relative;
-          display: flex;
-          flex-direction: column;
+          box-shadow: 0 4px 15px rgba(0,0,0,0.2);
       }
       .schedule-card:hover { 
           background: rgba(255, 255, 255, 0.08); 
           border-color: var(--border-gold); 
-          transform: translateY(-2px); 
+          transform: translateY(-2px);
       }
       .schedule-card.clickable::after {
           content: "VIEW SCORES →";
@@ -213,8 +239,7 @@
           color: var(--gold-light);
           letter-spacing: 0.05em;
       }
-
-      .card-date { font-size: 0.65rem; color: var(--gold-light); font-weight: 800; text-transform: uppercase; margin-bottom: 0.5rem; letter-spacing: 0.05em; }
+      .card-date { font-size: 0.65rem; color: var(--gold-light); font-weight: 800; text-transform: uppercase; margin-bottom: 0.4rem; }
       .card-name { font-size: 1.1rem; font-weight: 900; color: #fff; margin-bottom: 0.25rem; line-height: 1.2; }
       .card-course { font-size: 0.8rem; color: var(--text-muted); font-weight: 500; }
 
@@ -226,11 +251,8 @@
       @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
       @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
       
-      @media (max-width: 600px) {
-          h1 { font-size: 1.5rem; }
-          .golf-table th, .golf-table td { padding: 0.75rem 0.5rem; }
-          .col-pos { width: 40px; }
-          .col-score { width: 65px; }
+      @media (min-width: 600px) {
+          .schedule-grid { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
       }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/hashids@2.2.10/dist/hashids.min.js"></script>
@@ -249,14 +271,13 @@
     <div id="tournament-banner">
         <div class="banner-content">
             <div class="banner-label" id="display-banner-label">Tournament Status</div>
-            <div class="banner-name" id="display-tournament-name">Loading...</div>
+            <div class="banner-name" id="display-tournament-name">Loading Schedule...</div>
             <div class="banner-course" id="display-course-name">-</div>
         </div>
     </div>
 
     <div id="loading-indicator">Syncing Tournament Data...</div>
 
-    <!-- LIVE VIEW -->
     <div id="view-live" class="content-view active">
         <div class="leaderboard-panel">
             <div class="leaderboard-header">
@@ -283,14 +304,12 @@
         </div>
     </div>
 
-    <!-- UPCOMING VIEW -->
     <div id="view-upcoming" class="content-view">
         <div class="schedule-grid" id="upcoming-list"></div>
     </div>
 
-    <!-- PAST VIEW -->
     <div id="view-past" class="content-view">
-        <div id="archive-viewer" style="display:none; margin-top:0;">
+        <div id="archive-viewer" style="display:none;">
             <div style="margin-bottom:1rem; color:var(--gold-light); font-size:0.7rem; font-weight:800; cursor:pointer;" onclick="closeArchive()">← BACK TO ARCHIVES</div>
             <div class="leaderboard-panel">
                 <div class="leaderboard-header" id="archive-header-title">ARCHIVE DATA</div>
@@ -322,13 +341,12 @@
         let masterArchiveData = [];
         let currentProcessedUsers = [];
 
-        function switchView(viewName) {
-            document.querySelectorAll('.content-view').forEach(v => v.classList.remove('active'));
-            document.getElementById(`view-${viewName}`).classList.add('active');
+        function switchView(v) {
+            document.querySelectorAll('.content-view').forEach(el => el.classList.remove('active'));
+            document.getElementById(`view-${v}`).classList.add('active');
             document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-            const clickedBtn = document.getElementById(`tab-${viewName}`);
-            if(clickedBtn) clickedBtn.classList.add('active');
-            if (viewName === 'past') closeArchive();
+            document.getElementById(`tab-${v}`).classList.add('active');
+            if (v === 'past') closeArchive();
         }
 
         function closeArchive() {
@@ -337,20 +355,19 @@
         }
 
         function formatToPar(score) {
-            const num = parseInt(score);
-            if (isNaN(num)) return 'E';
-            if (num < 0) return `<span class="score-under">${num}</span>`;
-            if (num === 0) return `<span class="score-even">E</span>`;
-            return `<span class="score-over">+${num}</span>`;
+            const n = parseInt(score);
+            if (isNaN(n)) return 'E';
+            if (n < 0) return `<span class="score-under">${n}</span>`;
+            if (n === 0) return `<span class="score-even">E</span>`;
+            return `<span class="score-over">+${n}</span>`;
         }
 
-        function calculateGolfScore(userPoints, allPoints) {
-            if (userPoints === 0 || allPoints.length < 2) return 0;
-            if (allPoints.every(p => p === 0)) return 0;
-            const sorted = [...allPoints].sort((a, b) => a - b);
-            const index = sorted.indexOf(userPoints);
-            const percentileRank = (index / (sorted.length - 1)) * 100;
-            return Math.round((50 - percentileRank) / 6.25);
+        function calculateGolfScore(pts, all) {
+            if (pts === 0 || all.length < 2) return 0;
+            const sorted = [...all].sort((a,b) => a - b);
+            const idx = sorted.indexOf(pts);
+            const pr = (idx / (sorted.length - 1)) * 100;
+            return Math.round((50 - pr) / 6.25);
         }
 
         function renderLeaderboard() {
@@ -358,92 +375,62 @@
             if (!tbody) return;
             tbody.innerHTML = '';
             
-            const syncedPlayers = users.filter(u => u.hasData);
-            const totalPointsArray = syncedPlayers.map(u => u.actualTotalPoints);
-            const todayPointsArray = syncedPlayers.map(u => u.actualTodayPoints);
+            const synced = users.filter(u => u.hasData);
+            const allT = synced.map(u => u.actualTotalPoints);
+            const allD = synced.map(u => u.actualTodayPoints);
             
-            const sortedTotals = [...totalPointsArray].sort((a, b) => a - b);
-            const mid = Math.floor(sortedTotals.length / 2);
-            const medianTotal = sortedTotals.length % 2 !== 0 ? sortedTotals[mid] : (sortedTotals[mid - 1] + sortedTotals[mid]) / 2;
-            document.getElementById('par-score-display').innerText = `EVEN: ${medianTotal ? medianTotal.toFixed(1) : '0.0'} PTS`;
+            const sorted = [...allT].sort((a,b) => a - b);
+            const median = sorted.length ? (sorted.length % 2 ? sorted[Math.floor(sorted.length/2)] : (sorted[sorted.length/2-1] + sorted[sorted.length/2])/2) : 0;
+            document.getElementById('par-score-display').innerText = `EVEN: ${median.toFixed(1)} PTS`;
             
-            const todayIdx = new Date().getDay(); 
+            const dayIdx = new Date().getDay(); 
 
-            currentProcessedUsers = users.map(user => {
-                const golfTotal = user.actualTotalPoints > 0 ? calculateGolfScore(user.actualTotalPoints, totalPointsArray) : 0;
-                const golfToday = user.actualTodayPoints > 0 ? calculateGolfScore(user.actualTodayPoints, todayPointsArray) : 0;
-                
+            currentProcessedUsers = users.map(u => {
+                const total = u.actualTotalPoints > 0 ? calculateGolfScore(u.actualTotalPoints, allT) : 0;
+                const today = u.actualTodayPoints > 0 ? calculateGolfScore(u.actualTodayPoints, allD) : 0;
                 let rounds = { thu: 0, fri: 0, sat: 0, sun: 0 };
-                if (todayIdx === 4) rounds.thu = golfToday;
-                else if (todayIdx === 5) rounds.fri = golfToday;
-                else if (todayIdx === 6) rounds.sat = golfToday;
-                else if (todayIdx === 0) rounds.sun = golfToday;
-
-                return { ...user, golfTotal, golfToday, rounds };
+                if (dayIdx === 4) rounds.thu = today;
+                else if (dayIdx === 5) rounds.fri = today;
+                else if (dayIdx === 6) rounds.sat = today;
+                else if (dayIdx === 0) rounds.sun = today;
+                return { ...u, total, today, rounds };
             });
 
-            currentProcessedUsers.sort((a, b) => a.golfTotal - b.golfTotal);
+            currentProcessedUsers.sort((a,b) => a.total - b.total);
 
-            currentProcessedUsers.forEach((user, idx) => {
-                const mainTr = document.createElement('tr');
-                mainTr.className = 'main-row';
-                const handle = user.username.startsWith('@') ? user.username : '@' + user.username;
-
-                mainTr.innerHTML = `
-                    <td class="col-pos">${user.hasData ? idx + 1 : '-'}</td>
-                    <td class="col-player">${handle} <span class="toggle-icon">▼</span></td>
-                    <td class="col-score">${formatToPar(user.golfTotal)}</td>
-                    <td class="col-score">${formatToPar(user.golfToday)}</td>
-                `;
+            currentProcessedUsers.forEach((u, i) => {
+                const row = document.createElement('tr');
+                row.className = 'main-row';
+                const handle = u.username.startsWith('@') ? u.username : '@' + u.username;
+                row.innerHTML = `<td class="col-pos">${u.hasData ? i+1 : '-'}</td><td class="col-player">${handle} <span class="toggle-icon">▼</span></td><td class="col-score">${formatToPar(u.total)}</td><td class="col-score">${formatToPar(u.today)}</td>`;
                 
-                const draftTr = document.createElement('tr');
-                draftTr.className = 'draft-row';
-                draftTr.innerHTML = `
-                    <td colspan="4">
-                        <div class="expanded-container">
-                            <div class="round-breakdown">
-                                <div class="round-slot"><span class="round-label">Thu</span><span class="round-val">${formatToPar(user.rounds.thu)}</span></div>
-                                <div class="round-slot"><span class="round-label">Fri</span><span class="round-val">${formatToPar(user.rounds.fri)}</span></div>
-                                <div class="round-slot"><span class="round-label">Sat</span><span class="round-val">${formatToPar(user.rounds.sat)}</span></div>
-                                <div class="round-slot"><span class="round-label">Sun</span><span class="round-val">${formatToPar(user.rounds.sun)}</span></div>
-                            </div>
-                            <div class="draft-list"></div>
-                        </div>
-                    </td>
-                `;
+                const draftRow = document.createElement('tr');
+                draftRow.className = 'draft-row';
+                draftRow.innerHTML = `<td colspan="4"><div class="expanded-container"><div class="round-breakdown"><div class="round-slot"><span class="round-label">Thu</span><span class="round-val">${formatToPar(u.rounds.thu)}</span></div><div class="round-slot"><span class="round-label">Fri</span><span class="round-val">${formatToPar(u.rounds.fri)}</span></div><div class="round-slot"><span class="round-label">Sat</span><span class="round-val">${formatToPar(u.rounds.sat)}</span></div><div class="round-slot"><span class="round-label">Sun</span><span class="round-val">${formatToPar(u.rounds.sun)}</span></div></div><div class="draft-grid"></div></div></td>`;
                 
-                mainTr.onclick = () => {
-                    const isOpen = mainTr.classList.contains('open');
+                row.onclick = () => {
+                    const isOpen = row.classList.contains('open');
                     document.querySelectorAll('.main-row').forEach(r => r.classList.remove('open'));
                     document.querySelectorAll('.draft-row').forEach(r => r.classList.remove('open'));
                     if (!isOpen) {
-                        mainTr.classList.add('open'); draftTr.classList.add('open');
-                        renderDraft(user.lineup, draftTr.querySelector('.draft-list'));
+                        row.classList.add('open'); draftRow.classList.add('open');
+                        renderDraft(u.lineup, draftRow.querySelector('.draft-grid'));
                     }
                 };
-                tbody.appendChild(mainTr);
-                tbody.appendChild(draftTr);
+                tbody.appendChild(row);
+                tbody.appendChild(draftRow);
             });
         }
 
-        function renderDraft(lineupData, container) {
-            if (!lineupData || lineupData.length === 0) {
-                container.innerHTML = '<div style="padding:10px; color:var(--text-muted); font-size:0.7rem;">Syncing data...</div>';
-                return;
-            }
-            container.innerHTML = lineupData.map(g => `
-                <div class="draft-item">
-                    <img src="${g.avatar ? `https://media.realapp.link/assets/players/default/large/${g.avatar}.webp` : 'https://placehold.co/50x50/222/fff?text=?'}" class="draft-item-avatar" onerror="this.src='https://placehold.co/40x40/111/fff?text=?'">
-                    <span class="draft-item-name">${g.displayName}</span>
-                    <span class="draft-item-score">${(parseFloat(g.score) || 0).toFixed(1)}</span>
-                </div>
-            `).join('');
+        function renderDraft(data, container) {
+            if (!data || data.length === 0) { container.innerHTML = '<div style="flex: 1; text-align:center; font-size:0.7rem; color:var(--text-muted);">Syncing...</div>'; return; }
+            container.innerHTML = data.map(g => `<div class="draft-item"><img src="${g.avatar ? `https://media.realapp.link/assets/players/default/large/${g.avatar}.webp` : 'https://placehold.co/40x40/222/fff?text=?'}" class="draft-item-avatar" onerror="this.src='https://placehold.co/40x40/111/fff?text=?'"><span class="draft-item-name">${g.displayName}</span><span class="draft-item-score">${(parseFloat(g.score) || 0).toFixed(1)}</span></div>`).join('');
         }
 
         async function fetchBatchViaWorker(urls) {
-            const query = new URLSearchParams(); urls.forEach(u => query.append('url', u));
-            const fetchOptions = { headers: { 'real-auth-info': config.REAL_AUTH_TOKEN, 'real-device-name': 'Chrome', 'real-device-type': 'desktop_web', 'real-device-uuid': DEVICE_UUID, 'real-request-token': new Hashids("realwebapp", 16).encode(Date.now()), 'real-version': config.REAL_VERSION } };
-            const res = await fetch(`${config.workerProxy}?${query.toString()}`, fetchOptions);
+            const q = new URLSearchParams(); urls.forEach(u => q.append('url', u));
+            const opts = { headers: { 'real-auth-info': config.REAL_AUTH_TOKEN, 'real-device-name': 'Chrome', 'real-device-type': 'desktop_web', 'real-device-uuid': DEVICE_UUID, 'real-request-token': new Hashids("realwebapp", 16).encode(Date.now()), 'real-version': config.REAL_VERSION } };
+            const res = await fetch(`${config.workerProxy}?${q.toString()}`, opts);
             return await res.json();
         }
 
@@ -457,26 +444,23 @@
                 const rows = parseCSV(await res.text());
                 const now = new Date(); const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
                 const day = now.getDay(); const upcoming = [], past = [];
-                let current = null, next = null;
-
+                let curr = null, next = null;
                 for (let i = 1; i < rows.length; i++) {
                     const r = rows[i]; const parts = (r[0] || '').split('/'); if (parts.length < 2) continue;
                     const start = new Date(today.getFullYear(), parseInt(parts[0]) - 1, parseInt(parts[1]));
                     const obj = { name: r[1], course: r[2] || '-', date: r[0], start };
-                    if (start <= today) { current = obj; past.unshift(obj); } else { if (!next) next = obj; upcoming.push(obj); }
+                    if (start <= today) { curr = obj; past.unshift(obj); } else { if (!next) next = obj; upcoming.push(obj); }
                 }
-
                 document.getElementById('upcoming-list').innerHTML = upcoming.map(t => `<div class="schedule-card"><div class="card-date">${t.date}</div><div class="card-name">${t.name}</div><div class="card-course">${t.course}</div></div>`).join('');
                 document.getElementById('past-tournament-grid').innerHTML = past.map(t => `<div class="schedule-card clickable" onclick="viewArchive('${t.name.replace(/'/g, "\\'")}')"><div class="card-date">${t.date}</div><div class="card-name">${t.name}</div><div class="card-course">${t.course}</div></div>`).join('');
-
-                let d = (day === 3 && next) ? { ...next, label: 'Live Tournament' } : (day === 1 || day === 2) ? { ...current, label: 'Past Tournament' } : { ...current, label: 'Live Tournament' };
+                let d = (day === 3 && next) ? { ...next, label: 'Live Tournament' } : (day === 1 || day === 2) ? { ...curr, label: 'Past Tournament' } : { ...curr, label: 'Live Tournament' };
                 if (d && d.name) {
                     document.getElementById('display-tournament-name').innerText = d.name;
                     document.getElementById('display-course-name').innerText = d.course;
                     document.getElementById('display-banner-label').innerText = d.label;
                     document.getElementById('tournament-banner').style.display = 'block';
                 }
-            } catch (e) { console.error(e); }
+            } catch (e) {}
         }
 
         async function fetchArchiveData() { try { masterArchiveData = parseCSV(await (await fetch(config.archiveDataUrl)).text()); } catch (e) {} }
@@ -484,7 +468,7 @@
         function viewArchive(name) {
             const filtered = masterArchiveData.slice(1).filter(r => r[9] === name);
             const tbody = document.getElementById('archive-tbody');
-            tbody.innerHTML = filtered.length ? filtered.map(r => `<tr><td class="col-pos">${r[0]}</td><td class="col-player">${r[1].startsWith('@')?r[1]:'@'+r[1]}</td><td class="col-score">${formatToPar(r[3])}</td><td class="col-score">${r[8]}</td></tr>`).join('') : '<tr><td colspan="4" style="text-align:center; padding:2rem; color:var(--text-muted);">No archive data for this event.</td></tr>';
+            tbody.innerHTML = filtered.length ? filtered.map(r => `<tr><td class="col-pos">${r[0]}</td><td class="col-player">${r[1].startsWith('@')?r[1]:'@'+r[1]}</td><td class="col-total">${formatToPar(r[3])}</td><td class="col-total">${r[8]}</td></tr>`).join('') : '<tr><td colspan="4" style="text-align:center; padding:2rem;">No data.</td></tr>';
             document.getElementById('archive-header-title').innerText = `${name.toUpperCase()} ARCHIVE`;
             document.getElementById('past-tournament-grid').style.display = 'none';
             document.getElementById('archive-viewer').style.display = 'block';
@@ -493,7 +477,7 @@
         function handleArchiveUpload(e) {
             const r = new FileReader(); r.onload = (ev) => {
                 const rows = parseCSV(ev.target.result);
-                document.getElementById('archive-tbody').innerHTML = rows.slice(1).map(r => `<tr><td class="col-pos">${r[0]}</td><td class="col-player">${r[1].startsWith('@')?r[1]:'@'+r[1]}</td><td class="col-score">${formatToPar(r[3])}</td><td class="col-score">${r[8]}</td></tr>`).join('');
+                document.getElementById('archive-tbody').innerHTML = rows.slice(1).map(r => `<tr><td class="col-pos">${r[0]}</td><td class="col-player">${r[1].startsWith('@')?r[1]:'@'+r[1]}</td><td class="col-total">${formatToPar(r[3])}</td><td class="col-total">${r[8]}</td></tr>`).join('');
                 document.getElementById('archive-header-title').innerText = "LOCAL FILE";
                 document.getElementById('past-tournament-grid').style.display = 'none';
                 document.getElementById('archive-viewer').style.display = 'block';
@@ -501,10 +485,10 @@
         }
 
         async function loadAllUserScores() {
-            const queue = users.filter(u => u.golfId && u.userId).map(u => ({ url: `https://web.realsports.io/games/playerratingcontest/${u.golfId}/view/${u.userId}?contestType=sport&source=home`, user: u }));
-            const chunkSize = 3; let loaded = 0; const statusEl = document.getElementById('sync-status');
-            while (queue.length > 0) {
-                const chunk = queue.splice(0, chunkSize);
+            const q = users.filter(u => u.golfId && u.userId).map(u => ({ url: `https://web.realsports.io/games/playerratingcontest/${u.golfId}/view/${u.userId}?contestType=sport&source=home`, user: u }));
+            const chunkS = 3; let loaded = 0; const statusEl = document.getElementById('sync-status');
+            while (q.length > 0) {
+                const chunk = q.splice(0, chunkS);
                 try {
                     const results = await fetchBatchViaWorker(chunk.map(c => c.url));
                     results.forEach((res, idx) => {
@@ -518,7 +502,7 @@
                         }
                         loaded++;
                     });
-                    statusEl.innerHTML = `<span class="sync-dot"></span>${loaded}/${chunk.length + queue.length + loaded}`;
+                    statusEl.innerHTML = `<span class="sync-dot"></span>${loaded}/${chunk.length + q.length + loaded}`;
                     renderLeaderboard();
                 } catch (e) {}
                 await new Promise(r => setTimeout(r, 250));
@@ -532,7 +516,7 @@
             const rows = [["position", "username", "user id", "total score", "thursday score", "friday score", "saturday score", "sunday score", "raw points", "tournament"]];
             currentProcessedUsers.forEach((u, index) => {
                 if (!u.hasData) return;
-                rows.push([index + 1, u.username, u.userId, u.golfTotal, u.rounds.thu, u.rounds.fri, u.rounds.sat, u.rounds.sun, u.actualTotalPoints.toFixed(1), tournName]);
+                rows.push([index + 1, u.username, u.userId, u.total, u.rounds.thu, u.rounds.fri, u.rounds.sat, u.rounds.sun, u.actualTotalPoints.toFixed(1), tournName]);
             });
             const blob = new Blob([rows.map(e => e.join(",")).join("\n")], { type: 'text/csv' });
             const link = document.createElement("a");
@@ -540,6 +524,8 @@
             link.download = `golf_plug_${new Date().toISOString().split('T')[0]}.csv`;
             link.click();
         }
+
+        const findIndex = (h, n) => { for(const name of n) { const i=h.findIndex(x=>x.toLowerCase().trim().includes(name.toLowerCase())); if(i!==-1)return i;} return -1; };
 
         async function fetchUsers() {
             try {
