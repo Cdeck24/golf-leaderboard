@@ -9,12 +9,10 @@
         --golf-green-dark: #0b3d2c;
         --golf-green-mid: #145943;
         --golf-green-bright: #2ecc71;
-        --golf-fairway: #1a3a2a;
         --text-main: #f8f9fa;
         --text-muted: #a0aec0;
         --border-gold: #c5a059;
         --gold-light: #f3e5ab;
-        --danger: #ff4d4d;
         --bg-body: #05140d;
       }
 
@@ -27,7 +25,6 @@
         line-height: 1.4;
         background-image: radial-gradient(circle at top right, #0b3d2c 0%, #05140d 60%);
         min-height: 100vh;
-        overflow-x: hidden;
       }
 
       header {
@@ -35,14 +32,7 @@
         padding: 1.5rem 1rem 0.5rem 1rem;
         text-align: center;
         position: relative;
-      }
-
-      header::after {
-          content: "";
-          position: absolute;
-          bottom: 0; left: 0; width: 100%; height: 1px;
-          background: var(--border-gold);
-          opacity: 0.8;
+        border-bottom: 1px solid var(--border-gold);
       }
 
       h1 { 
@@ -74,11 +64,6 @@
           text-transform: uppercase;
           border-radius: 4px;
           cursor: pointer;
-          transition: all 0.2s ease;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          text-align: center;
       }
 
       .nav-tab.active {
@@ -102,12 +87,12 @@
           text-align: center;
       }
 
-      .banner-label { font-size: 0.55rem; text-transform: uppercase; letter-spacing: 0.15em; color: var(--gold-light); font-weight: 700; margin-bottom: 0.25rem; }
-      .banner-name { font-size: 1.1rem; font-weight: 800; color: #fff; margin-bottom: 0.15rem; line-height: 1.2; }
+      .banner-label { font-size: 0.55rem; text-transform: uppercase; letter-spacing: 0.15em; color: var(--gold-light); font-weight: 700; }
+      .banner-name { font-size: 1.1rem; font-weight: 800; color: #fff; margin: 0.25rem 0; line-height: 1.2; }
       .banner-course { font-size: 0.75rem; color: var(--text-muted); }
 
       .content-view {
-          max-width: 1100px;
+          max-width: 800px;
           margin: 1rem auto 3rem auto;
           padding: 0 0.75rem;
           display: none;
@@ -115,20 +100,11 @@
 
       .content-view.active { display: block; animation: fadeIn 0.4s ease-out; }
 
-      #loading-indicator {
-          text-align: center;
-          padding: 2rem;
-          color: var(--gold-light);
-          font-weight: 700;
-          animation: pulse 1.5s infinite;
-      }
-
       .leaderboard-panel {
           background: rgba(255, 255, 255, 0.03);
           border: 1px solid rgba(255, 255, 255, 0.1);
           border-radius: 12px;
           overflow: hidden;
-          box-shadow: 0 10px 30px rgba(0,0,0,0.5);
       }
 
       .leaderboard-header {
@@ -137,11 +113,8 @@
           display: flex;
           justify-content: space-between;
           align-items: center;
-          flex-wrap: wrap;
-          gap: 10px;
       }
 
-      .header-actions { display: flex; align-items: center; gap: 12px; }
       .export-btn {
           background: rgba(255, 255, 255, 0.05);
           border: 1px solid var(--border-gold);
@@ -156,86 +129,79 @@
       .status-text { text-align: right; font-size: 0.6rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
       .sync-dot { display: inline-block; width: 6px; height: 6px; background: var(--golf-green-bright); border-radius: 50%; margin-right: 4px; }
 
-      .golf-table-container { 
-          overflow-x: auto; 
-          -webkit-overflow-scrolling: touch;
-          position: relative;
-      }
-      
-      .golf-table { width: 100%; border-collapse: collapse; text-align: left; min-width: 750px; }
-      
-      /* Sticky Columns for Mobile */
-      .golf-table th:nth-child(1), .golf-table td:nth-child(1) { position: sticky; left: 0; z-index: 10; background: #081a13; width: 45px; min-width: 45px; }
-      .golf-table th:nth-child(2), .golf-table td:nth-child(2) { position: sticky; left: 45px; z-index: 10; background: #081a13; width: 140px; min-width: 140px; border-right: 1px solid rgba(255,255,255,0.05); }
+      .golf-table { width: 100%; border-collapse: collapse; text-align: left; table-layout: fixed; }
       
       .golf-table th {
           background: rgba(0,0,0,0.4);
           color: var(--text-muted);
-          font-size: 0.55rem;
+          font-size: 0.6rem;
           font-weight: 800;
           text-transform: uppercase;
           padding: 0.75rem 1rem;
           border-bottom: 1px solid rgba(255,255,255,0.05);
-          white-space: nowrap;
       }
 
-      .golf-table td { 
-          padding: 0.85rem 1rem; 
-          border-bottom: 1px solid rgba(255,255,255,0.02); 
-          font-size: 0.85rem; 
-          white-space: nowrap; 
-      }
+      .golf-table td { padding: 1rem; border-bottom: 1px solid rgba(255,255,255,0.02); font-size: 0.95rem; }
+
+      /* Column Widths */
+      .col-pos { width: 50px; text-align: center; color: var(--border-gold); font-weight: 900; }
+      .col-player { width: auto; font-weight: 700; }
+      .col-total { width: 70px; text-align: center; font-weight: 800; }
+      .col-today { width: 70px; text-align: center; font-weight: 800; }
 
       .main-row { cursor: pointer; transition: background 0.2s; }
-      .main-row:hover td { background: rgba(255, 255, 255, 0.05) !important; }
+      .main-row:hover { background: rgba(255, 255, 255, 0.05); }
       .main-row.open { background: rgba(197, 160, 89, 0.1); }
       
       .toggle-icon { font-size: 0.5rem; color: var(--text-muted); margin-left: 4px; opacity: 0.5; transition: transform 0.3s; }
       .main-row.open .toggle-icon { transform: rotate(180deg); }
 
+      /* Expanded Content Styling */
       .draft-row { display: none; background: rgba(0,0,0,0.5); }
       .draft-row.open { display: table-row; }
       
-      .draft-content { 
-          display: flex; gap: 10px; padding: 1rem; overflow-x: auto; scrollbar-width: none; border-left: 3px solid var(--border-gold);
+      .expanded-container { padding: 1.25rem; border-left: 3px solid var(--border-gold); }
+
+      /* Round Breakdown Scorecard */
+      .round-breakdown {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 10px;
+          margin-bottom: 1.5rem;
+          background: rgba(255,255,255,0.03);
+          padding: 10px;
+          border-radius: 8px;
+          border: 1px solid rgba(255,255,255,0.05);
       }
-      .draft-content::-webkit-scrollbar { display: none; }
+      .round-slot { text-align: center; }
+      .round-label { font-size: 0.55rem; text-transform: uppercase; font-weight: 800; color: var(--text-muted); display: block; margin-bottom: 2px; }
+      .round-val { font-size: 0.9rem; font-weight: 900; color: var(--gold-light); }
+
+      .draft-list { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 5px; scrollbar-width: none; }
+      .draft-list::-webkit-scrollbar { display: none; }
 
       .draft-item { 
           flex: 0 0 100px; display: flex; flex-direction: column; align-items: center; text-align: center;
           background: rgba(255, 255, 255, 0.03); padding: 10px 6px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.05);
       }
       
-      .draft-item-avatar { width: 45px; height: 45px; border-radius: 50%; border: 2px solid var(--border-gold); background: #000; margin-bottom: 6px; }
+      .draft-item-avatar { width: 45px; height: 45px; border-radius: 50%; border: 1px solid var(--border-gold); background: #000; margin-bottom: 6px; }
       .draft-item-name { color: var(--text-main); font-weight: 700; font-size: 0.65rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; }
       .draft-item-score { font-weight: 800; font-size: 0.85rem; color: var(--gold-light); }
-
-      .col-pos { text-align: center; font-weight: 900; color: var(--border-gold); font-size: 1rem; }
-      .col-player { font-weight: 700; color: var(--text-main); }
-      .col-score { width: 70px; text-align: center; font-weight: 800; font-size: 1rem; }
-      .col-day { width: 60px; text-align: center; font-weight: 600; opacity: 0.8; font-size: 0.75rem; }
-      .col-raw { width: 80px; text-align: center; font-weight: 700; color: var(--gold-light); font-size: 0.8rem; }
 
       .score-under { color: #ff4d4d; } 
       .score-even { color: var(--golf-green-bright); } 
 
-      .schedule-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; margin-top: 1rem; }
-      .schedule-card { background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 10px; padding: 1.25rem; transition: transform 0.2s; cursor: pointer; }
-      .card-date { font-size: 0.6rem; color: var(--gold-light); font-weight: 800; margin-bottom: 0.4rem; }
-      .card-name { font-size: 1rem; font-weight: 800; color: #fff; margin-bottom: 0.2rem; }
-      .card-course { font-size: 0.75rem; color: var(--text-muted); }
+      #loading-indicator { text-align: center; padding: 2rem; color: var(--gold-light); font-weight: 700; animation: pulse 1.5s infinite; }
 
       @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
       @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
       
       @media (max-width: 600px) {
-          h1 { font-size: 1.5rem; }
-          .leaderboard-header { flex-direction: column; align-items: flex-start; }
-          .header-actions { width: 100%; justify-content: space-between; }
-          .status-text { text-align: right; }
+          h1 { font-size: 1.4rem; }
           .golf-table th, .golf-table td { padding: 0.75rem 0.5rem; }
-          .col-player { width: 110px !important; min-width: 110px !important; left: 40px !important; }
-          .col-pos { width: 40px !important; min-width: 40px !important; }
+          .col-pos { width: 40px; }
+          .col-total, .col-today { width: 60px; }
       }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/hashids@2.2.10/dist/hashids.min.js"></script>
@@ -245,9 +211,9 @@
     <header>
         <h1>Golf Plug Leaderboard</h1>
         <div class="main-nav">
-            <button id="tab-live" class="nav-tab active" onclick="switchView('live')">Live Standings</button>
-            <button id="tab-upcoming" class="nav-tab" onclick="switchView('upcoming')">Upcoming Schedule</button>
-            <button id="tab-past" class="nav-tab" onclick="switchView('past')">Past Archives</button>
+            <button id="tab-live" class="nav-tab active" onclick="switchView('live')">Live</button>
+            <button id="tab-upcoming" class="nav-tab" onclick="switchView('upcoming')">Schedule</button>
+            <button id="tab-past" class="nav-tab" onclick="switchView('past')">Archives</button>
         </div>
     </header>
 
@@ -261,12 +227,11 @@
 
     <div id="loading-indicator">Syncing Live Drafts...</div>
 
-    <!-- LIVE VIEW -->
     <div id="view-live" class="content-view active">
         <div class="leaderboard-panel">
             <div class="leaderboard-header">
-                <span style="font-weight: 800; font-size: 0.8rem;"><span style="margin-right: 6px;">⛳</span>STANDINGS</span>
-                <div class="header-actions">
+                <span style="font-weight: 800; font-size: 0.75rem;"><span style="margin-right: 6px;">⛳</span>STANDINGS</span>
+                <div style="display:flex; align-items:center; gap:10px;">
                     <button class="export-btn" onclick="exportScoresToCSV()">Export</button>
                     <div class="status-text">
                         <div id="sync-status"><span class="sync-dot"></span>LIVE</div>
@@ -274,65 +239,44 @@
                     </div>
                 </div>
             </div>
-            <div class="golf-table-container">
+            <table class="golf-table">
+                <thead>
+                    <tr>
+                        <th class="col-pos">Pos</th>
+                        <th class="col-player">Player</th>
+                        <th class="col-total">Total</th>
+                        <th class="col-today">Today</th>
+                    </tr>
+                </thead>
+                <tbody id="leaderboard-tbody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="view-upcoming" class="content-view">
+        <div class="leaderboard-panel"><div class="leaderboard-header">Upcoming Schedule</div></div>
+        <div class="schedule-grid" id="upcoming-list" style="display:grid; gap:10px; margin-top:10px;"></div>
+    </div>
+
+    <div id="view-past" class="content-view">
+        <div class="leaderboard-panel">
+            <div class="leaderboard-header">
+                <span>Archives</span>
+                <label for="archive-upload" class="export-btn">Upload CSV</label>
+                <input type="file" id="archive-upload" style="display:none;" accept=".csv" onchange="handleArchiveUpload(event)">
+            </div>
+        </div>
+        <div id="archive-viewer" style="display:none; margin-top:1rem;">
+            <div style="margin-bottom:0.5rem; color:var(--gold-light); font-size:0.6rem; font-weight:800;" onclick="closeArchive()">← BACK</div>
+            <div class="leaderboard-panel">
+                <div class="leaderboard-header" id="archive-header-title">ARCHIVE</div>
                 <table class="golf-table">
-                    <thead>
-                        <tr>
-                            <th class="col-pos">Pos</th>
-                            <th class="col-player">Username</th>
-                            <th class="col-score">Total</th>
-                            <th class="col-day">Thu</th>
-                            <th class="col-day">Fri</th>
-                            <th class="col-day">Sat</th>
-                            <th class="col-day">Sun</th>
-                            <th class="col-raw">Pts</th>
-                        </tr>
-                    </thead>
-                    <tbody id="leaderboard-tbody"></tbody>
+                    <thead><tr><th class="col-pos">Pos</th><th class="col-player">Player</th><th class="col-total">Final</th><th class="col-today">Today</th></tr></thead>
+                    <tbody id="archive-tbody"></tbody>
                 </table>
             </div>
         </div>
-    </div>
-
-    <!-- UPCOMING VIEW -->
-    <div id="view-upcoming" class="content-view">
-        <div class="leaderboard-header" style="border-radius: 12px 12px 0 0;">Upcoming Tournaments</div>
-        <div class="schedule-grid" id="upcoming-list"></div>
-    </div>
-
-    <!-- PAST VIEW -->
-    <div id="view-past" class="content-view">
-        <div class="leaderboard-header" style="border-radius: 12px 12px 0 0; display: flex; justify-content: space-between;">
-            <span>Historical Archives</span>
-            <label for="archive-upload" class="export-btn">Upload CSV</label>
-            <input type="file" id="archive-upload" style="display: none;" accept=".csv" onchange="handleArchiveUpload(event)">
-        </div>
-        
-        <div id="archive-viewer" style="display: none; margin-top: 1rem;">
-            <div style="margin-bottom: 1rem; color: var(--gold-light); font-size: 0.7rem; font-weight: 800; cursor: pointer;" onclick="closeArchive()">← BACK TO LIST</div>
-            <div class="leaderboard-panel">
-                <div class="leaderboard-header" id="archive-header-title">ARCHIVE DATA</div>
-                <div class="golf-table-container">
-                    <table class="golf-table">
-                        <thead>
-                            <tr>
-                                <th class="col-pos">Pos</th>
-                                <th class="col-player">Username</th>
-                                <th class="col-score">Score</th>
-                                <th class="col-day">Thu</th>
-                                <th class="col-day">Fri</th>
-                                <th class="col-day">Sat</th>
-                                <th class="col-day">Sun</th>
-                                <th class="col-raw">Pts</th>
-                            </tr>
-                        </thead>
-                        <tbody id="archive-tbody"></tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <div id="past-tournament-grid" class="schedule-grid"></div>
+        <div id="past-tournament-grid" style="display:grid; gap:10px; margin-top:10px;"></div>
     </div>
 
     <script>
@@ -352,11 +296,9 @@
 
         function switchView(viewName) {
             document.querySelectorAll('.content-view').forEach(v => v.classList.remove('active'));
-            const view = document.getElementById(`view-${viewName}`);
-            if(view) view.classList.add('active');
+            document.getElementById(`view-${viewName}`).classList.add('active');
             document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-            const clickedBtn = document.getElementById(`tab-${viewName}`);
-            if(clickedBtn) clickedBtn.classList.add('active');
+            document.getElementById(`tab-${viewName}`).classList.add('active');
             if (viewName === 'past') closeArchive();
         }
 
@@ -364,45 +306,6 @@
             document.getElementById('archive-viewer').style.display = 'none';
             document.getElementById('past-tournament-grid').style.display = 'grid';
         }
-
-        function generateRequestToken() {
-            const timestampMs = Date.now();
-            const hasher = new Hashids("realwebapp", 16);
-            return hasher.encode(timestampMs);
-        }
-
-        function base64ToText(base64String) {
-            if (!base64String) return '';
-            try {
-                const binStr = atob(base64String);
-                const bytes = new Uint8Array(binStr.length);
-                for (let i = 0; i < binStr.length; i++) bytes[i] = binStr.charCodeAt(i);
-                return new TextDecoder().decode(bytes);
-            } catch (e) { return ''; }
-        }
-
-        async function fetchBatchViaWorker(urls) {
-            const queryParams = new URLSearchParams();
-            for (const url of urls) queryParams.append('url', url);
-            const urlString = config.workerProxy + '?' + queryParams.toString();
-            const fetchOptions = {
-                headers: {
-                    'real-auth-info': config.REAL_AUTH_TOKEN,
-                    'real-device-name': 'Chrome on Web',
-                    'real-device-type': 'desktop_web',
-                    'real-device-uuid': DEVICE_UUID,
-                    'real-request-token': generateRequestToken(),
-                    'real-version': config.REAL_VERSION
-                }
-            };
-            try {
-                const res = await fetch(urlString, fetchOptions);
-                if (!res.ok) throw new Error(`Worker Error: ${res.status}`);
-                return await res.json();
-            } catch (err) { throw err; }
-        }
-
-        const findIndex = (h, n) => { for(const name of n) { const i=h.findIndex(x=>x.toLowerCase().trim().includes(name.toLowerCase())); if(i!==-1)return i;} return -1; };
 
         function formatToPar(score) {
             const num = parseInt(score);
@@ -414,18 +317,10 @@
 
         function calculateGolfScore(userPoints, allPoints) {
             if (userPoints === 0 || allPoints.length < 2) return 0;
-            if (allPoints.every(p => p === 0)) return 0;
             const sorted = [...allPoints].sort((a, b) => a - b);
             const index = sorted.indexOf(userPoints);
             const percentileRank = (index / (sorted.length - 1)) * 100;
             return Math.round((50 - percentileRank) / 6.25);
-        }
-
-        function formatHandle(username) {
-            if (!username) return '';
-            let clean = username.trim();
-            if (clean.startsWith('@')) return clean;
-            return '@' + clean;
         }
 
         function renderLeaderboard() {
@@ -440,22 +335,21 @@
             const sortedTotals = [...totalPointsArray].sort((a, b) => a - b);
             const mid = Math.floor(sortedTotals.length / 2);
             const medianTotal = sortedTotals.length % 2 !== 0 ? sortedTotals[mid] : (sortedTotals[mid - 1] + sortedTotals[mid]) / 2;
-            
             document.getElementById('par-score-display').innerText = `EVEN: ${medianTotal ? medianTotal.toFixed(1) : '0.0'} PTS`;
             
-            const today = new Date().getDay(); 
+            const todayIdx = new Date().getDay(); // 0 Sun, 4 Thu
 
             currentProcessedUsers = users.map(user => {
-                const golfTotal = (user.actualTotalPoints > 0) ? calculateGolfScore(user.actualTotalPoints, totalPointsArray) : 0;
-                const golfToday = (user.actualTodayPoints > 0) ? calculateGolfScore(user.actualTodayPoints, todayPointsArray) : 0;
+                const golfTotal = user.actualTotalPoints > 0 ? calculateGolfScore(user.actualTotalPoints, totalPointsArray) : 0;
+                const golfToday = user.actualTodayPoints > 0 ? calculateGolfScore(user.actualTodayPoints, todayPointsArray) : 0;
                 
-                let thu = user.thuScore || 0, fri = user.friScore || 0, sat = user.satScore || 0, sun = user.sunScore || 0;
-                if (today === 4) thu = golfToday;
-                else if (today === 5) fri = golfToday;
-                else if (today === 6) sat = golfToday;
-                else if (today === 0) sun = golfToday;
+                let rounds = { thu: user.thuScore || 0, fri: user.friScore || 0, sat: user.satScore || 0, sun: user.sunScore || 0 };
+                if (todayIdx === 4) rounds.thu = golfToday;
+                else if (todayIdx === 5) rounds.fri = golfToday;
+                else if (todayIdx === 6) rounds.sat = golfToday;
+                else if (todayIdx === 0) rounds.sun = golfToday;
 
-                return { ...user, golfTotal, golfToday, thu, fri, sat, sun };
+                return { ...user, golfTotal, golfToday, rounds };
             });
 
             currentProcessedUsers.sort((a, b) => a.golfTotal - b.golfTotal);
@@ -463,33 +357,38 @@
             currentProcessedUsers.forEach((user, idx) => {
                 const mainTr = document.createElement('tr');
                 mainTr.className = 'main-row';
-                const handle = formatHandle(user.username);
+                const handle = user.username.startsWith('@') ? user.username : '@' + user.username;
 
                 mainTr.innerHTML = `
                     <td class="col-pos">${user.hasData ? idx + 1 : '-'}</td>
                     <td class="col-player">${handle} <span class="toggle-icon">▼</span></td>
-                    <td class="col-score">${formatToPar(user.golfTotal)}</td>
-                    <td class="col-day">${formatToPar(user.thu)}</td>
-                    <td class="col-day">${formatToPar(user.fri)}</td>
-                    <td class="col-day">${formatToPar(user.sat)}</td>
-                    <td class="col-day">${formatToPar(user.sun)}</td>
-                    <td class="col-raw">${user.actualTotalPoints.toFixed(1)}</td>
+                    <td class="col-total">${formatToPar(user.golfTotal)}</td>
+                    <td class="col-today">${formatToPar(user.golfToday)}</td>
                 `;
                 
                 const draftTr = document.createElement('tr');
                 draftTr.className = 'draft-row';
-                draftTr.innerHTML = `<td colspan="8" style="padding: 0;"><div class="draft-content"></div></td>`;
-                const draftContent = draftTr.querySelector('.draft-content');
+                draftTr.innerHTML = `
+                    <td colspan="4">
+                        <div class="expanded-container">
+                            <div class="round-breakdown">
+                                <div class="round-slot"><span class="round-label">Thu</span><span class="round-val">${formatToPar(user.rounds.thu)}</span></div>
+                                <div class="round-slot"><span class="round-label">Fri</span><span class="round-val">${formatToPar(user.rounds.fri)}</span></div>
+                                <div class="round-slot"><span class="round-label">Sat</span><span class="round-val">${formatToPar(user.rounds.sat)}</span></div>
+                                <div class="round-slot"><span class="round-label">Sun</span><span class="round-val">${formatToPar(user.rounds.sun)}</span></div>
+                            </div>
+                            <div class="draft-list"></div>
+                        </div>
+                    </td>
+                `;
                 
                 mainTr.onclick = () => {
                     const isOpen = mainTr.classList.contains('open');
-                    document.querySelectorAll('.main-row').forEach(r => { if(r !== mainTr) r.classList.remove('open'); });
-                    document.querySelectorAll('.draft-row').forEach(r => { if(r !== draftTr) r.classList.remove('open'); });
+                    document.querySelectorAll('.main-row').forEach(r => r.classList.remove('open'));
+                    document.querySelectorAll('.draft-row').forEach(r => r.classList.remove('open'));
                     if (!isOpen) {
                         mainTr.classList.add('open'); draftTr.classList.add('open');
-                        renderDraft(user.lineup, draftContent);
-                    } else {
-                        mainTr.classList.remove('open'); draftTr.classList.remove('open');
+                        renderDraft(user.lineup, draftTr.querySelector('.draft-list'));
                     }
                 };
                 tbody.appendChild(mainTr);
@@ -499,7 +398,7 @@
 
         function renderDraft(lineupData, container) {
             if (!lineupData || lineupData.length === 0) {
-                container.innerHTML = '<div style="text-align:center; flex: 1; padding: 1rem; color: var(--text-muted); font-size: 0.75rem;">Loading lineup...</div>';
+                container.innerHTML = '<div style="padding:10px; color:var(--text-muted); font-size:0.7rem;">Syncing data...</div>';
                 return;
             }
             container.innerHTML = lineupData.map(g => `
@@ -512,8 +411,9 @@
         }
 
         async function loadAllUserScores() {
-            const queue = [];
-            users.forEach(u => { if (u.golfId && u.userId) queue.push({ url: `https://web.realsports.io/games/playerratingcontest/${u.golfId}/view/${u.userId}?contestType=sport&source=home`, user: u }); });
+            const queue = users.filter(u => u.golfId && u.userId).map(u => ({ 
+                url: `https://web.realsports.io/games/playerratingcontest/${u.golfId}/view/${u.userId}?contestType=sport&source=home`, user: u 
+            }));
             const chunkSize = 3;
             let loaded = 0;
             const statusEl = document.getElementById('sync-status');
@@ -535,7 +435,7 @@
                     statusEl.innerHTML = `<span class="sync-dot"></span>${loaded}/${chunk.length + queue.length + loaded}`;
                     renderLeaderboard();
                 } catch (e) { console.error(e); }
-                await new Promise(r => setTimeout(r, 200));
+                await new Promise(r => setTimeout(r, 250));
             }
             statusEl.innerHTML = '<span class="sync-dot"></span>LIVE';
         }
@@ -546,128 +446,88 @@
             const rows = [["position", "username", "user id", "total score", "thursday score", "friday score", "saturday score", "sunday score", "raw points", "tournament"]];
             currentProcessedUsers.forEach((u, index) => {
                 if (!u.hasData) return;
-                rows.push([index + 1, u.username, u.userId, u.golfTotal, u.thu, u.fri, u.sat, u.sun, u.actualTotalPoints.toFixed(1), tournName]);
+                rows.push([index + 1, u.username, u.userId, u.golfTotal, u.rounds.thu, u.rounds.fri, u.rounds.sat, u.rounds.sun, u.actualTotalPoints.toFixed(1), tournName]);
             });
-            const csvContent = rows.map(e => e.join(",")).join("\n");
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
+            const blob = new Blob([rows.map(e => e.join(",")).join("\n")], { type: 'text/csv' });
             const link = document.createElement("a");
-            link.setAttribute("href", url);
-            link.setAttribute("download", `golf_scores_${new Date().toISOString().split('T')[0]}.csv`);
-            document.body.appendChild(link);
+            link.href = URL.createObjectURL(blob);
+            link.download = `golf_plug_${new Date().toISOString().split('T')[0]}.csv`;
             link.click();
-            document.body.removeChild(link);
         }
 
-        function parseCSV(text) {
-            const lines = text.split(/\r?\n/);
-            return lines.map(line => {
-                const cleanedLine = line.trim(); if (!cleanedLine) return [];
-                const values = []; let currentVal = '', inQuotes = false;
-                for (let i = 0; i < cleanedLine.length; i++) {
-                    const char = cleanedLine[i];
-                    if (char === '"' && (i === 0 || cleanedLine[i-1] !== '\\')) inQuotes = !inQuotes;
-                    else if (char === ',' && !inQuotes) { values.push(currentVal.trim()); currentVal = ''; }
-                    else currentVal += char;
-                }
-                values.push(currentVal.trim()); return values;
-            }).filter(row => row.length > 0);
+        function base64ToText(b) { try { return new TextDecoder().decode(Uint8Array.from(atob(b), c => c.charCodeAt(0))); } catch(e) { return ''; } }
+
+        async function fetchBatchViaWorker(urls) {
+            const query = new URLSearchParams(); urls.forEach(u => query.append('url', u));
+            const fetchOptions = { headers: { 'real-auth-info': config.REAL_AUTH_TOKEN, 'real-device-name': 'Chrome', 'real-device-type': 'desktop_web', 'real-device-uuid': DEVICE_UUID, 'real-request-token': new Hashids("realwebapp", 16).encode(Date.now()), 'real-version': config.REAL_VERSION } };
+            const res = await fetch(`${config.workerProxy}?${query.toString()}`, fetchOptions);
+            return await res.json();
         }
+
+        function parseCSV(t) { return t.split(/\r?\n/).map(l => { const v = []; let c = '', q = false; for(let i=0; i<l.length; i++) { if(l[i]==='"' && l[i-1]!=='\\') q=!q; else if(l[i]===',' && !q) { v.push(c.trim()); c=''; } else c+=l[i]; } v.push(c.trim()); return v; }).filter(r => r.length > 1); }
 
         async function fetchTournamentSchedule() {
             try {
                 const res = await fetch(config.scheduleUrl);
-                const text = await res.text();
-                const rows = parseCSV(text); if (rows.length < 2) return;
-                const headers = rows[0].map(h => h.toLowerCase().trim());
-                const dateIdx = findIndex(headers, ['date']), tournIdx = findIndex(headers, ['tourn']), courseIdx = findIndex(headers, ['course']);
+                const rows = parseCSV(await res.text());
                 const now = new Date(); const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                const dayOfWeek = now.getDay(); 
-                let currentTournRow = null, nextTournRow = null; const upcoming = [], past = [];
+                const day = now.getDay(); const upcoming = [], past = [];
+                let current = null, next = null;
+
                 for (let i = 1; i < rows.length; i++) {
-                    const row = rows[i];
-                    const dateParts = (row[dateIdx] || '').split('/'); if (dateParts.length < 2) continue;
-                    const startDate = new Date(today.getFullYear(), parseInt(dateParts[0]) - 1, parseInt(dateParts[1]));
-                    const tournObj = { name: row[tournIdx], course: row[courseIdx] || '-', date: row[dateIdx], startDate };
-                    if (startDate <= today) { currentTournRow = { row, startDate }; past.unshift(tournObj); }
-                    else { if (!nextTournRow) nextTournRow = { row, startDate }; upcoming.push(tournObj); }
+                    const r = rows[i]; const parts = (r[0] || '').split('/'); if (parts.length < 2) continue;
+                    const start = new Date(today.getFullYear(), parseInt(parts[0]) - 1, parseInt(parts[1]));
+                    const obj = { name: r[1], course: r[2] || '-', date: r[0], start };
+                    if (start <= today) { current = obj; past.unshift(obj); } else { if (!next) next = obj; upcoming.push(obj); }
                 }
+
                 document.getElementById('upcoming-list').innerHTML = upcoming.map(t => `<div class="schedule-card"><div class="card-date">${t.date}</div><div class="card-name">${t.name}</div><div class="card-course">${t.course}</div></div>`).join('');
                 document.getElementById('past-tournament-grid').innerHTML = past.map(t => `<div class="schedule-card" onclick="viewArchive('${t.name.replace(/'/g, "\\'")}')"><div class="card-date">${t.date}</div><div class="card-name">${t.name}</div><div class="card-course">${t.course}</div></div>`).join('');
-                let display = null;
-                if (dayOfWeek === 3 && nextTournRow) display = { name: nextTournRow.row[tournIdx], course: nextTournRow.row[courseIdx], label: 'Live Tournament' };
-                else if (dayOfWeek === 1 || dayOfWeek === 2) if (currentTournRow) display = { name: currentTournRow.row[tournIdx], course: currentTournRow.row[courseIdx], label: 'Past Tournament' };
-                else if (currentTournRow) display = { name: currentTournRow.row[tournIdx], course: currentTournRow.row[courseIdx], label: 'Live Tournament' };
-                if (display) {
-                    document.getElementById('display-tournament-name').innerText = display.name;
-                    document.getElementById('display-course-name').innerText = display.course;
-                    document.getElementById('display-banner-label').innerText = display.label;
+
+                let d = (day === 3 && next) ? { ...next, label: 'Live Tournament' } : (day === 1 || day === 2) ? { ...current, label: 'Past Tournament' } : { ...current, label: 'Live Tournament' };
+                if (d && d.name) {
+                    document.getElementById('display-tournament-name').innerText = d.name;
+                    document.getElementById('display-course-name').innerText = d.course;
+                    document.getElementById('display-banner-label').innerText = d.label;
                     document.getElementById('tournament-banner').style.display = 'block';
                 }
             } catch (e) { console.error(e); }
         }
 
-        async function fetchArchiveData() {
-            try {
-                const res = await fetch(config.archiveDataUrl);
-                const text = await res.text();
-                masterArchiveData = parseCSV(text);
-            } catch (e) { console.error(e); }
-        }
+        async function fetchArchiveData() { try { masterArchiveData = parseCSV(await (await fetch(config.archiveDataUrl)).text()); } catch (e) {} }
 
-        function viewArchive(tournamentName) {
-            if (masterArchiveData.length < 2) return;
-            const filtered = masterArchiveData.slice(1).filter(row => row[9] === tournamentName);
+        function viewArchive(name) {
+            const filtered = masterArchiveData.slice(1).filter(r => r[9] === name);
             const tbody = document.getElementById('archive-tbody');
-            tbody.innerHTML = '';
-            if (filtered.length === 0) tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:2rem; color:var(--text-muted);">No archived scores found.</td></tr>`;
-            else {
-                filtered.forEach(row => {
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `<td class="col-pos">${row[0]}</td><td class="col-player">${formatHandle(row[1])}</td><td class="col-score">${formatToPar(row[3])}</td><td class="col-day">${formatToPar(row[4])}</td><td class="col-day">${formatToPar(row[5])}</td><td class="col-day">${formatToPar(row[6])}</td><td class="col-day">${formatToPar(row[7])}</td><td class="col-raw">${row[8] || '-'}</td>`;
-                    tbody.appendChild(tr);
-                });
-            }
-            document.getElementById('archive-header-title').innerText = `${tournamentName.toUpperCase()} ARCHIVE`;
+            tbody.innerHTML = filtered.length ? filtered.map(r => `<tr><td class="col-pos">${r[0]}</td><td class="col-player">${r[1].startsWith('@')?r[1]:'@'+r[1]}</td><td class="col-total">${formatToPar(r[3])}</td><td class="col-today">${formatToPar(r[4])}</td></tr>`).join('') : '<tr><td colspan="4" style="text-align:center; padding:2rem;">No data.</td></tr>';
+            document.getElementById('archive-header-title').innerText = `${name.toUpperCase()} ARCHIVE`;
             document.getElementById('past-tournament-grid').style.display = 'none';
             document.getElementById('archive-viewer').style.display = 'block';
-            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
-        function handleArchiveUpload(event) {
-            const file = event.target.files[0]; if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const rows = parseCSV(e.target.result); const tbody = document.getElementById('archive-tbody');
-                tbody.innerHTML = '';
-                rows.slice(1).forEach(row => {
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `<td class="col-pos">${row[0]}</td><td class="col-player">${formatHandle(row[1])}</td><td class="col-score">${formatToPar(row[3])}</td><td class="col-day">${formatToPar(row[4])}</td><td class="col-day">${formatToPar(row[5])}</td><td class="col-day">${formatToPar(row[6])}</td><td class="col-day">${formatToPar(row[7])}</td><td class="col-raw">${row[8] || '-'}</td>`;
-                    tbody.appendChild(tr);
-                });
-                document.getElementById('archive-header-title').innerText = "LOCAL FILE ARCHIVE";
+        function handleArchiveUpload(e) {
+            const r = new FileReader(); r.onload = (ev) => {
+                const rows = parseCSV(ev.target.result);
+                document.getElementById('archive-tbody').innerHTML = rows.slice(1).map(r => `<tr><td class="col-pos">${r[0]}</td><td class="col-player">${r[1].startsWith('@')?r[1]:'@'+r[1]}</td><td class="col-total">${formatToPar(r[3])}</td><td class="col-today">${formatToPar(r[4])}</td></tr>`).join('');
+                document.getElementById('archive-header-title').innerText = "LOCAL FILE";
                 document.getElementById('past-tournament-grid').style.display = 'none';
                 document.getElementById('archive-viewer').style.display = 'block';
-            };
-            reader.readAsText(file);
+            }; r.readAsText(e.target.files[0]);
         }
 
         async function fetchUsers() {
             try {
-                const res = await fetch(config.usersDataUrl);
-                const parsedData = parseCSV(await res.text());
-                const headers = parsedData[0];
-                const uIdx = findIndex(headers, ['username']), uidIdx = findIndex(headers, ['user id', 'userid']), gidIdx = findIndex(headers, ['golf id', 'golfid']);
-                if (uIdx === -1 || uidIdx === -1) return [];
-                return parsedData.slice(1).map(row => ({ userId: row[uidIdx].trim(), username: row[uIdx].trim(), golfId: gidIdx !== -1 ? row[gidIdx].trim() : '', actualTotalPoints: 0, actualTodayPoints: 0, hasData: false, lineup: [] })).filter(u => u.username && u.userId);
-            } catch (error) { return []; }
+                const rows = parseCSV(await (await fetch(config.usersDataUrl)).text());
+                const h = rows[0].map(v => v.toLowerCase().trim());
+                const uIdx = h.indexOf('username'), uidIdx = h.findIndex(v => v.includes('user id')), gidIdx = h.findIndex(v => v.includes('golf id'));
+                return rows.slice(1).map(r => ({ userId: r[uidIdx].trim(), username: r[uIdx].trim(), golfId: gidIdx !== -1 ? r[gidIdx].trim() : '', actualTotalPoints: 0, actualTodayPoints: 0, hasData: false, lineup: [] })).filter(u => u.username && u.userId);
+            } catch (e) { return []; }
         }
 
         async function initApp() {
-            const indicator = document.getElementById('loading-indicator');
             await fetchTournamentSchedule(); await fetchArchiveData();
             users = await fetchUsers();
-            if (indicator) indicator.style.display = 'none';
+            document.getElementById('loading-indicator').style.display = 'none';
             renderLeaderboard(); loadAllUserScores();
         }
         initApp();
