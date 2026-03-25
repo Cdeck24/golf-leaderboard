@@ -33,7 +33,7 @@
 
       header {
         background: linear-gradient(180deg, var(--golf-green-dark) 0%, rgba(5, 20, 13, 0.8) 100%);
-        padding: 2.5rem 1.5rem;
+        padding: 2rem 1.5rem;
         border-bottom: 2px solid var(--border-gold);
         text-align: center;
         box-shadow: 0 4px 20px rgba(0,0,0,0.5);
@@ -41,7 +41,7 @@
 
       h1 { 
         color: var(--gold-light); 
-        font-size: 2.2rem; 
+        font-size: 2rem; 
         font-weight: 800;
         letter-spacing: -0.02em;
         text-transform: uppercase;
@@ -53,18 +53,18 @@
         display: flex;
         justify-content: center;
         gap: 1rem;
-        margin-top: 1.5rem;
+        margin-top: 1rem;
       }
 
       .sub-nav-btn {
         background: rgba(197, 160, 89, 0.1);
         border: 1px solid var(--border-gold);
         color: var(--gold-light);
-        font-size: 0.85rem;
+        font-size: 0.8rem;
         font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.1em;
-        padding: 0.6rem 1.5rem;
+        padding: 0.5rem 1.2rem;
         border-radius: 4px;
         cursor: default;
       }
@@ -91,7 +91,7 @@
       .leaderboard-panel {
           background: rgba(255, 255, 255, 0.03);
           border: 1px solid rgba(255, 255, 255, 0.1);
-          border-radius: 16px;
+          border-radius: 12px;
           overflow: hidden;
           box-shadow: 0 20px 50px rgba(0,0,0,0.6);
           backdrop-filter: blur(10px);
@@ -100,9 +100,9 @@
       .leaderboard-header {
           background: linear-gradient(90deg, #0b3d2c, #1a4d3a);
           color: #fff;
-          padding: 1.25rem 2rem;
+          padding: 1rem 1.5rem;
           font-weight: 800;
-          font-size: 1.1rem;
+          font-size: 1rem;
           border-bottom: 1px solid var(--border-gold);
           display: flex;
           justify-content: space-between;
@@ -112,10 +112,10 @@
       }
 
       .golf-table-container { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-      .golf-table { width: 100%; border-collapse: collapse; text-align: left; min-width: 500px; }
+      .golf-table { width: 100%; border-collapse: collapse; text-align: left; min-width: 550px; }
       
       .golf-table th {
-          background: rgba(0,0,0,0.3);
+          background: rgba(0,0,0,0.4);
           color: var(--text-muted);
           font-size: 0.7rem;
           font-weight: 800;
@@ -127,7 +127,7 @@
       }
 
       .golf-table td { 
-          padding: 1.25rem 1.5rem; 
+          padding: 1.1rem 1.5rem; 
           border-bottom: 1px solid rgba(255,255,255,0.05); 
           font-size: 1rem; 
           white-space: nowrap; 
@@ -135,14 +135,14 @@
 
       .main-row { cursor: pointer; transition: all 0.2s ease; }
       .main-row:hover { background: rgba(255, 255, 255, 0.07) !important; }
-      .main-row.open { background: rgba(197, 160, 89, 0.12); }
+      .main-row.open { background: rgba(197, 160, 89, 0.15); }
       
       .toggle-icon { 
           font-size: 0.6rem; 
           color: var(--gold-light); 
           transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
           display: inline-block; 
-          margin-left: 10px;
+          margin-left: 8px;
           opacity: 0.6;
       }
       .main-row.open .toggle-icon { transform: rotate(180deg); opacity: 1; }
@@ -154,33 +154,33 @@
       .draft-content { 
           display: flex;
           gap: 12px;
-          padding: 1.5rem; 
+          padding: 1.25rem 2rem; 
           overflow-x: auto;
-          scrollbar-width: none; /* Firefox */
-          -ms-overflow-style: none;  /* IE/Edge */
+          scrollbar-width: none; 
+          -ms-overflow-style: none;
           border-left: 4px solid var(--border-gold);
       }
-      .draft-content::-webkit-scrollbar { display: none; } /* Chrome/Safari */
+      .draft-content::-webkit-scrollbar { display: none; }
 
       .draft-item { 
-          flex: 0 0 100px;
+          flex: 0 0 110px;
           display: flex; 
           flex-direction: column;
           align-items: center; 
           text-align: center;
-          background: rgba(255,255,255,0.05);
+          background: rgba(255,255,255,0.04);
           padding: 12px 8px;
           border-radius: 8px;
-          border: 1px solid rgba(255,255,255,0.1);
+          border: 1px solid rgba(255,255,255,0.08);
       }
       
       .draft-item-avatar { 
-          width: 50px; 
-          height: 50px; 
+          width: 54px; 
+          height: 54px; 
           border-radius: 50%; 
           border: 2px solid var(--border-gold); 
           background: #000;
-          margin-bottom: 8px;
+          margin-bottom: 10px;
       }
       .draft-item-name { 
           color: var(--text-main); 
@@ -200,7 +200,7 @@
       .draft-item-mult { 
           font-size: 0.55rem; 
           background: var(--golf-green-dark); 
-          padding: 1px 6px; 
+          padding: 1px 8px; 
           border-radius: 100px; 
           border: 1px solid var(--border-gold); 
           color: var(--gold-light); 
@@ -210,12 +210,12 @@
       }
 
       .col-pos { width: 60px; text-align: center; font-weight: 800; color: var(--gold-light); font-size: 1.1rem; }
-      .col-player { font-weight: 700; color: var(--text-main); font-size: 1.1rem; }
+      .col-player { font-weight: 700; color: var(--text-main); font-size: 1.05rem; }
       .col-score { width: 90px; text-align: center; font-weight: 800; font-size: 1.2rem; border-left: 1px solid rgba(255,255,255,0.05); }
-      .col-thru { width: 70px; text-align: center; font-weight: 600; color: var(--text-muted); font-size: 0.8rem; }
+      .col-thru { width: 80px; text-align: center; font-weight: 600; color: var(--text-muted); font-size: 0.85rem; }
 
-      .score-under { color: #ff4d4d; }
-      .score-even { color: var(--golf-green-bright); }
+      .score-under { color: #ff4d4d; } /* Traditional Red */
+      .score-even { color: var(--golf-green-bright); } /* Sharp Green for E */
       .score-over { color: var(--text-main); }
 
       @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -227,10 +227,10 @@
           .col-pos { width: 45px; font-size: 0.95rem; }
           .col-player { font-size: 0.95rem; }
           .col-score { font-size: 1.1rem; width: 75px; }
-          .col-thru { width: 60px; font-size: 0.75rem; }
-          .draft-content { padding: 1rem; gap: 8px; }
-          .draft-item { flex: 0 0 85px; padding: 10px 5px; }
-          .draft-item-avatar { width: 40px; height: 40px; }
+          .col-thru { width: 65px; font-size: 0.8rem; }
+          .draft-content { padding: 1rem; gap: 10px; }
+          .draft-item { flex: 0 0 90px; padding: 10px 5px; }
+          .draft-item-avatar { width: 44px; height: 44px; }
           h1 { font-size: 1.6rem; }
       }
     </style>
@@ -245,15 +245,15 @@
         </div>
     </header>
 
-    <div id="loading-indicator">Syncing Tournament Field...</div>
+    <div id="loading-indicator">Syncing Live Drafts...</div>
 
     <div id="leaderboard-view" class="content-view">
         <div class="leaderboard-panel">
             <div class="leaderboard-header">
-                <span><span style="margin-right: 8px;">⛳</span>Standings</span>
+                <span><span style="margin-right: 8px;">⛳</span>Live Standings</span>
                 <div style="text-align: right;">
                     <div id="sync-status" style="font-size: 0.7rem; font-weight: 700; color: var(--gold-light); opacity: 0.8;">Loading...</div>
-                    <div id="avg-score-display" style="font-size: 0.6rem; color: var(--text-muted); font-weight: 400; margin-top: 2px; text-transform: uppercase;">Avg: -</div>
+                    <div id="par-score-display" style="font-size: 0.6rem; color: var(--text-muted); font-weight: 400; margin-top: 2px; text-transform: uppercase;">Even Line: -</div>
                 </div>
             </div>
             <div class="golf-table-container">
@@ -330,11 +330,27 @@
 
         const findIndex = (h, n) => { for(const name of n) { const i=h.findIndex(x=>x.toLowerCase().trim()===name.toLowerCase()); if(i!==-1)return i;} return -1; };
 
-        function formatRelativeScore(score) {
-            const num = Math.round(score);
-            if (num < 0) return `<span class="score-under">${num}</span>`;
-            if (num === 0) return `<span class="score-even">E</span>`;
-            return `<span class="score-over">+${num}</span>`;
+        /**
+         * Weekend Golf Scoring Logic (-8 to +8 Range)
+         * Percentile Rank (PR) 100 -> -8
+         * Percentile Rank (PR) 50  -> 0 (Even)
+         * Percentile Rank (PR) 0   -> +8
+         * Mapping: round((50 - PR) / 6.25)
+         */
+        function calculateGolfScore(userPoints, allPoints) {
+            if (allPoints.length < 2) return 0;
+            
+            const sorted = [...allPoints].sort((a, b) => a - b);
+            const index = sorted.indexOf(userPoints);
+            const percentileRank = (index / (sorted.length - 1)) * 100;
+            
+            return Math.round((50 - percentileRank) / 6.25);
+        }
+
+        function formatToPar(score) {
+            if (score < 0) return `<span class="score-under">${score}</span>`;
+            if (score === 0) return `<span class="score-even">E</span>`;
+            return `<span class="score-over">+${score}</span>`;
         }
 
         function renderLeaderboard() {
@@ -343,17 +359,24 @@
             tbody.innerHTML = '';
 
             const syncedPlayers = users.filter(u => u.hasData);
-            const totalPoints = syncedPlayers.reduce((acc, u) => acc + u.actualTotalPoints, 0);
-            const avgPoints = syncedPlayers.length > 0 ? (totalPoints / syncedPlayers.length) : 0;
+            const totalPointsArray = syncedPlayers.map(u => u.actualTotalPoints);
+            const todayPointsArray = syncedPlayers.map(u => u.actualTodayPoints);
+            
+            const sortedTotals = [...totalPointsArray].sort((a, b) => a - b);
+            const mid = Math.floor(sortedTotals.length / 2);
+            const medianTotal = sortedTotals.length % 2 !== 0 ? sortedTotals[mid] : (sortedTotals[mid - 1] + sortedTotals[mid]) / 2;
 
-            document.getElementById('avg-score-display').innerText = `Field Avg: ${avgPoints.toFixed(1)} pts`;
+            document.getElementById('par-score-display').innerText = `Even Line: ${medianTotal ? medianTotal.toFixed(1) : '-'} pts`;
 
-            const sortedUsers = [...users].sort((a, b) => b.actualTotalPoints - a.actualTotalPoints);
+            const usersWithScores = users.map(user => ({
+                ...user,
+                golfTotal: user.hasData ? calculateGolfScore(user.actualTotalPoints, totalPointsArray) : 999,
+                golfToday: user.hasData ? calculateGolfScore(user.actualTodayPoints, todayPointsArray) : 0
+            }));
 
-            sortedUsers.forEach((user, idx) => {
-                const relativeTotal = user.hasData ? (avgPoints - user.actualTotalPoints) : 0;
-                const relativeToday = user.hasData ? (user.actualTodayPoints - (avgPoints/6)) : 0;
+            usersWithScores.sort((a, b) => a.golfTotal - b.golfTotal);
 
+            usersWithScores.forEach((user, idx) => {
                 const mainTr = document.createElement('tr');
                 mainTr.className = 'main-row';
                 
@@ -365,9 +388,9 @@
                         ${user.username} 
                         <span class="toggle-icon">▼</span>
                     </td>
-                    <td class="col-score">${user.hasData ? formatRelativeScore(relativeTotal) : '-'}</td>
+                    <td class="col-score">${user.hasData ? formatToPar(user.golfTotal) : '-'}</td>
                     <td class="col-thru">${user.thru || '-'}</td>
-                    <td class="col-score">${user.hasData ? formatRelativeScore(relativeToday) : '-'}</td>
+                    <td class="col-score">${user.hasData ? formatToPar(user.golfToday) : '-'}</td>
                 `;
 
                 const draftTr = document.createElement('tr');
@@ -383,7 +406,7 @@
                     if (!isOpen) {
                         mainTr.classList.add('open');
                         draftTr.classList.add('open');
-                        renderDraft(user.lineup, draftContent, avgPoints / 6);
+                        renderDraft(user.lineup, draftContent);
                     } else {
                         mainTr.classList.remove('open');
                         draftTr.classList.remove('open');
@@ -395,20 +418,19 @@
             });
         }
 
-        function renderDraft(lineupData, container, slotAvg) {
+        function renderDraft(lineupData, container) {
             if (!lineupData || lineupData.length === 0) {
-                container.innerHTML = '<div style="text-align:center; flex: 1; padding: 2rem; color: var(--text-muted); font-size: 0.9rem; font-style: italic;">Syncing lineup...</div>';
+                container.innerHTML = '<div style="text-align:center; flex: 1; padding: 2rem; color: var(--text-muted); font-size: 0.85rem; font-style: italic;">Syncing roster data...</div>';
                 return;
             }
 
             container.innerHTML = lineupData.map(g => {
-                const golferRelScore = slotAvg - (parseFloat(g.score) || 0);
                 return `
                 <div class="draft-item">
                     <span class="draft-item-mult">${g.multiplierDisplay || (g.multiplier + 'x')}</span>
-                    <img src="${g.avatar ? `https://media.realapp.link/assets/players/default/large/${g.avatar}.webp` : 'https://placehold.co/40x40/222/fff?text=?'}" class="draft-item-avatar" onerror="this.src='https://placehold.co/40x40/111/fff?text=?'">
+                    <img src="${g.avatar ? `https://media.realapp.link/assets/players/default/large/${g.avatar}.webp` : 'https://placehold.co/50x50/222/fff?text=?'}" class="draft-item-avatar" onerror="this.src='https://placehold.co/50x50/111/fff?text=?'">
                     <span class="draft-item-name">${g.displayName}</span>
-                    <span class="draft-item-score">${formatRelativeScore(golferRelScore)}</span>
+                    <span class="draft-item-score" style="color: var(--gold-light); font-size: 0.9rem; font-weight: 800;">${(parseFloat(g.score) || 0).toFixed(1)}</span>
                 </div>
             `}).join('');
         }
@@ -449,7 +471,7 @@
                 } catch (e) { console.error("Batch load failed", e); }
                 await new Promise(r => setTimeout(r, 200));
             }
-            if (statusEl) statusEl.innerText = '● LIVE SYNC';
+            if (statusEl) statusEl.innerText = '● LIVE UPDATES';
         }
 
         function parseCSV(text) {
