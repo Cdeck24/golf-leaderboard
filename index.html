@@ -492,7 +492,8 @@
             document.querySelectorAll('.content-view').forEach(v => v.classList.remove('active'));
             document.getElementById(`view-${viewName}`).classList.add('active');
             document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-            document.getElementById(`tab-${viewName}`).classList.add('active');
+            const clickedBtn = Array.from(document.querySelectorAll('.nav-tab')).find(btn => btn.innerText.toLowerCase().includes(viewName));
+            if(clickedBtn) clickedBtn.classList.add('active');
             
             if (viewName === 'past') closeArchive();
         }
@@ -539,10 +540,11 @@
             } catch (err) { throw err; }
         }
 
-        const findIndex = (h, n) => { for(const name of n) { const i=h.findIndex(x=>x.toLowerCase().trim()===name.toLowerCase()); if(i!==-1)return i;} return -1; };
+        const findIndex = (h, n) => { for(const name of n) { const i=h.findIndex(x=>x.toLowerCase().trim().includes(name.toLowerCase())); if(i!==-1)return i;} return -1; };
 
         function formatToPar(score) {
             const num = parseInt(score);
+            if (isNaN(num)) return 'E';
             if (num < 0) return `<span class="score-under">${num}</span>`;
             if (num === 0) return `<span class="score-even">E</span>`;
             return `<span class="score-over">+${num}</span>`;
@@ -672,11 +674,15 @@
                 const res = await fetch(config.scheduleUrl);
                 const text = await res.text();
                 const rows = parseCSV(text);
+                if (rows.length < 2) return;
                 const headers = rows[0].map(h => h.toLowerCase().trim());
-                const dateIdx = headers.findIndex(h => h.includes('date')), tournIdx = headers.findIndex(h => h.includes('tourn')), courseIdx = headers.findIndex(h => h.includes('course'));
+                const dateIdx = findIndex(headers, ['date']), tournIdx = findIndex(headers, ['tourn']), courseIdx = findIndex(headers, ['course']);
+                if (dateIdx === -1 || tournIdx === -1) return;
+
                 const now = new Date();
                 const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
                 const dayOfWeek = now.getDay(); 
+                
                 let currentTournRow = null, nextTournRow = null;
                 const upcoming = [], past = [];
 
@@ -691,18 +697,25 @@
                 }
 
                 document.getElementById('upcoming-list').innerHTML = upcoming.map(t => `<div class="schedule-card"><div class="card-date">${t.date}</div><div class="card-name">${t.name}</div><div class="card-course">${t.course}</div></div>`).join('');
-                document.getElementById('past-tournament-grid').innerHTML = past.map(t => `<div class="schedule-card clickable" onclick="viewArchive('${t.name}')"><div class="card-date">${t.date}</div><div class="card-name">${t.name}</div><div class="card-course">${t.course}</div></div>`).join('');
+                document.getElementById('past-tournament-grid').innerHTML = past.map(t => `<div class="schedule-card clickable" onclick="viewArchive('${t.name.replace(/'/g, "\\'")}')"><div class="card-date">${t.date}</div><div class="card-name">${t.name}</div><div class="card-course">${t.course}</div></div>`).join('');
 
-                if (!currentTournRow) return;
                 let display = null;
-                if (dayOfWeek === 3 && nextTournRow && Math.floor((nextTournRow.startDate - today) / (1000*60*60*24)) <= 0) { display = { name: nextTournRow.row[tournIdx], course: nextTournRow.row[courseIdx], label: 'Live Tournament' }; }
-                else if (dayOfWeek === 1 || dayOfWeek === 2) { display = { name: currentTournRow.row[tournIdx], course: currentTournRow.row[courseIdx], label: 'Past Tournament' }; }
-                else { display = { name: currentTournRow.row[tournIdx], course: currentTournRow.row[courseIdx], label: 'Live Tournament' }; }
-                document.getElementById('display-tournament-name').innerText = display.name;
-                document.getElementById('display-course-name').innerText = display.course;
-                document.getElementById('display-banner-label').innerText = display.label;
-                document.getElementById('tournament-banner').style.display = 'block';
-            } catch (e) { console.error(e); }
+                // LOGIC FIX: On Wednesday (day 3), look ahead to the NEXT tournament starting this week.
+                if (dayOfWeek === 3 && nextTournRow) {
+                    display = { name: nextTournRow.row[tournIdx], course: nextTournRow.row[courseIdx], label: 'Live Tournament' };
+                } else if (dayOfWeek === 1 || dayOfWeek === 2) {
+                    if (currentTournRow) display = { name: currentTournRow.row[tournIdx], course: currentTournRow.row[courseIdx], label: 'Past Tournament' };
+                } else {
+                    if (currentTournRow) display = { name: currentTournRow.row[tournIdx], course: currentTournRow.row[courseIdx], label: 'Live Tournament' };
+                }
+
+                if (display) {
+                    document.getElementById('display-tournament-name').innerText = display.name;
+                    document.getElementById('display-course-name').innerText = display.course;
+                    document.getElementById('display-banner-label').innerText = display.label;
+                    document.getElementById('tournament-banner').style.display = 'block';
+                }
+            } catch (e) { console.error("Schedule load failed", e); }
         }
 
         async function fetchArchiveData() {
@@ -716,30 +729,20 @@
         function viewArchive(tournamentName) {
             if (masterArchiveData.length < 2) return;
             const headers = masterArchiveData[0].map(h => h.toLowerCase().trim());
-            const tournIdx = headers.findIndex(h => h.includes('tourn'));
+            const tournIdx = findIndex(headers, ['tourn']);
             const posIdx = 0, userIdx = 1, scoreIdx = 3, pointsIdx = 5;
-
-            // Filter data for the specific tournament
             const filtered = masterArchiveData.slice(1).filter(row => row[tournIdx] === tournamentName);
-            
             const tbody = document.getElementById('archive-tbody');
             tbody.innerHTML = '';
-            
             if (filtered.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:2rem; color:var(--text-muted);">No archived scores found for this event.</td></tr>`;
             } else {
                 filtered.forEach(row => {
                     const tr = document.createElement('tr');
-                    tr.innerHTML = `
-                        <td class="col-pos">${row[posIdx]}</td>
-                        <td class="col-player">${row[userIdx]}</td>
-                        <td class="col-score">${formatToPar(row[scoreIdx])}</td>
-                        <td class="col-score">${row[pointsIdx]}</td>
-                    `;
+                    tr.innerHTML = `<td class="col-pos">${row[posIdx]}</td><td class="col-player">${row[userIdx]}</td><td class="col-score">${formatToPar(row[scoreIdx])}</td><td class="col-score">${row[pointsIdx]}</td>`;
                     tbody.appendChild(tr);
                 });
             }
-
             document.getElementById('archive-header-title').innerText = `${tournamentName.toUpperCase()} ARCHIVE`;
             document.getElementById('past-tournament-grid').style.display = 'none';
             document.getElementById('archive-viewer').style.display = 'block';
