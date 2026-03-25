@@ -59,7 +59,6 @@
         text-shadow: 0 2px 4px rgba(0,0,0,0.3);
       }
 
-      /* Main Tabs Navigation */
       .main-nav {
           display: flex;
           justify-content: center;
@@ -92,7 +91,6 @@
           border-color: var(--border-gold);
       }
 
-      /* Tournament Info Banner */
       #tournament-banner {
           max-width: 1100px;
           margin: 2rem auto 0 auto;
@@ -134,7 +132,7 @@
       }
 
       .content-view {
-          max-width: 1100px;
+          max-width: 1200px;
           margin: 1.5rem auto 3rem auto;
           padding: 0 1rem;
           display: none;
@@ -156,7 +154,6 @@
           animation: pulse 1.5s infinite;
       }
 
-      /* --- Leaderboard UI --- */
       .leaderboard-panel {
           background: rgba(255, 255, 255, 0.03);
           border: 1px solid rgba(255, 255, 255, 0.1);
@@ -222,24 +219,24 @@
       }
 
       .golf-table-container { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-      .golf-table { width: 100%; border-collapse: collapse; text-align: left; min-width: 550px; }
+      .golf-table { width: 100%; border-collapse: collapse; text-align: left; min-width: 900px; }
       
       .golf-table th {
           background: rgba(0,0,0,0.2);
           color: var(--text-muted);
-          font-size: 0.65rem;
+          font-size: 0.6rem;
           font-weight: 800;
           text-transform: uppercase;
-          padding: 1rem 1.5rem;
+          padding: 1rem 1.2rem;
           border-bottom: 1px solid rgba(255,255,255,0.05);
           white-space: nowrap;
-          letter-spacing: 0.1em;
+          letter-spacing: 0.05em;
       }
 
       .golf-table td { 
-          padding: 1.25rem 1.5rem; 
+          padding: 1rem 1.2rem; 
           border-bottom: 1px solid rgba(255,255,255,0.02); 
-          font-size: 1rem; 
+          font-size: 0.9rem; 
           white-space: nowrap; 
       }
 
@@ -287,7 +284,7 @@
           width: 50px; 
           height: 50px; 
           border-radius: 50%; 
-          border: 2px solid var(--border-gold); 
+          border: 1px solid var(--border-gold); 
           background: #000;
           margin-bottom: 8px;
       }
@@ -307,16 +304,17 @@
           color: var(--gold-light); 
       }
 
-      .col-pos { width: 60px; text-align: center; font-weight: 900; color: var(--border-gold); font-size: 1.1rem; }
-      .col-player { font-weight: 700; color: var(--text-main); font-size: 1rem; }
-      .col-score { width: 90px; text-align: center; font-weight: 800; font-size: 1.1rem; }
-      .col-thru { width: 80px; text-align: center; font-weight: 600; color: var(--text-muted); font-size: 0.85rem; }
+      .col-pos { width: 50px; text-align: center; font-weight: 900; color: var(--border-gold); }
+      .col-player { font-weight: 700; color: var(--text-main); width: 180px; }
+      .col-uid { font-size: 0.7rem; color: var(--text-muted); width: 100px; font-family: monospace; }
+      .col-score { width: 80px; text-align: center; font-weight: 800; }
+      .col-day { width: 70px; text-align: center; font-weight: 600; opacity: 0.8; }
+      .col-raw { width: 90px; text-align: center; font-weight: 700; color: var(--gold-light); }
 
       .score-under { color: #ff4d4d; } 
       .score-even { color: var(--golf-green-bright); } 
       .score-over { color: var(--text-main); }
 
-      /* Schedule Grid */
       .schedule-grid {
           display: grid;
           grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -369,14 +367,7 @@
       @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
       
       @media (max-width: 600px) {
-          .golf-table td, .golf-table th { padding: 0.8rem 1rem; }
-          .col-pos { width: 45px; font-size: 0.95rem; }
-          .col-player { font-size: 0.9rem; }
-          .col-score { font-size: 1.1rem; width: 75px; }
-          .col-thru { width: 60px; font-size: 0.8rem; }
           h1 { font-size: 1.8rem; }
-          .main-nav { flex-wrap: wrap; }
-          .nav-tab { padding: 6px 12px; font-size: 0.65rem; }
       }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/hashids@2.2.10/dist/hashids.min.js"></script>
@@ -420,10 +411,14 @@
                     <thead>
                         <tr>
                             <th class="col-pos">Pos</th>
-                            <th class="col-player">Player</th>
+                            <th class="col-player">Username</th>
+                            <th class="col-uid">User ID</th>
                             <th class="col-score">Total</th>
-                            <th class="col-thru">Thru</th>
-                            <th class="col-score">Today</th>
+                            <th class="col-day">Thu</th>
+                            <th class="col-day">Fri</th>
+                            <th class="col-day">Sat</th>
+                            <th class="col-day">Sun</th>
+                            <th class="col-raw">Raw Pts</th>
                         </tr>
                     </thead>
                     <tbody id="leaderboard-tbody"></tbody>
@@ -448,7 +443,6 @@
             </div>
         </div>
         
-        <!-- Historical Viewer -->
         <div id="archive-viewer" style="display: none; margin-top: 1rem;">
             <button class="back-btn" onclick="closeArchive()">← Back to Archive List</button>
             <div class="leaderboard-panel">
@@ -458,9 +452,14 @@
                         <thead>
                             <tr>
                                 <th class="col-pos">Pos</th>
-                                <th class="col-player">Player</th>
-                                <th class="col-score">Final Score</th>
-                                <th class="col-score">Raw Points</th>
+                                <th class="col-player">Username</th>
+                                <th class="col-uid">User ID</th>
+                                <th class="col-score">Total</th>
+                                <th class="col-day">Thu</th>
+                                <th class="col-day">Fri</th>
+                                <th class="col-day">Sat</th>
+                                <th class="col-day">Sun</th>
+                                <th class="col-raw">Raw Pts</th>
                             </tr>
                         </thead>
                         <tbody id="archive-tbody"></tbody>
@@ -490,11 +489,11 @@
 
         function switchView(viewName) {
             document.querySelectorAll('.content-view').forEach(v => v.classList.remove('active'));
-            document.getElementById(`view-${viewName}`).classList.add('active');
+            const view = document.getElementById(`view-${viewName}`);
+            if(view) view.classList.add('active');
             document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-            const clickedBtn = Array.from(document.querySelectorAll('.nav-tab')).find(btn => btn.innerText.toLowerCase().includes(viewName));
+            const clickedBtn = document.getElementById(`tab-${viewName}`);
             if(clickedBtn) clickedBtn.classList.add('active');
-            
             if (viewName === 'past') closeArchive();
         }
 
@@ -551,44 +550,76 @@
         }
 
         function calculateGolfScore(userPoints, allPoints) {
-            if (allPoints.length < 2) return 0;
+            if (userPoints === 0 || allPoints.length < 2) return 0;
+            if (allPoints.every(p => p === 0)) return 0;
             const sorted = [...allPoints].sort((a, b) => a - b);
             const index = sorted.indexOf(userPoints);
             const percentileRank = (index / (sorted.length - 1)) * 100;
             return Math.round((50 - percentileRank) / 6.25);
         }
 
+        function formatHandle(username) {
+            if (!username) return '';
+            let clean = username.trim();
+            if (clean.startsWith('@')) return clean;
+            return '@' + clean;
+        }
+
         function renderLeaderboard() {
             const tbody = document.getElementById('leaderboard-tbody');
             if (!tbody) return;
             tbody.innerHTML = '';
+            
             const syncedPlayers = users.filter(u => u.hasData);
             const totalPointsArray = syncedPlayers.map(u => u.actualTotalPoints);
             const todayPointsArray = syncedPlayers.map(u => u.actualTodayPoints);
+            
             const sortedTotals = [...totalPointsArray].sort((a, b) => a - b);
             const mid = Math.floor(sortedTotals.length / 2);
             const medianTotal = sortedTotals.length % 2 !== 0 ? sortedTotals[mid] : (sortedTotals[mid - 1] + sortedTotals[mid]) / 2;
-            document.getElementById('par-score-display').innerText = `EVEN LINE: ${medianTotal ? medianTotal.toFixed(1) : '-'} PTS`;
-            currentProcessedUsers = users.map(user => ({
-                ...user,
-                golfTotal: user.hasData ? calculateGolfScore(user.actualTotalPoints, totalPointsArray) : 999,
-                golfToday: user.hasData ? calculateGolfScore(user.actualTodayPoints, todayPointsArray) : 0
-            }));
+            
+            document.getElementById('par-score-display').innerText = `EVEN LINE: ${medianTotal ? medianTotal.toFixed(1) : '0.0'} PTS`;
+            
+            const today = new Date().getDay(); // 0 Sun, 1 Mon, 4 Thu, 5 Fri, 6 Sat
+
+            currentProcessedUsers = users.map(user => {
+                const golfTotal = user.hasData ? calculateGolfScore(user.actualTotalPoints, totalPointsArray) : 0;
+                const golfToday = user.hasData ? calculateGolfScore(user.actualTodayPoints, todayPointsArray) : 0;
+                
+                // Dynamically map "Today" to a specific day column
+                let thu = user.thuScore || 0, fri = user.friScore || 0, sat = user.satScore || 0, sun = user.sunScore || 0;
+                if (today === 4) thu = golfToday;
+                else if (today === 5) fri = golfToday;
+                else if (today === 6) sat = golfToday;
+                else if (today === 0) sun = golfToday;
+
+                return { ...user, golfTotal, golfToday, thu, fri, sat, sun };
+            });
+
             currentProcessedUsers.sort((a, b) => a.golfTotal - b.golfTotal);
+
             currentProcessedUsers.forEach((user, idx) => {
                 const mainTr = document.createElement('tr');
                 mainTr.className = 'main-row';
+                const handle = formatHandle(user.username);
+
                 mainTr.innerHTML = `
                     <td class="col-pos">${user.hasData ? idx + 1 : '-'}</td>
-                    <td class="col-player">@${user.username} <span class="toggle-icon">▼</span></td>
-                    <td class="col-score">${user.hasData ? formatToPar(user.golfTotal) : '-'}</td>
-                    <td class="col-thru">${user.thru || '-'}</td>
-                    <td class="col-score">${user.hasData ? formatToPar(user.golfToday) : '-'}</td>
+                    <td class="col-player">${handle} <span class="toggle-icon">▼</span></td>
+                    <td class="col-uid">${user.userId}</td>
+                    <td class="col-score">${formatToPar(user.golfTotal)}</td>
+                    <td class="col-day">${formatToPar(user.thu)}</td>
+                    <td class="col-day">${formatToPar(user.fri)}</td>
+                    <td class="col-day">${formatToPar(user.sat)}</td>
+                    <td class="col-day">${formatToPar(user.sun)}</td>
+                    <td class="col-raw">${user.actualTotalPoints.toFixed(1)}</td>
                 `;
+                
                 const draftTr = document.createElement('tr');
                 draftTr.className = 'draft-row';
-                draftTr.innerHTML = `<td colspan="5" style="padding: 0;"><div class="draft-content"></div></td>`;
+                draftTr.innerHTML = `<td colspan="9" style="padding: 0;"><div class="draft-content"></div></td>`;
                 const draftContent = draftTr.querySelector('.draft-content');
+                
                 mainTr.onclick = () => {
                     const isOpen = mainTr.classList.contains('open');
                     document.querySelectorAll('.main-row').forEach(r => { if(r !== mainTr) r.classList.remove('open'); });
@@ -651,6 +682,37 @@
             statusEl.innerHTML = '<span class="sync-dot"></span>LIVE UPDATES';
         }
 
+        function exportScoresToCSV() {
+            if (currentProcessedUsers.length === 0) return;
+            
+            const rows = [["position", "username", "user id", "total score", "thursday score", "friday score", "saturday score", "sunday score", "raw points"]];
+            currentProcessedUsers.forEach((u, index) => {
+                if (!u.hasData) return;
+                rows.push([
+                    index + 1,
+                    u.username,
+                    u.userId,
+                    u.golfTotal,
+                    u.thu,
+                    u.fri,
+                    u.sat,
+                    u.sun,
+                    u.actualTotalPoints.toFixed(1)
+                ]);
+            });
+
+            const csvContent = rows.map(e => e.join(",")).join("\n");
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const dateStr = new Date().toISOString().split('T')[0];
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            link.setAttribute("download", `golf_plug_scores_${dateStr}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
         function parseCSV(text) {
             const lines = text.split(/\r?\n/);
             return lines.map(line => {
@@ -677,12 +739,9 @@
                 if (rows.length < 2) return;
                 const headers = rows[0].map(h => h.toLowerCase().trim());
                 const dateIdx = findIndex(headers, ['date']), tournIdx = findIndex(headers, ['tourn']), courseIdx = findIndex(headers, ['course']);
-                if (dateIdx === -1 || tournIdx === -1) return;
-
                 const now = new Date();
                 const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
                 const dayOfWeek = now.getDay(); 
-                
                 let currentTournRow = null, nextTournRow = null;
                 const upcoming = [], past = [];
 
@@ -700,14 +759,9 @@
                 document.getElementById('past-tournament-grid').innerHTML = past.map(t => `<div class="schedule-card clickable" onclick="viewArchive('${t.name.replace(/'/g, "\\'")}')"><div class="card-date">${t.date}</div><div class="card-name">${t.name}</div><div class="card-course">${t.course}</div></div>`).join('');
 
                 let display = null;
-                // LOGIC FIX: On Wednesday (day 3), look ahead to the NEXT tournament starting this week.
-                if (dayOfWeek === 3 && nextTournRow) {
-                    display = { name: nextTournRow.row[tournIdx], course: nextTournRow.row[courseIdx], label: 'Live Tournament' };
-                } else if (dayOfWeek === 1 || dayOfWeek === 2) {
-                    if (currentTournRow) display = { name: currentTournRow.row[tournIdx], course: currentTournRow.row[courseIdx], label: 'Past Tournament' };
-                } else {
-                    if (currentTournRow) display = { name: currentTournRow.row[tournIdx], course: currentTournRow.row[courseIdx], label: 'Live Tournament' };
-                }
+                if (dayOfWeek === 3 && nextTournRow) display = { name: nextTournRow.row[tournIdx], course: nextTournRow.row[courseIdx], label: 'Live Tournament' };
+                else if (dayOfWeek === 1 || dayOfWeek === 2) if (currentTournRow) display = { name: currentTournRow.row[tournIdx], course: currentTournRow.row[courseIdx], label: 'Past Tournament' };
+                else if (currentTournRow) display = { name: currentTournRow.row[tournIdx], course: currentTournRow.row[courseIdx], label: 'Live Tournament' };
 
                 if (display) {
                     document.getElementById('display-tournament-name').innerText = display.name;
@@ -715,7 +769,7 @@
                     document.getElementById('display-banner-label').innerText = display.label;
                     document.getElementById('tournament-banner').style.display = 'block';
                 }
-            } catch (e) { console.error("Schedule load failed", e); }
+            } catch (e) { console.error(e); }
         }
 
         async function fetchArchiveData() {
@@ -723,23 +777,32 @@
                 const res = await fetch(config.archiveDataUrl);
                 const text = await res.text();
                 masterArchiveData = parseCSV(text);
-            } catch (e) { console.error("Archive fetch failed", e); }
+            } catch (e) { console.error(e); }
         }
 
         function viewArchive(tournamentName) {
             if (masterArchiveData.length < 2) return;
             const headers = masterArchiveData[0].map(h => h.toLowerCase().trim());
             const tournIdx = findIndex(headers, ['tourn']);
-            const posIdx = 0, userIdx = 1, scoreIdx = 3, pointsIdx = 5;
             const filtered = masterArchiveData.slice(1).filter(row => row[tournIdx] === tournamentName);
             const tbody = document.getElementById('archive-tbody');
             tbody.innerHTML = '';
             if (filtered.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:2rem; color:var(--text-muted);">No archived scores found for this event.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:2rem; color:var(--text-muted);">No archived scores found for this event.</td></tr>`;
             } else {
                 filtered.forEach(row => {
                     const tr = document.createElement('tr');
-                    tr.innerHTML = `<td class="col-pos">${row[posIdx]}</td><td class="col-player">${row[userIdx]}</td><td class="col-score">${formatToPar(row[scoreIdx])}</td><td class="col-score">${row[pointsIdx]}</td>`;
+                    tr.innerHTML = `
+                        <td class="col-pos">${row[0]}</td>
+                        <td class="col-player">${formatHandle(row[1])}</td>
+                        <td class="col-uid">${row[2]}</td>
+                        <td class="col-score">${formatToPar(row[3])}</td>
+                        <td class="col-day">${formatToPar(row[4])}</td>
+                        <td class="col-day">${formatToPar(row[5])}</td>
+                        <td class="col-day">${formatToPar(row[6])}</td>
+                        <td class="col-day">${formatToPar(row[7])}</td>
+                        <td class="col-raw">${row[8] || '-'}</td>
+                    `;
                     tbody.appendChild(tr);
                 });
             }
@@ -760,7 +823,17 @@
                 tbody.innerHTML = '';
                 rows.slice(1).forEach(row => {
                     const tr = document.createElement('tr');
-                    tr.innerHTML = `<td class="col-pos">${row[0]}</td><td class="col-player">@${row[1]}</td><td class="col-score">${formatToPar(row[3])}</td><td class="col-score">${row[5] || '-'}</td>`;
+                    tr.innerHTML = `
+                        <td class="col-pos">${row[0]}</td>
+                        <td class="col-player">${formatHandle(row[1])}</td>
+                        <td class="col-uid">${row[2] || '-'}</td>
+                        <td class="col-score">${formatToPar(row[3])}</td>
+                        <td class="col-day">${formatToPar(row[4])}</td>
+                        <td class="col-day">${formatToPar(row[5])}</td>
+                        <td class="col-day">${formatToPar(row[6])}</td>
+                        <td class="col-day">${formatToPar(row[7])}</td>
+                        <td class="col-raw">${row[8] || '-'}</td>
+                    `;
                     tbody.appendChild(tr);
                 });
                 document.getElementById('archive-header-title').innerText = "LOCAL FILE ARCHIVE";
