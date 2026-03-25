@@ -321,8 +321,9 @@
         const MAX_SALARY = 50000;
 
         function generateRequestToken() {
+            const timestampMs = Date.now();
             const hasher = new Hashids("realwebapp", 16);
-            return hasher.encode(Date.now());
+            return hasher.encode(timestampMs);
         }
 
         function base64ToText(base64String) {
@@ -338,10 +339,10 @@
         async function fetchBatchViaWorker(urls) {
             try {
                 const queryParams = new URLSearchParams();
-                urls.forEach(url => queryParams.append('url', url));
-                const urlString = config.workerProxy + '?' + queryParams.toString();
+                for (const url of urls) queryParams.append('url', url);
+                const urlString = config.workerProxy.endsWith('?') ? config.workerProxy + queryParams.toString() : config.workerProxy + '?' + queryParams.toString();
                 
-                const res = await fetch(urlString, {
+                const fetchOptions = {
                     headers: {
                         'real-auth-info': config.REAL_AUTH_TOKEN,
                         'real-device-name': 'Chrome on Web',
@@ -350,12 +351,17 @@
                         'real-request-token': generateRequestToken(),
                         'real-version': config.REAL_VERSION
                     }
-                });
+                };
                 
-                if (!res.ok) throw new Error(`Worker HTTP ${res.status}`);
+                const res = await fetch(urlString, fetchOptions);
+                if (!res.ok) {
+                    const text = await res.text();
+                    console.error(`[Worker Proxy] Returned Error ${res.status}:`, text);
+                    throw new Error(`Worker returned HTTP ${res.status}`);
+                }
                 return await res.json();
             } catch (err) {
-                console.error("Worker fetch failed:", err);
+                console.error("[Worker Proxy] Fetch completely failed:", err);
                 throw err;
             }
         }
@@ -538,7 +544,6 @@
                 const parsedData = parseCSV(text);
                 if (parsedData.length < 2) return [];
 
-                // More robust header matching
                 const headers = parsedData[0].map(h => h.toLowerCase().trim());
                 const uIdx = headers.findIndex(h => h === 'username');
                 const uidIdx = headers.findIndex(h => h === 'user id');
