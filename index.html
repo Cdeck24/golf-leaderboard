@@ -6,134 +6,217 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
       :root {
-        --bg-navy: #0a192f;
-        --bg-navy-light: #112240;
-        --bg-card: #1d2d50;
-        --text-main: #ccd6f6;
-        --text-muted: #8892b0;
-        --border-subtle: rgba(255, 255, 255, 0.1);
-        --border-gold: #d4af37;
+        /* Professional Golf Palette */
+        --golf-green-dark: #0b3d2c; /* Classic Masters Green */
+        --golf-green-mid: #145943;
+        --golf-green-bright: #2ecc71;
+        --golf-fairway: #1a3a2a;
+        --golf-sand: #fdf5e6;
+        --text-main: #f8f9fa;
+        --text-muted: #a0aec0;
+        --border-gold: #c5a059;
         --gold-light: #f3e5ab;
-        --gold-mid: #d4af37;
         --danger: #ff4d4d;
+        --bg-body: #05140d;
       }
 
       * { box-sizing: border-box; margin: 0; padding: 0; }
 
       body {
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-        background-color: var(--bg-navy);
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        background-color: var(--bg-body);
         color: var(--text-main);
         line-height: 1.6;
+        background-image: radial-gradient(circle at top right, #0b3d2c 0%, #05140d 60%);
+        min-height: 100vh;
       }
 
       header {
-        background: linear-gradient(180deg, var(--bg-navy-light) 0%, var(--bg-navy) 100%);
-        padding: 1.5rem;
-        border-bottom: 1px solid var(--border-gold);
+        background: linear-gradient(180deg, var(--golf-green-dark) 0%, rgba(5, 20, 13, 0.8) 100%);
+        padding: 2.5rem 1.5rem;
+        border-bottom: 2px solid var(--border-gold);
         text-align: center;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.5);
       }
 
-      h1 { color: var(--gold-light); font-size: 1.8rem; margin-bottom: 0.5rem; }
+      h1 { 
+        color: var(--gold-light); 
+        font-size: 2.2rem; 
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        text-transform: uppercase;
+        margin-bottom: 0.5rem;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+      }
 
       .sub-nav-container {
         display: flex;
         justify-content: center;
         gap: 1rem;
-        margin-top: 1rem;
+        margin-top: 1.5rem;
       }
 
       .sub-nav-btn {
-        background: transparent;
-        border: none;
+        background: rgba(197, 160, 89, 0.1);
+        border: 1px solid var(--border-gold);
         color: var(--gold-light);
-        font-size: 1rem;
-        font-weight: 600;
-        padding: 0.5rem 1rem;
-        border-bottom: 2px solid var(--gold-mid);
+        font-size: 0.85rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        padding: 0.6rem 1.5rem;
+        border-radius: 4px;
+        cursor: default;
       }
 
       .content-view {
-          max-width: 1200px;
-          margin: 2rem auto;
-          padding: 0 1rem;
-          animation: fadeIn 0.3s ease-out;
+          max-width: 1100px;
+          margin: 3rem auto;
+          padding: 0 1.5rem;
+          animation: fadeIn 0.4s ease-out;
       }
 
       #loading-indicator {
           text-align: center;
-          padding: 2rem;
-          color: var(--gold-mid);
-          font-weight: bold;
+          padding: 3rem;
+          color: var(--gold-light);
+          font-weight: 700;
+          font-size: 1.1rem;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
           animation: pulse 1.5s infinite;
-          display: none;
       }
 
-      /* --- Leaderboard & Draft Dropdowns --- */
+      /* --- Leaderboard UI --- */
       .leaderboard-panel {
-          background: var(--bg-navy-light);
-          border: 1px solid var(--border-subtle);
-          border-radius: 12px;
+          background: rgba(255, 255, 255, 0.03);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 16px;
           overflow: hidden;
-          margin-top: 1rem;
-          box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+          box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+          backdrop-filter: blur(10px);
       }
 
       .leaderboard-header {
-          background: linear-gradient(to right, #0b3d2c, #145943);
+          background: linear-gradient(90deg, #0b3d2c, #1a4d3a);
           color: #fff;
-          padding: 1rem 1.5rem;
-          font-weight: 700;
-          font-size: 1.2rem;
-          border-bottom: 2px solid var(--border-gold);
+          padding: 1.25rem 2rem;
+          font-weight: 800;
+          font-size: 1.1rem;
+          border-bottom: 1px solid var(--border-gold);
           display: flex;
           justify-content: space-between;
           align-items: center;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
       }
 
       .golf-table-container { overflow-x: auto; }
       .golf-table { width: 100%; border-collapse: collapse; text-align: left; }
+      
       .golf-table th {
-          background: rgba(0,0,0,0.4);
+          background: rgba(0,0,0,0.3);
           color: var(--text-muted);
-          font-size: 0.75rem;
+          font-size: 0.7rem;
+          font-weight: 800;
           text-transform: uppercase;
-          padding: 0.75rem 1rem;
-          border-bottom: 1px solid var(--border-subtle);
+          padding: 1rem 1.5rem;
+          border-bottom: 1px solid rgba(255,255,255,0.1);
           white-space: nowrap;
+          letter-spacing: 0.1em;
       }
-      .golf-table td { padding: 1rem; border-bottom: 1px solid rgba(255,255,255,0.03); font-size: 0.95rem; white-space: nowrap; }
 
-      .main-row { cursor: pointer; transition: background 0.2s; }
-      .main-row:hover { background: rgba(255,255,255,0.08) !important; }
-      .main-row.open .toggle-icon { transform: rotate(180deg); }
-      .toggle-icon { font-size: 0.7rem; color: var(--text-muted); transition: transform 0.3s ease; display: inline-block; float: right; margin-top: 4px; }
+      .golf-table td { 
+          padding: 1.25rem 1.5rem; 
+          border-bottom: 1px solid rgba(255,255,255,0.05); 
+          font-size: 1rem; 
+          white-space: nowrap; 
+      }
 
-      .draft-row { display: none; background: rgba(0,0,0,0.3); }
+      .main-row { cursor: pointer; transition: all 0.2s ease; }
+      .main-row:hover { background: rgba(255, 255, 255, 0.07) !important; }
+      .main-row.open { background: rgba(197, 160, 89, 0.08); }
+      
+      .toggle-icon { 
+          font-size: 0.6rem; 
+          color: var(--gold-light); 
+          transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+          display: inline-block; 
+          margin-left: 10px;
+          opacity: 0.6;
+      }
+      .main-row.open .toggle-icon { transform: rotate(180deg); opacity: 1; }
+
+      .draft-row { display: none; background: rgba(0,0,0,0.4); }
       .draft-row.open { display: table-row; }
       
-      .draft-content { padding: 1rem 2rem; min-height: 100px; }
-      .draft-item { display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+      .draft-content { 
+          padding: 1.5rem 3rem; 
+          min-height: 100px;
+          border-left: 4px solid var(--border-gold);
+      }
+
+      .draft-item { 
+          display: flex; 
+          justify-content: space-between; 
+          align-items: center; 
+          padding: 0.75rem 0; 
+          border-bottom: 1px solid rgba(255,255,255,0.05); 
+      }
       .draft-item:last-child { border-bottom: none; }
-      .draft-item-info { display: flex; align-items: center; gap: 12px; }
-      .draft-item-avatar { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--border-subtle); background: #000; }
-      .draft-item-name { color: var(--text-main); font-weight: 500; font-size: 0.9rem; }
-      .draft-item-score { font-weight: 700; font-size: 0.95rem; color: var(--gold-mid); }
-      .draft-item-mult { font-size: 0.65rem; background: var(--bg-navy); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-gold); color: var(--gold-light); font-weight: bold; }
+      
+      .draft-item-info { display: flex; align-items: center; gap: 16px; }
+      .draft-item-avatar { 
+          width: 40px; 
+          height: 40px; 
+          border-radius: 50%; 
+          border: 2px solid var(--golf-green-dark); 
+          background: #000;
+          box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+      }
+      .draft-item-name { 
+          color: var(--text-main); 
+          font-weight: 600; 
+          font-size: 0.95rem; 
+      }
+      .draft-item-score { 
+          font-weight: 800; 
+          font-size: 1.1rem; 
+          color: var(--gold-light); 
+      }
+      .draft-item-mult { 
+          font-size: 0.6rem; 
+          background: var(--golf-green-dark); 
+          padding: 2px 8px; 
+          border-radius: 100px; 
+          border: 1px solid var(--border-gold); 
+          color: var(--gold-light); 
+          font-weight: 900;
+          text-transform: uppercase;
+      }
 
-      .col-pos { width: 60px; text-align: center; font-weight: 700; color: var(--text-muted); }
-      .col-player { font-weight: 600; color: var(--text-main); }
-      .col-score { width: 80px; text-align: center; font-weight: 700; font-size: 1.1rem; }
-      .col-thru { width: 80px; text-align: center; font-weight: 500; color: var(--text-muted); }
+      .col-pos { width: 80px; text-align: center; font-weight: 800; color: var(--gold-light); font-size: 1.1rem; }
+      .col-player { font-weight: 700; color: var(--text-main); font-size: 1.1rem; }
+      .col-score { width: 100px; text-align: center; font-weight: 800; font-size: 1.2rem; border-left: 1px solid rgba(255,255,255,0.05); }
+      .col-thru { width: 90px; text-align: center; font-weight: 600; color: var(--text-muted); font-size: 0.85rem; }
 
-      .score-under { color: #ff4d4d; }
-      .score-even { color: #2ecc71; }
+      .score-under { color: #ff4d4d; } /* Traditional Leaderboard Red */
+      .score-even { color: var(--golf-green-bright); }
       .score-over { color: var(--text-main); }
 
-      @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-      @keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
+      @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+      @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
+      
+      /* Mobile optimization */
+      @media (max-width: 600px) {
+          .golf-table td, .golf-table th { padding: 0.75rem 1rem; }
+          .col-pos { width: 50px; font-size: 0.9rem; }
+          .col-player { font-size: 0.9rem; }
+          .col-score { font-size: 1rem; width: 70px; }
+          .draft-content { padding: 1rem 1.5rem; }
+          h1 { font-size: 1.6rem; }
+      }
     </style>
-    <!-- Required for Hashids Token Generation -->
     <script src="https://cdn.jsdelivr.net/npm/hashids@2.2.10/dist/hashids.min.js"></script>
 </head>
 <body>
@@ -141,27 +224,27 @@
     <header>
         <h1>Golf Plug Leaderboard</h1>
         <div class="sub-nav-container">
-            <button class="sub-nav-btn">Live Leaderboard</button>
+            <div class="sub-nav-btn">Live Tournament Rankings</div>
         </div>
     </header>
 
-    <div id="loading-indicator">Syncing Live Data...</div>
+    <div id="loading-indicator">Syncing Tournament Field...</div>
 
     <div id="leaderboard-view" class="content-view">
         <div class="leaderboard-panel">
             <div class="leaderboard-header">
-                <span>🏆 Live Tournament Rankings</span>
-                <span id="sync-status" style="font-size: 0.9rem; font-weight: 400; color: var(--gold-light);">Syncing...</span>
+                <span><span style="margin-right: 8px;">⛳</span>Live Standings</span>
+                <span id="sync-status" style="font-size: 0.75rem; font-weight: 700; color: var(--gold-light); opacity: 0.8;">Loading...</span>
             </div>
             <div class="golf-table-container">
                 <table class="golf-table">
                     <thead>
                         <tr>
-                            <th class="col-pos">POS</th>
-                            <th class="col-player">PLAYER</th>
-                            <th class="col-score">TOTAL</th>
-                            <th class="col-thru">THRU</th>
-                            <th class="col-score">TODAY</th>
+                            <th class="col-pos">Pos</th>
+                            <th class="col-player">Player</th>
+                            <th class="col-score">Total</th>
+                            <th class="col-thru">Thru</th>
+                            <th class="col-score">Today</th>
                         </tr>
                     </thead>
                     <tbody id="leaderboard-tbody"></tbody>
@@ -242,7 +325,7 @@
             if (!tbody) return;
             tbody.innerHTML = '';
 
-            // Sort by score
+            // Sort by score (asc)
             const sortedUsers = [...users].sort((a, b) => (parseFloat(a.totalScore) || 0) - (parseFloat(b.totalScore) || 0));
 
             sortedUsers.forEach((user) => {
@@ -286,14 +369,14 @@
 
         function renderDraft(lineupData, container) {
             if (!lineupData || lineupData.length === 0) {
-                container.innerHTML = '<div style="text-align:center; padding: 2rem; color: var(--text-muted);">No golfers drafted or live sync failed.</div>';
+                container.innerHTML = '<div style="text-align:center; padding: 2rem; color: var(--text-muted); font-size: 0.9rem; font-style: italic;">No active lineup found or live sync pending...</div>';
                 return;
             }
 
             container.innerHTML = lineupData.map(g => `
                 <div class="draft-item">
                     <div class="draft-item-info">
-                        <img src="${g.avatar ? `https://media.realapp.link/assets/players/default/large/${g.avatar}.webp` : 'https://placehold.co/40x40/222/fff?text=?'}" class="draft-item-avatar" onerror="this.src='https://placehold.co/34x34/111/fff?text=?'">
+                        <img src="${g.avatar ? `https://media.realapp.link/assets/players/default/large/${g.avatar}.webp` : 'https://placehold.co/40x40/222/fff?text=?'}" class="draft-item-avatar" onerror="this.src='https://placehold.co/40x40/111/fff?text=?'">
                         <div>
                             <span class="draft-item-name">${g.displayName}</span>
                             <span class="draft-item-mult" style="margin-left: 8px;">${g.multiplierDisplay || (g.multiplier + 'x')}</span>
@@ -330,18 +413,18 @@
                             user.totalScore = data.info?.rankDisplayInfos?.[0]?.scoreDisplay || '0';
                             user.rank = data.info?.rankDisplayInfos?.[0]?.rankDisplay || '-';
                             user.lineup = data.lineup || [];
-                            user.todayScore = user.lineup.reduce((acc, g) => acc + (g.score || 0), 0);
+                            user.todayScore = user.lineup.reduce((acc, g) => acc + (parseFloat(g.score) || 0), 0);
                         }
                         loaded++;
                     });
-                    if (statusEl) statusEl.innerText = `Syncing... ${loaded}/${chunk.length + queue.length + loaded}`;
+                    if (statusEl) statusEl.innerText = `SYNCING... ${loaded}/${chunk.length + queue.length + loaded}`;
                     renderLeaderboard();
                 } catch (e) {
                     console.error("Batch load failed", e);
                 }
                 await new Promise(r => setTimeout(r, 300));
             }
-            if (statusEl) statusEl.innerText = 'Live Sync';
+            if (statusEl) statusEl.innerText = '● LIVE SYNC';
         }
 
         function parseCSV(text) {
