@@ -41,13 +41,13 @@
         font-weight: 900;
         letter-spacing: 0.05em;
         text-transform: uppercase;
-        margin-bottom: 1rem;
+        margin-bottom: 1.25rem;
       }
 
       .main-nav {
           display: grid;
           grid-template-columns: repeat(3, 1fr);
-          gap: 6px;
+          gap: 8px;
           margin-bottom: 1rem;
           max-width: 600px;
           margin-left: auto;
@@ -58,12 +58,13 @@
           background: rgba(255, 255, 255, 0.05);
           border: 1px solid rgba(197, 160, 89, 0.3);
           color: var(--text-muted);
-          padding: 10px 4px;
+          padding: 12px 4px;
           font-size: 0.65rem;
           font-weight: 800;
           text-transform: uppercase;
-          border-radius: 4px;
+          border-radius: 6px;
           cursor: pointer;
+          transition: all 0.2s ease;
       }
 
       .nav-tab.active {
@@ -73,9 +74,9 @@
       }
 
       #tournament-banner {
-          max-width: 1100px;
+          max-width: 800px;
           margin: 1.5rem auto 0 auto;
-          padding: 0 0.75rem;
+          padding: 0 1rem;
           display: none;
       }
 
@@ -83,23 +84,25 @@
           background: rgba(255, 255, 255, 0.03);
           border: 1px solid rgba(255, 255, 255, 0.1);
           border-radius: 12px;
-          padding: 1rem;
+          padding: 1.25rem;
           text-align: center;
+          box-shadow: 0 10px 30px rgba(0,0,0,0.3);
       }
 
-      .banner-label { font-size: 0.55rem; text-transform: uppercase; letter-spacing: 0.15em; color: var(--gold-light); font-weight: 700; }
-      .banner-name { font-size: 1.1rem; font-weight: 800; color: #fff; margin: 0.25rem 0; line-height: 1.2; }
-      .banner-course { font-size: 0.75rem; color: var(--text-muted); }
+      .banner-label { font-size: 0.55rem; text-transform: uppercase; letter-spacing: 0.2em; color: var(--gold-light); font-weight: 800; margin-bottom: 0.5rem; }
+      .banner-name { font-size: 1.3rem; font-weight: 900; color: #fff; margin-bottom: 0.25rem; line-height: 1.2; }
+      .banner-course { font-size: 0.85rem; color: var(--text-muted); font-weight: 500; }
 
       .content-view {
           max-width: 800px;
           margin: 1rem auto 3rem auto;
-          padding: 0 0.75rem;
+          padding: 0 1rem;
           display: none;
       }
 
       .content-view.active { display: block; animation: fadeIn 0.4s ease-out; }
 
+      /* --- Leaderboard Tables --- */
       .leaderboard-panel {
           background: rgba(255, 255, 255, 0.03);
           border: 1px solid rgba(255, 255, 255, 0.1);
@@ -120,7 +123,7 @@
           border: 1px solid var(--border-gold);
           color: var(--gold-light);
           font-size: 0.6rem;
-          padding: 6px 10px;
+          padding: 6px 12px;
           border-radius: 4px;
           font-weight: 800;
           text-transform: uppercase;
@@ -130,39 +133,32 @@
       .sync-dot { display: inline-block; width: 6px; height: 6px; background: var(--golf-green-bright); border-radius: 50%; margin-right: 4px; }
 
       .golf-table { width: 100%; border-collapse: collapse; text-align: left; table-layout: fixed; }
-      
       .golf-table th {
           background: rgba(0,0,0,0.4);
           color: var(--text-muted);
           font-size: 0.6rem;
           font-weight: 800;
           text-transform: uppercase;
-          padding: 0.75rem 1rem;
+          padding: 0.85rem 1rem;
           border-bottom: 1px solid rgba(255,255,255,0.05);
       }
+      .golf-table td { padding: 1.1rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.02); font-size: 0.95rem; }
 
-      .golf-table td { padding: 1rem; border-bottom: 1px solid rgba(255,255,255,0.02); font-size: 0.95rem; }
-
-      /* Column Widths */
       .col-pos { width: 50px; text-align: center; color: var(--border-gold); font-weight: 900; }
-      .col-player { width: auto; font-weight: 700; }
-      .col-total { width: 70px; text-align: center; font-weight: 800; }
-      .col-today { width: 70px; text-align: center; font-weight: 800; }
+      .col-player { font-weight: 700; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .col-score { width: 70px; text-align: center; font-weight: 800; font-size: 1rem; }
 
       .main-row { cursor: pointer; transition: background 0.2s; }
       .main-row:hover { background: rgba(255, 255, 255, 0.05); }
       .main-row.open { background: rgba(197, 160, 89, 0.1); }
-      
       .toggle-icon { font-size: 0.5rem; color: var(--text-muted); margin-left: 4px; opacity: 0.5; transition: transform 0.3s; }
       .main-row.open .toggle-icon { transform: rotate(180deg); }
 
-      /* Expanded Content Styling */
+      /* Expanded Scorecard */
       .draft-row { display: none; background: rgba(0,0,0,0.5); }
       .draft-row.open { display: table-row; }
-      
       .expanded-container { padding: 1.25rem; border-left: 3px solid var(--border-gold); }
-
-      /* Round Breakdown Scorecard */
+      
       .round-breakdown {
           display: grid;
           grid-template-columns: repeat(4, 1fr);
@@ -181,13 +177,46 @@
       .draft-list::-webkit-scrollbar { display: none; }
 
       .draft-item { 
-          flex: 0 0 100px; display: flex; flex-direction: column; align-items: center; text-align: center;
-          background: rgba(255, 255, 255, 0.03); padding: 10px 6px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.05);
+          flex: 0 0 110px; display: flex; flex-direction: column; align-items: center; text-align: center;
+          background: rgba(255, 255, 255, 0.03); padding: 12px 8px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.05);
       }
+      .draft-item-avatar { width: 50px; height: 50px; border-radius: 50%; border: 2px solid var(--border-gold); background: #000; margin-bottom: 8px; }
+      .draft-item-name { color: var(--text-main); font-weight: 700; font-size: 0.7rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; }
+      .draft-item-score { font-weight: 800; font-size: 0.9rem; color: var(--gold-light); }
+
+      /* --- Schedule & Archive Cards --- */
+      .schedule-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100%, 1fr)); gap: 12px; }
       
-      .draft-item-avatar { width: 45px; height: 45px; border-radius: 50%; border: 1px solid var(--border-gold); background: #000; margin-bottom: 6px; }
-      .draft-item-name { color: var(--text-main); font-weight: 700; font-size: 0.65rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; }
-      .draft-item-score { font-weight: 800; font-size: 0.85rem; color: var(--gold-light); }
+      .schedule-card {
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 12px;
+          padding: 1.25rem;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          position: relative;
+          display: flex;
+          flex-direction: column;
+      }
+      .schedule-card:hover { 
+          background: rgba(255, 255, 255, 0.08); 
+          border-color: var(--border-gold); 
+          transform: translateY(-2px); 
+      }
+      .schedule-card.clickable::after {
+          content: "VIEW SCORES →";
+          position: absolute;
+          bottom: 12px;
+          right: 15px;
+          font-size: 0.55rem;
+          font-weight: 800;
+          color: var(--gold-light);
+          letter-spacing: 0.05em;
+      }
+
+      .card-date { font-size: 0.65rem; color: var(--gold-light); font-weight: 800; text-transform: uppercase; margin-bottom: 0.5rem; letter-spacing: 0.05em; }
+      .card-name { font-size: 1.1rem; font-weight: 900; color: #fff; margin-bottom: 0.25rem; line-height: 1.2; }
+      .card-course { font-size: 0.8rem; color: var(--text-muted); font-weight: 500; }
 
       .score-under { color: #ff4d4d; } 
       .score-even { color: var(--golf-green-bright); } 
@@ -198,10 +227,10 @@
       @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
       
       @media (max-width: 600px) {
-          h1 { font-size: 1.4rem; }
+          h1 { font-size: 1.5rem; }
           .golf-table th, .golf-table td { padding: 0.75rem 0.5rem; }
           .col-pos { width: 40px; }
-          .col-total, .col-today { width: 60px; }
+          .col-score { width: 65px; }
       }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/hashids@2.2.10/dist/hashids.min.js"></script>
@@ -220,17 +249,18 @@
     <div id="tournament-banner">
         <div class="banner-content">
             <div class="banner-label" id="display-banner-label">Tournament Status</div>
-            <div class="banner-name" id="display-tournament-name">Loading Schedule...</div>
+            <div class="banner-name" id="display-tournament-name">Loading...</div>
             <div class="banner-course" id="display-course-name">-</div>
         </div>
     </div>
 
-    <div id="loading-indicator">Syncing Live Drafts...</div>
+    <div id="loading-indicator">Syncing Tournament Data...</div>
 
+    <!-- LIVE VIEW -->
     <div id="view-live" class="content-view active">
         <div class="leaderboard-panel">
             <div class="leaderboard-header">
-                <span style="font-weight: 800; font-size: 0.75rem;"><span style="margin-right: 6px;">⛳</span>STANDINGS</span>
+                <span style="font-weight: 900; font-size: 0.75rem; letter-spacing: 0.05em;"><span style="margin-right: 6px;">⛳</span>STANDINGS</span>
                 <div style="display:flex; align-items:center; gap:10px;">
                     <button class="export-btn" onclick="exportScoresToCSV()">Export</button>
                     <div class="status-text">
@@ -244,8 +274,8 @@
                     <tr>
                         <th class="col-pos">Pos</th>
                         <th class="col-player">Player</th>
-                        <th class="col-total">Total</th>
-                        <th class="col-today">Today</th>
+                        <th class="col-score">Total</th>
+                        <th class="col-score">Today</th>
                     </tr>
                 </thead>
                 <tbody id="leaderboard-tbody"></tbody>
@@ -253,30 +283,28 @@
         </div>
     </div>
 
+    <!-- UPCOMING VIEW -->
     <div id="view-upcoming" class="content-view">
-        <div class="leaderboard-panel"><div class="leaderboard-header">Upcoming Schedule</div></div>
-        <div class="schedule-grid" id="upcoming-list" style="display:grid; gap:10px; margin-top:10px;"></div>
+        <div class="schedule-grid" id="upcoming-list"></div>
     </div>
 
+    <!-- PAST VIEW -->
     <div id="view-past" class="content-view">
-        <div class="leaderboard-panel">
-            <div class="leaderboard-header">
-                <span>Archives</span>
-                <label for="archive-upload" class="export-btn">Upload CSV</label>
-                <input type="file" id="archive-upload" style="display:none;" accept=".csv" onchange="handleArchiveUpload(event)">
-            </div>
-        </div>
-        <div id="archive-viewer" style="display:none; margin-top:1rem;">
-            <div style="margin-bottom:0.5rem; color:var(--gold-light); font-size:0.6rem; font-weight:800;" onclick="closeArchive()">← BACK</div>
+        <div id="archive-viewer" style="display:none; margin-top:0;">
+            <div style="margin-bottom:1rem; color:var(--gold-light); font-size:0.7rem; font-weight:800; cursor:pointer;" onclick="closeArchive()">← BACK TO ARCHIVES</div>
             <div class="leaderboard-panel">
-                <div class="leaderboard-header" id="archive-header-title">ARCHIVE</div>
+                <div class="leaderboard-header" id="archive-header-title">ARCHIVE DATA</div>
                 <table class="golf-table">
-                    <thead><tr><th class="col-pos">Pos</th><th class="col-player">Player</th><th class="col-total">Final</th><th class="col-today">Today</th></tr></thead>
+                    <thead><tr><th class="col-pos">Pos</th><th class="col-player">Player</th><th class="col-score">Final</th><th class="col-score">Points</th></tr></thead>
                     <tbody id="archive-tbody"></tbody>
                 </table>
             </div>
         </div>
-        <div id="past-tournament-grid" style="display:grid; gap:10px; margin-top:10px;"></div>
+        <div id="past-tournament-grid" class="schedule-grid"></div>
+        <div style="margin-top: 2rem; text-align: center;">
+            <label for="archive-upload" class="export-btn" style="padding: 10px 20px;">Upload Custom CSV</label>
+            <input type="file" id="archive-upload" style="display:none;" accept=".csv" onchange="handleArchiveUpload(event)">
+        </div>
     </div>
 
     <script>
@@ -298,7 +326,8 @@
             document.querySelectorAll('.content-view').forEach(v => v.classList.remove('active'));
             document.getElementById(`view-${viewName}`).classList.add('active');
             document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-            document.getElementById(`tab-${viewName}`).classList.add('active');
+            const clickedBtn = document.getElementById(`tab-${viewName}`);
+            if(clickedBtn) clickedBtn.classList.add('active');
             if (viewName === 'past') closeArchive();
         }
 
@@ -317,6 +346,7 @@
 
         function calculateGolfScore(userPoints, allPoints) {
             if (userPoints === 0 || allPoints.length < 2) return 0;
+            if (allPoints.every(p => p === 0)) return 0;
             const sorted = [...allPoints].sort((a, b) => a - b);
             const index = sorted.indexOf(userPoints);
             const percentileRank = (index / (sorted.length - 1)) * 100;
@@ -337,13 +367,13 @@
             const medianTotal = sortedTotals.length % 2 !== 0 ? sortedTotals[mid] : (sortedTotals[mid - 1] + sortedTotals[mid]) / 2;
             document.getElementById('par-score-display').innerText = `EVEN: ${medianTotal ? medianTotal.toFixed(1) : '0.0'} PTS`;
             
-            const todayIdx = new Date().getDay(); // 0 Sun, 4 Thu
+            const todayIdx = new Date().getDay(); 
 
             currentProcessedUsers = users.map(user => {
                 const golfTotal = user.actualTotalPoints > 0 ? calculateGolfScore(user.actualTotalPoints, totalPointsArray) : 0;
                 const golfToday = user.actualTodayPoints > 0 ? calculateGolfScore(user.actualTodayPoints, todayPointsArray) : 0;
                 
-                let rounds = { thu: user.thuScore || 0, fri: user.friScore || 0, sat: user.satScore || 0, sun: user.sunScore || 0 };
+                let rounds = { thu: 0, fri: 0, sat: 0, sun: 0 };
                 if (todayIdx === 4) rounds.thu = golfToday;
                 else if (todayIdx === 5) rounds.fri = golfToday;
                 else if (todayIdx === 6) rounds.sat = golfToday;
@@ -362,8 +392,8 @@
                 mainTr.innerHTML = `
                     <td class="col-pos">${user.hasData ? idx + 1 : '-'}</td>
                     <td class="col-player">${handle} <span class="toggle-icon">▼</span></td>
-                    <td class="col-total">${formatToPar(user.golfTotal)}</td>
-                    <td class="col-today">${formatToPar(user.golfToday)}</td>
+                    <td class="col-score">${formatToPar(user.golfTotal)}</td>
+                    <td class="col-score">${formatToPar(user.golfToday)}</td>
                 `;
                 
                 const draftTr = document.createElement('tr');
@@ -410,13 +440,69 @@
             `).join('');
         }
 
+        async function fetchBatchViaWorker(urls) {
+            const query = new URLSearchParams(); urls.forEach(u => query.append('url', u));
+            const fetchOptions = { headers: { 'real-auth-info': config.REAL_AUTH_TOKEN, 'real-device-name': 'Chrome', 'real-device-type': 'desktop_web', 'real-device-uuid': DEVICE_UUID, 'real-request-token': new Hashids("realwebapp", 16).encode(Date.now()), 'real-version': config.REAL_VERSION } };
+            const res = await fetch(`${config.workerProxy}?${query.toString()}`, fetchOptions);
+            return await res.json();
+        }
+
+        function base64ToText(b) { try { return new TextDecoder().decode(Uint8Array.from(atob(b), c => c.charCodeAt(0))); } catch(e) { return ''; } }
+
+        function parseCSV(t) { return t.split(/\r?\n/).map(l => { const v = []; let c = '', q = false; for(let i=0; i<l.length; i++) { if(l[i]==='"' && l[i-1]!=='\\') q=!q; else if(l[i]===',' && !q) { v.push(c.trim()); c=''; } else c+=l[i]; } v.push(c.trim()); return v; }).filter(r => r.length > 1); }
+
+        async function fetchTournamentSchedule() {
+            try {
+                const res = await fetch(config.scheduleUrl);
+                const rows = parseCSV(await res.text());
+                const now = new Date(); const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                const day = now.getDay(); const upcoming = [], past = [];
+                let current = null, next = null;
+
+                for (let i = 1; i < rows.length; i++) {
+                    const r = rows[i]; const parts = (r[0] || '').split('/'); if (parts.length < 2) continue;
+                    const start = new Date(today.getFullYear(), parseInt(parts[0]) - 1, parseInt(parts[1]));
+                    const obj = { name: r[1], course: r[2] || '-', date: r[0], start };
+                    if (start <= today) { current = obj; past.unshift(obj); } else { if (!next) next = obj; upcoming.push(obj); }
+                }
+
+                document.getElementById('upcoming-list').innerHTML = upcoming.map(t => `<div class="schedule-card"><div class="card-date">${t.date}</div><div class="card-name">${t.name}</div><div class="card-course">${t.course}</div></div>`).join('');
+                document.getElementById('past-tournament-grid').innerHTML = past.map(t => `<div class="schedule-card clickable" onclick="viewArchive('${t.name.replace(/'/g, "\\'")}')"><div class="card-date">${t.date}</div><div class="card-name">${t.name}</div><div class="card-course">${t.course}</div></div>`).join('');
+
+                let d = (day === 3 && next) ? { ...next, label: 'Live Tournament' } : (day === 1 || day === 2) ? { ...current, label: 'Past Tournament' } : { ...current, label: 'Live Tournament' };
+                if (d && d.name) {
+                    document.getElementById('display-tournament-name').innerText = d.name;
+                    document.getElementById('display-course-name').innerText = d.course;
+                    document.getElementById('display-banner-label').innerText = d.label;
+                    document.getElementById('tournament-banner').style.display = 'block';
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        async function fetchArchiveData() { try { masterArchiveData = parseCSV(await (await fetch(config.archiveDataUrl)).text()); } catch (e) {} }
+
+        function viewArchive(name) {
+            const filtered = masterArchiveData.slice(1).filter(r => r[9] === name);
+            const tbody = document.getElementById('archive-tbody');
+            tbody.innerHTML = filtered.length ? filtered.map(r => `<tr><td class="col-pos">${r[0]}</td><td class="col-player">${r[1].startsWith('@')?r[1]:'@'+r[1]}</td><td class="col-score">${formatToPar(r[3])}</td><td class="col-score">${r[8]}</td></tr>`).join('') : '<tr><td colspan="4" style="text-align:center; padding:2rem; color:var(--text-muted);">No archive data for this event.</td></tr>';
+            document.getElementById('archive-header-title').innerText = `${name.toUpperCase()} ARCHIVE`;
+            document.getElementById('past-tournament-grid').style.display = 'none';
+            document.getElementById('archive-viewer').style.display = 'block';
+        }
+
+        function handleArchiveUpload(e) {
+            const r = new FileReader(); r.onload = (ev) => {
+                const rows = parseCSV(ev.target.result);
+                document.getElementById('archive-tbody').innerHTML = rows.slice(1).map(r => `<tr><td class="col-pos">${r[0]}</td><td class="col-player">${r[1].startsWith('@')?r[1]:'@'+r[1]}</td><td class="col-score">${formatToPar(r[3])}</td><td class="col-score">${r[8]}</td></tr>`).join('');
+                document.getElementById('archive-header-title').innerText = "LOCAL FILE";
+                document.getElementById('past-tournament-grid').style.display = 'none';
+                document.getElementById('archive-viewer').style.display = 'block';
+            }; r.readAsText(e.target.files[0]);
+        }
+
         async function loadAllUserScores() {
-            const queue = users.filter(u => u.golfId && u.userId).map(u => ({ 
-                url: `https://web.realsports.io/games/playerratingcontest/${u.golfId}/view/${u.userId}?contestType=sport&source=home`, user: u 
-            }));
-            const chunkSize = 3;
-            let loaded = 0;
-            const statusEl = document.getElementById('sync-status');
+            const queue = users.filter(u => u.golfId && u.userId).map(u => ({ url: `https://web.realsports.io/games/playerratingcontest/${u.golfId}/view/${u.userId}?contestType=sport&source=home`, user: u }));
+            const chunkSize = 3; let loaded = 0; const statusEl = document.getElementById('sync-status');
             while (queue.length > 0) {
                 const chunk = queue.splice(0, chunkSize);
                 try {
@@ -434,7 +520,7 @@
                     });
                     statusEl.innerHTML = `<span class="sync-dot"></span>${loaded}/${chunk.length + queue.length + loaded}`;
                     renderLeaderboard();
-                } catch (e) { console.error(e); }
+                } catch (e) {}
                 await new Promise(r => setTimeout(r, 250));
             }
             statusEl.innerHTML = '<span class="sync-dot"></span>LIVE';
@@ -455,69 +541,10 @@
             link.click();
         }
 
-        function base64ToText(b) { try { return new TextDecoder().decode(Uint8Array.from(atob(b), c => c.charCodeAt(0))); } catch(e) { return ''; } }
-
-        async function fetchBatchViaWorker(urls) {
-            const query = new URLSearchParams(); urls.forEach(u => query.append('url', u));
-            const fetchOptions = { headers: { 'real-auth-info': config.REAL_AUTH_TOKEN, 'real-device-name': 'Chrome', 'real-device-type': 'desktop_web', 'real-device-uuid': DEVICE_UUID, 'real-request-token': new Hashids("realwebapp", 16).encode(Date.now()), 'real-version': config.REAL_VERSION } };
-            const res = await fetch(`${config.workerProxy}?${query.toString()}`, fetchOptions);
-            return await res.json();
-        }
-
-        function parseCSV(t) { return t.split(/\r?\n/).map(l => { const v = []; let c = '', q = false; for(let i=0; i<l.length; i++) { if(l[i]==='"' && l[i-1]!=='\\') q=!q; else if(l[i]===',' && !q) { v.push(c.trim()); c=''; } else c+=l[i]; } v.push(c.trim()); return v; }).filter(r => r.length > 1); }
-
-        async function fetchTournamentSchedule() {
-            try {
-                const res = await fetch(config.scheduleUrl);
-                const rows = parseCSV(await res.text());
-                const now = new Date(); const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                const day = now.getDay(); const upcoming = [], past = [];
-                let current = null, next = null;
-
-                for (let i = 1; i < rows.length; i++) {
-                    const r = rows[i]; const parts = (r[0] || '').split('/'); if (parts.length < 2) continue;
-                    const start = new Date(today.getFullYear(), parseInt(parts[0]) - 1, parseInt(parts[1]));
-                    const obj = { name: r[1], course: r[2] || '-', date: r[0], start };
-                    if (start <= today) { current = obj; past.unshift(obj); } else { if (!next) next = obj; upcoming.push(obj); }
-                }
-
-                document.getElementById('upcoming-list').innerHTML = upcoming.map(t => `<div class="schedule-card"><div class="card-date">${t.date}</div><div class="card-name">${t.name}</div><div class="card-course">${t.course}</div></div>`).join('');
-                document.getElementById('past-tournament-grid').innerHTML = past.map(t => `<div class="schedule-card" onclick="viewArchive('${t.name.replace(/'/g, "\\'")}')"><div class="card-date">${t.date}</div><div class="card-name">${t.name}</div><div class="card-course">${t.course}</div></div>`).join('');
-
-                let d = (day === 3 && next) ? { ...next, label: 'Live Tournament' } : (day === 1 || day === 2) ? { ...current, label: 'Past Tournament' } : { ...current, label: 'Live Tournament' };
-                if (d && d.name) {
-                    document.getElementById('display-tournament-name').innerText = d.name;
-                    document.getElementById('display-course-name').innerText = d.course;
-                    document.getElementById('display-banner-label').innerText = d.label;
-                    document.getElementById('tournament-banner').style.display = 'block';
-                }
-            } catch (e) { console.error(e); }
-        }
-
-        async function fetchArchiveData() { try { masterArchiveData = parseCSV(await (await fetch(config.archiveDataUrl)).text()); } catch (e) {} }
-
-        function viewArchive(name) {
-            const filtered = masterArchiveData.slice(1).filter(r => r[9] === name);
-            const tbody = document.getElementById('archive-tbody');
-            tbody.innerHTML = filtered.length ? filtered.map(r => `<tr><td class="col-pos">${r[0]}</td><td class="col-player">${r[1].startsWith('@')?r[1]:'@'+r[1]}</td><td class="col-total">${formatToPar(r[3])}</td><td class="col-today">${formatToPar(r[4])}</td></tr>`).join('') : '<tr><td colspan="4" style="text-align:center; padding:2rem;">No data.</td></tr>';
-            document.getElementById('archive-header-title').innerText = `${name.toUpperCase()} ARCHIVE`;
-            document.getElementById('past-tournament-grid').style.display = 'none';
-            document.getElementById('archive-viewer').style.display = 'block';
-        }
-
-        function handleArchiveUpload(e) {
-            const r = new FileReader(); r.onload = (ev) => {
-                const rows = parseCSV(ev.target.result);
-                document.getElementById('archive-tbody').innerHTML = rows.slice(1).map(r => `<tr><td class="col-pos">${r[0]}</td><td class="col-player">${r[1].startsWith('@')?r[1]:'@'+r[1]}</td><td class="col-total">${formatToPar(r[3])}</td><td class="col-today">${formatToPar(r[4])}</td></tr>`).join('');
-                document.getElementById('archive-header-title').innerText = "LOCAL FILE";
-                document.getElementById('past-tournament-grid').style.display = 'none';
-                document.getElementById('archive-viewer').style.display = 'block';
-            }; r.readAsText(e.target.files[0]);
-        }
-
         async function fetchUsers() {
             try {
-                const rows = parseCSV(await (await fetch(config.usersDataUrl)).text());
+                const res = await fetch(config.usersDataUrl);
+                const rows = parseCSV(await res.text());
                 const h = rows[0].map(v => v.toLowerCase().trim());
                 const uIdx = h.indexOf('username'), uidIdx = h.findIndex(v => v.includes('user id')), gidIdx = h.findIndex(v => v.includes('golf id'));
                 return rows.slice(1).map(r => ({ userId: r[uidIdx].trim(), username: r[uIdx].trim(), golfId: gidIdx !== -1 ? r[gidIdx].trim() : '', actualTotalPoints: 0, actualTodayPoints: 0, hasData: false, lineup: [] })).filter(u => u.username && u.userId);
@@ -534,3 +561,4 @@
     </script>
 </body>
 </html>
+
