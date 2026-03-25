@@ -49,29 +49,53 @@
         text-shadow: 0 2px 4px rgba(0,0,0,0.3);
       }
 
-      .sub-nav-container {
-        display: flex;
-        justify-content: center;
-        gap: 1rem;
-        margin-top: 1rem;
+      /* Tournament Info Banner */
+      #tournament-banner {
+          max-width: 1100px;
+          margin: 2rem auto 0 auto;
+          padding: 0 1rem;
+          display: none; /* Hidden until loaded */
+          animation: fadeIn 0.6s ease-out;
       }
 
-      .sub-nav-btn {
-        background: rgba(197, 160, 89, 0.1);
-        border: 1px solid var(--border-gold);
-        color: var(--gold-light);
-        font-size: 0.8rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.1em;
-        padding: 0.5rem 1.2rem;
-        border-radius: 4px;
-        cursor: default;
+      .banner-content {
+          background: linear-gradient(135deg, rgba(11, 61, 44, 0.9), rgba(20, 89, 67, 0.8));
+          border: 1px solid var(--border-gold);
+          border-radius: 12px;
+          padding: 1.25rem;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          text-align: center;
+          box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+      }
+
+      .banner-label {
+          font-size: 0.65rem;
+          text-transform: uppercase;
+          letter-spacing: 0.2em;
+          color: var(--gold-light);
+          font-weight: 700;
+          margin-bottom: 0.25rem;
+      }
+
+      .banner-name {
+          font-size: 1.4rem;
+          font-weight: 800;
+          color: #fff;
+          margin-bottom: 0.25rem;
+          line-height: 1.2;
+      }
+
+      .banner-course {
+          font-size: 0.9rem;
+          color: var(--text-muted);
+          font-weight: 500;
       }
 
       .content-view {
           max-width: 1100px;
-          margin: 2rem auto;
+          margin: 1.5rem auto 3rem auto;
           padding: 0 1rem;
           animation: fadeIn 0.4s ease-out;
       }
@@ -150,7 +174,6 @@
       .draft-row { display: none; background: rgba(0,0,0,0.5); }
       .draft-row.open { display: table-row; }
       
-      /* Horizontal Lineup Scrolling */
       .draft-content { 
           display: flex;
           gap: 12px;
@@ -214,14 +237,13 @@
       .col-score { width: 90px; text-align: center; font-weight: 800; font-size: 1.2rem; border-left: 1px solid rgba(255,255,255,0.05); }
       .col-thru { width: 80px; text-align: center; font-weight: 600; color: var(--text-muted); font-size: 0.85rem; }
 
-      .score-under { color: #ff4d4d; } /* Traditional Red */
-      .score-even { color: var(--golf-green-bright); } /* Sharp Green for E */
+      .score-under { color: #ff4d4d; } 
+      .score-even { color: var(--golf-green-bright); } 
       .score-over { color: var(--text-main); }
 
       @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
       @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
       
-      /* Mobile optimization */
       @media (max-width: 600px) {
           .golf-table td, .golf-table th { padding: 0.8rem 1rem; }
           .col-pos { width: 45px; font-size: 0.95rem; }
@@ -232,6 +254,7 @@
           .draft-item { flex: 0 0 90px; padding: 10px 5px; }
           .draft-item-avatar { width: 44px; height: 44px; }
           h1 { font-size: 1.6rem; }
+          .banner-name { font-size: 1.1rem; }
       }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/hashids@2.2.10/dist/hashids.min.js"></script>
@@ -240,10 +263,15 @@
 
     <header>
         <h1>Golf Plug Leaderboard</h1>
-        <div class="sub-nav-container">
-            <div class="sub-nav-btn">Live Tournament Rankings</div>
-        </div>
     </header>
+
+    <div id="tournament-banner">
+        <div class="banner-content">
+            <div class="banner-label">Active Tournament</div>
+            <div class="banner-name" id="display-tournament-name">Loading Schedule...</div>
+            <div class="banner-course" id="display-course-name">-</div>
+        </div>
+    </div>
 
     <div id="loading-indicator">Syncing Live Drafts...</div>
 
@@ -276,7 +304,8 @@
     <script>
         // --- AUTH & CONFIGURATION ---
         const config = {
-            usersDataUrl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRNfMOTfQ4xpIILu_IPjjOAZjUq2Tfp1UqEMOVnR2Qyz-H572bmiIWbC-GuUlEW7ogM8TUNLFWw5xz3/pub?gid=0&single=true&output=csv', 
+            usersDataUrl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRNfMOTfQ4xpIILu_IPjjOAZjUq2Tfp1UqEMOVnR2Qyz-H572bmiIWbC-GuUlEW7ogM8TUNLFWw5xz3/pub?gid=0&single=true&output=csv',
+            scheduleUrl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTuVpFht1S7pkLdCssZyFR6B3T0f92_cPk_qFMf2KZVm_KTPtKuKvC-2yUfF4oEFpDGIajryZpb3_oV/pub?gid=0&single=true&output=csv',
             workerProxy: 'https://rda-worker.coledecker04.workers.dev/',
             REAL_AUTH_TOKEN: 'xnr5VpW3!ApZk8L2E!4fe6e26f-949f-4936-ae3e-16384878932f',
             REAL_VERSION: '27'
@@ -330,20 +359,11 @@
 
         const findIndex = (h, n) => { for(const name of n) { const i=h.findIndex(x=>x.toLowerCase().trim()===name.toLowerCase()); if(i!==-1)return i;} return -1; };
 
-        /**
-         * Weekend Golf Scoring Logic (-8 to +8 Range)
-         * Percentile Rank (PR) 100 -> -8
-         * Percentile Rank (PR) 50  -> 0 (Even)
-         * Percentile Rank (PR) 0   -> +8
-         * Mapping: round((50 - PR) / 6.25)
-         */
         function calculateGolfScore(userPoints, allPoints) {
             if (allPoints.length < 2) return 0;
-            
             const sorted = [...allPoints].sort((a, b) => a - b);
             const index = sorted.indexOf(userPoints);
             const percentileRank = (index / (sorted.length - 1)) * 100;
-            
             return Math.round((50 - percentileRank) / 6.25);
         }
 
@@ -379,7 +399,6 @@
             usersWithScores.forEach((user, idx) => {
                 const mainTr = document.createElement('tr');
                 mainTr.className = 'main-row';
-                
                 const rankDisplay = user.hasData ? (idx + 1) : '-';
 
                 mainTr.innerHTML = `
@@ -402,7 +421,6 @@
                     const isOpen = mainTr.classList.contains('open');
                     document.querySelectorAll('.main-row').forEach(r => { if(r !== mainTr) r.classList.remove('open'); });
                     document.querySelectorAll('.draft-row').forEach(r => { if(r !== draftTr) r.classList.remove('open'); });
-                    
                     if (!isOpen) {
                         mainTr.classList.add('open');
                         draftTr.classList.add('open');
@@ -412,7 +430,6 @@
                         draftTr.classList.remove('open');
                     }
                 };
-
                 tbody.appendChild(mainTr);
                 tbody.appendChild(draftTr);
             });
@@ -423,16 +440,14 @@
                 container.innerHTML = '<div style="text-align:center; flex: 1; padding: 2rem; color: var(--text-muted); font-size: 0.85rem; font-style: italic;">Syncing roster data...</div>';
                 return;
             }
-
-            container.innerHTML = lineupData.map(g => {
-                return `
+            container.innerHTML = lineupData.map(g => `
                 <div class="draft-item">
                     <span class="draft-item-mult">${g.multiplierDisplay || (g.multiplier + 'x')}</span>
                     <img src="${g.avatar ? `https://media.realapp.link/assets/players/default/large/${g.avatar}.webp` : 'https://placehold.co/50x50/222/fff?text=?'}" class="draft-item-avatar" onerror="this.src='https://placehold.co/50x50/111/fff?text=?'">
                     <span class="draft-item-name">${g.displayName}</span>
                     <span class="draft-item-score" style="color: var(--gold-light); font-size: 0.9rem; font-weight: 800;">${(parseFloat(g.score) || 0).toFixed(1)}</span>
                 </div>
-            `}).join('');
+            `).join('');
         }
 
         async function loadAllUserScores() {
@@ -492,20 +507,70 @@
             }).filter(row => row.length > 0);
         }
 
+        async function fetchTournamentSchedule() {
+            try {
+                const res = await fetch(config.scheduleUrl);
+                const text = await res.text();
+                const rows = parseCSV(text);
+                if (rows.length < 2) return;
+
+                const headers = rows[0].map(h => h.toLowerCase().trim());
+                const dateIdx = headers.indexOf('date');
+                const tournIdx = headers.indexOf('tournament');
+                const courseIdx = headers.indexOf('course');
+
+                const today = new Date();
+                // Get month/day for matching (supports 3/25, 03/25, etc)
+                const currentMonth = today.getMonth() + 1;
+                const currentDay = today.getDate();
+
+                let activeTournament = null;
+
+                // Simple date matching: look for today's entry or the most recent past entry
+                for (let i = 1; i < rows.length; i++) {
+                    const row = rows[i];
+                    const dateStr = row[dateIdx] || "";
+                    const parts = dateStr.split('/');
+                    if (parts.length >= 2) {
+                        const m = parseInt(parts[0]);
+                        const d = parseInt(parts[1]);
+                        
+                        // If exact match
+                        if (m === currentMonth && d === currentDay) {
+                            activeTournament = { name: row[tournIdx], course: row[courseIdx] };
+                            break;
+                        }
+                        
+                        // Fallback: Use the last tournament found if we've passed its date
+                        // (Assuming CSV is sorted by date)
+                        const rowDate = new Date(today.getFullYear(), m - 1, d);
+                        if (rowDate <= today) {
+                            activeTournament = { name: row[tournIdx], course: row[courseIdx] };
+                        }
+                    }
+                }
+
+                if (activeTournament) {
+                    document.getElementById('display-tournament-name').innerText = activeTournament.name;
+                    document.getElementById('display-course-name').innerText = activeTournament.course;
+                    document.getElementById('tournament-banner').style.display = 'block';
+                }
+            } catch (e) {
+                console.error("Schedule load failed", e);
+            }
+        }
+
         async function fetchUsers() {
             try {
                 const res = await fetch(config.usersDataUrl);
                 const text = await res.text();
                 const parsedData = parseCSV(text);
                 if (parsedData.length < 2) return [];
-
                 const headers = parsedData[0];
                 const uIdx = findIndex(headers, ['username']);
                 const uidIdx = findIndex(headers, ['user id', 'userid']);
                 const gidIdx = findIndex(headers, ['golf id', 'golfid']);
-
                 if (uIdx === -1 || uidIdx === -1) return [];
-
                 return parsedData.slice(1).map(row => ({
                     userId: row[uidIdx] ? row[uidIdx].trim() : '',
                     username: row[uIdx] ? row[uIdx].trim() : '',
@@ -523,6 +588,9 @@
         async function initApp() {
             const indicator = document.getElementById('loading-indicator');
             if (indicator) indicator.style.display = 'block';
+
+            // Fetch schedule first
+            fetchTournamentSchedule();
 
             users = await fetchUsers();
             if (indicator) indicator.style.display = 'none';
