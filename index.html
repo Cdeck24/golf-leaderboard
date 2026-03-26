@@ -230,6 +230,8 @@
         };
 
         const DEVICE_UUID = crypto.randomUUID();
+        const REFERENCE_IDS = ['jvbb41pv', 'R37kAWO3', 'gv8D5Q0v', '9JmXRKDn'].map(id => id.toLowerCase().trim());
+        
         let users = [];
         let historicalDailyData = {}; 
         let masterArchiveData = [];
@@ -264,7 +266,6 @@
             menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
         }
 
-        // Bell-Curve Scoring Logic (Cubic) targeting -6 to +5 range
         function calculateGolfScore(pts, allPtsForDay) {
             if (!pts || pts === 0 || allPtsForDay.length < 2) return 0;
             const validPts = allPtsForDay.filter(p => p > 0);
@@ -278,13 +279,10 @@
             
             let score = 0;
             if (z > 0) {
-                // Better performers hit -6
                 score = -6 * Math.pow(z, 3);
             } else {
-                // Worse performers hit +5
                 score = -5 * Math.pow(z, 3);
             }
-            
             return Math.round(score);
         }
 
@@ -293,6 +291,11 @@
             let clean = username.trim();
             while(clean.startsWith('@')) clean = clean.substring(1);
             return '@' + clean;
+        }
+
+        function getLineupSignature(lineup) {
+            if (!lineup || lineup.length === 0) return "";
+            return lineup.map(g => (g.displayName || g.player?.displayName || "").trim()).sort().join('|');
         }
 
         function renderLeaderboard() {
@@ -316,6 +319,15 @@
             const medianToday = sortedLive.length ? (sortedLive.length % 2 ? sortedLive[Math.floor(sortedLive.length/2)] : (sortedLive[sortedLive.length/2-1] + sortedLive[sortedLive.length/2])/2) : 0;
             document.getElementById('par-score-display').innerText = `EVEN: ${medianToday.toFixed(1)} PTS`;
             
+            // Build reference signatures for duplicate detection
+            const referenceSignatures = [];
+            synced.forEach(u => {
+                if (REFERENCE_IDS.includes(u.userId.toLowerCase().trim())) {
+                    const sig = getLineupSignature(u.lineup);
+                    if (sig) referenceSignatures.push(sig);
+                }
+            });
+
             currentProcessedUsers = users.map(u => {
                 const normId = u.userId.trim().toLowerCase();
                 const hist = historicalDailyData[normId] || {};
@@ -335,17 +347,23 @@
                 const todayGolf = (currentDayIdx >= 0 && currentDayIdx < 4) ? rounds[dayKeys[currentDayIdx]] : 0;
                 const isWD = u.hasData && (!u.lineup || u.lineup.length === 0);
 
-                return { ...u, total, today: todayGolf, rounds, isWD };
+                // Duplicate Detection logic
+                const mySig = getLineupSignature(u.lineup);
+                const isReferenceAccount = REFERENCE_IDS.includes(u.userId.toLowerCase().trim());
+                const isDuplicate = !isReferenceAccount && mySig !== "" && referenceSignatures.includes(mySig);
+
+                return { ...u, total, today: todayGolf, rounds, isWD, isDuplicate };
             });
 
+            // Sorting: Primary by Duplicate status (last), then WD (last), then Golf score (Asc), then Raw points (Desc)
             currentProcessedUsers.sort((a, b) => {
-                if (a.isWD && !b.isWD) return 1;
-                if (!a.isWD && b.isWD) return -1;
+                if (a.isDuplicate !== b.isDuplicate) return a.isDuplicate ? 1 : -1;
+                if (a.isWD !== b.isWD) return a.isWD ? 1 : -1;
                 if (a.total !== b.total) return a.total - b.total;
                 return b.actualTotalPoints - a.actualTotalPoints;
             });
 
-            const ranked = currentProcessedUsers.filter(u => !u.isWD);
+            const ranked = currentProcessedUsers.filter(u => !u.isWD && !u.isDuplicate);
             const cutRank = Math.floor(ranked.length * 0.45);
             const cutScore = ranked.length > 0 ? ranked[Math.max(0, cutRank - 1)].total : 99;
             
@@ -353,7 +371,7 @@
             const canShowMC = currentDayIdx >= 1; // Friday onwards
 
             currentProcessedUsers.forEach((u, i) => {
-                const isBelowCut = u.total > cutScore && !u.isWD;
+                const isBelowCut = u.total > cutScore && !u.isWD && !u.isDuplicate;
                 
                 if (!cutLineInserted && isBelowCut) {
                     const cutRow = document.createElement('tr');
@@ -367,33 +385,38 @@
                 const row = document.createElement('tr');
                 row.className = 'main-row';
                 const handle = formatHandle(u.username);
-                const tag = (canShowMC && isBelowCut) ? '<span style="color:var(--danger); font-size:0.6rem;">(MC)</span>' : '';
                 
+                let tag = "";
+                if (u.isDuplicate) tag = '<span style="color:var(--danger); font-size:0.6rem;">(DUPLICATE)</span>';
+                else if (canShowMC && isBelowCut) tag = '<span style="color:var(--danger); font-size:0.6rem;">(MC)</span>';
+                
+                const posDisplay = (u.isDuplicate || u.isWD) ? (u.isDuplicate ? 'DUP' : 'WD') : (u.hasData ? i + 1 : '-');
+
                 row.innerHTML = `
-                    <td class="col-pos">${u.isWD ? 'WD' : (u.hasData ? i + 1 : '-')}</td>
+                    <td class="col-pos">${posDisplay}</td>
                     <td class="col-player">${handle} ${tag} <span class="toggle-icon">▼</span></td>
-                    <td class="col-score">${u.isWD ? '-' : formatToPar(u.total)}</td>
-                    <td class="col-score">${u.isWD ? '-' : formatToPar(u.today)}</td>
+                    <td class="col-score">${(u.isWD || u.isDuplicate) ? '-' : formatToPar(u.total)}</td>
+                    <td class="col-score">${(u.isWD || u.isDuplicate) ? '-' : formatToPar(u.today)}</td>
                 `;
                 
                 const dr = document.createElement('tr');
                 dr.className = 'draft-row';
                 dr.innerHTML = `<td colspan="4"><div class="expanded-container">
                     <div class="round-breakdown">
-                        <div class="round-slot"><span class="round-label">Thu</span><span class="round-val">${u.isWD ? '-' : formatToPar(u.rounds.thu)}</span></div>
-                        <div class="round-slot"><span class="round-label">Fri</span><span class="round-val">${u.isWD ? '-' : formatToPar(u.rounds.fri)}</span></div>
-                        <div class="round-slot"><span class="round-label">Sat</span><span class="round-val">${u.isWD ? '-' : formatToPar(u.rounds.sat)}</span></div>
-                        <div class="round-slot"><span class="round-label">Sun</span><span class="round-val">${u.isWD ? '-' : formatToPar(u.rounds.sun)}</span></div>
+                        <div class="round-slot"><span class="round-label">Thu</span><span class="round-val">${(u.isWD || u.isDuplicate) ? '-' : formatToPar(u.rounds.thu)}</span></div>
+                        <div class="round-slot"><span class="round-label">Fri</span><span class="round-val">${(u.isWD || u.isDuplicate) ? '-' : formatToPar(u.rounds.fri)}</span></div>
+                        <div class="round-slot"><span class="round-label">Sat</span><span class="round-val">${(u.isWD || u.isDuplicate) ? '-' : formatToPar(u.rounds.sat)}</span></div>
+                        <div class="round-slot"><span class="round-label">Sun</span><span class="round-val">${(u.isWD || u.isDuplicate) ? '-' : formatToPar(u.rounds.sun)}</span></div>
                     </div>
-                    <div class="raw-pts-display">Raw Score: ${u.actualTotalPoints.toFixed(1)} ${u.isWD ? '(WITHDRAWN)' : ''}</div>
+                    <div class="raw-pts-display">Raw Score: ${u.actualTotalPoints.toFixed(1)} ${u.isWD ? '(WITHDRAWN)' : (u.isDuplicate ? '(DUPLICATE LINEUP)' : '')}</div>
                     <div class="draft-grid"></div>
                 </div></td>`;
                 
                 row.onclick = function() {
-                    const isOpen = this.classList.contains('open');
+                    const wasOpen = this.classList.contains('open');
                     document.querySelectorAll('.main-row').forEach(r => r.classList.remove('open'));
                     document.querySelectorAll('.draft-row').forEach(r => r.classList.remove('open'));
-                    if (!isOpen) {
+                    if (!wasOpen) {
                         this.classList.add('open'); dr.classList.add('open');
                         renderDraft(u, dr.querySelector('.draft-grid'));
                     }
@@ -405,7 +428,10 @@
 
         function renderDraft(user, container) {
             if (!user.hasData) { container.innerHTML = '<div style="flex:1; text-align:center; font-size:0.7rem; padding:10px;">Syncing...</div>'; return; }
-            if (user.isWD) { container.innerHTML = '<div style="flex:1; text-align:center; font-size:0.7rem; color:var(--danger); padding:10px;">PLAYER WITHDRAWN</div>'; return; }
+            if (user.isWD || (user.isDuplicate && (!user.lineup || user.lineup.length === 0))) { 
+                container.innerHTML = `<div style="flex:1; text-align:center; font-size:0.7rem; color:var(--danger); padding:10px;">${user.isWD ? 'PLAYER WITHDRAWN' : 'DUPLICATE ENTRY'}</div>`; 
+                return; 
+            }
             
             container.innerHTML = user.lineup.map(g => {
                 const name = g.displayName || g.player?.displayName || (g.player?.firstName ? `${g.player.firstName} ${g.player.lastName}` : 'Unknown');
@@ -447,8 +473,8 @@
                     historicalDailyData[r[uIdx].trim().toLowerCase()] = {
                         thu_score: parseInt(r[cMap.thu]) || 0,
                         fri_score: parseInt(r[cMap.fri]) || 0,
-                        sat_score: parseInt(r[cMap.sat]) || 0,
-                        sun_score: parseInt(r[cMap.sun]) || 0
+                        sat_score: parseInt(r[colMap?.sat || 0]) || 0,
+                        sun_score: parseInt(r[colMap?.sun || 0]) || 0
                     };
                 });
             } catch (e) {}
@@ -481,7 +507,7 @@
             const rows = [["position", "username", "user id", "total score", "thursday score", "friday score", "saturday score", "sunday score", "raw points", "tournament"]];
             currentProcessedUsers.forEach((u, index) => {
                 if (!u.hasData) return;
-                rows.push([u.isWD ? 'WD' : index + 1, u.username, u.userId, u.total, u.rounds.thu, u.rounds.fri, u.rounds.sat, u.rounds.sun, u.actualTotalPoints.toFixed(1), tourn]);
+                rows.push([u.isWD ? 'WD' : (u.isDuplicate ? 'DUP' : index + 1), u.username, u.userId, u.total, u.rounds.thu, u.rounds.fri, u.rounds.sat, u.rounds.sun, u.actualTotalPoints.toFixed(1), tourn]);
             });
             const blob = new Blob([rows.map(e => e.join(",")).join("\n")], { type: 'text/csv' });
             const link = document.createElement("a");
