@@ -87,7 +87,7 @@
       .main-row.open .toggle-icon { transform: rotate(180deg); opacity: 1; }
 
       .cut-line-row td {
-          background: rgba(255, 77, 77, 0.15) !important;
+          background: rgba(255, 77, 77, 0.12) !important;
           color: var(--danger) !important;
           font-weight: 900 !important;
           font-size: 0.65rem !important;
@@ -167,7 +167,7 @@
 
     <div id="loading-indicator">Syncing Tournament Data...</div>
 
-    <!-- STANDINGS VIEW -->
+    <!-- LIVE VIEW -->
     <div id="view-live" class="content-view active">
         <div class="leaderboard-panel">
             <div class="leaderboard-header">
@@ -196,12 +196,10 @@
         </div>
     </div>
 
-    <!-- SCHEDULE VIEW -->
     <div id="view-upcoming" class="content-view">
         <div class="schedule-grid" id="upcoming-list"></div>
     </div>
 
-    <!-- ARCHIVE VIEW -->
     <div id="view-past" class="content-view">
         <div id="archive-viewer" style="display:none;">
             <div style="margin-bottom:1rem; color:var(--gold-light); font-size:0.7rem; font-weight:800; cursor:pointer;" onclick="closeArchive()">← BACK TO ARCHIVES</div>
@@ -228,7 +226,7 @@
             dailyDataUrl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTuVpFht1S7pkLdCssZyFR6B3T0f92_cPk_qFMf2KZVm_KTPtKuKvC-2yUfF4oEFpDGIajryZpb3_oV/pub?gid=435355414&single=true&output=csv',
             workerProxy: 'https://rda-worker.coledecker04.workers.dev/',
             REAL_AUTH_TOKEN: 'xnr5VpW3!ApZk8L2E!4fe6e26f-949f-4936-ae3e-16384878932f',
-            REAL_VERSION: '48' 
+            REAL_VERSION: '52' 
         };
 
         const DEVICE_UUID = crypto.randomUUID();
@@ -266,7 +264,7 @@
             menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
         }
 
-        // Bell-Curve Logic (Cubic)
+        // Bell-Curve Scoring Logic (Cubic) targeting -6 to +5 range
         function calculateGolfScore(pts, allPtsForDay) {
             if (!pts || pts === 0 || allPtsForDay.length < 2) return 0;
             const validPts = allPtsForDay.filter(p => p > 0);
@@ -277,8 +275,17 @@
             
             const pr = idx / (sorted.length - 1);
             const z = (pr * 2) - 1; 
-            const golfScore = -1 * (Math.pow(z, 3) * 11.5); 
-            return Math.round(golfScore);
+            
+            let score = 0;
+            if (z > 0) {
+                // Better performers hit -6
+                score = -6 * Math.pow(z, 3);
+            } else {
+                // Worse performers hit +5
+                score = -5 * Math.pow(z, 3);
+            }
+            
+            return Math.round(score);
         }
 
         function formatHandle(username) {
@@ -326,8 +333,6 @@
 
                 const total = rounds.thu + rounds.fri + rounds.sat + rounds.sun;
                 const todayGolf = (currentDayIdx >= 0 && currentDayIdx < 4) ? rounds[dayKeys[currentDayIdx]] : 0;
-                
-                // WD identification
                 const isWD = u.hasData && (!u.lineup || u.lineup.length === 0);
 
                 return { ...u, total, today: todayGolf, rounds, isWD };
@@ -340,13 +345,12 @@
                 return b.actualTotalPoints - a.actualTotalPoints;
             });
 
-            // Cut Logic
             const ranked = currentProcessedUsers.filter(u => !u.isWD);
-            const cutIdx = Math.floor(ranked.length * 0.45);
-            const cutScore = ranked.length > 0 ? ranked[Math.max(0, cutIdx - 1)].total : 99;
+            const cutRank = Math.floor(ranked.length * 0.45);
+            const cutScore = ranked.length > 0 ? ranked[Math.max(0, cutRank - 1)].total : 99;
             
             let cutLineInserted = false;
-            const canShowMC = currentDayIdx >= 1; // Show (MC) from Friday onwards
+            const canShowMC = currentDayIdx >= 1; // Friday onwards
 
             currentProcessedUsers.forEach((u, i) => {
                 const isBelowCut = u.total > cutScore && !u.isWD;
@@ -386,10 +390,10 @@
                 </div></td>`;
                 
                 row.onclick = function() {
-                    const wasOpen = this.classList.contains('open');
+                    const isOpen = this.classList.contains('open');
                     document.querySelectorAll('.main-row').forEach(r => r.classList.remove('open'));
                     document.querySelectorAll('.draft-row').forEach(r => r.classList.remove('open'));
-                    if (!wasOpen) {
+                    if (!isOpen) {
                         this.classList.add('open'); dr.classList.add('open');
                         renderDraft(u, dr.querySelector('.draft-grid'));
                     }
@@ -502,7 +506,8 @@
                         const user = chunk[idx].user;
                         if (r.status === 200) {
                             try {
-                                const dataBody = JSON.parse(base64ToText(r.body));
+                                const rawBody = window.atob(r.body.replace(/-/g, '+').replace(/_/g, '/'));
+                                const dataBody = JSON.parse(new TextDecoder().decode(Uint8Array.from(rawBody, c => c.charCodeAt(0))));
                                 user.actualTotalPoints = parseFloat((dataBody.info?.rankDisplayInfos?.[0]?.scoreDisplay || '0').replace(/[^0-9.]/g, '')) || 0;
                                 user.lineup = dataBody.lineup || [];
                                 user.actualTodayPoints = user.lineup.reduce((acc, g) => acc + (parseFloat(g.score) || 0), 0);
@@ -517,18 +522,6 @@
                 await new Promise(r => setTimeout(r, 250));
             }
             statusEl.innerHTML = '<span class="sync-dot"></span>LIVE';
-        }
-
-        function base64ToText(b) { 
-            try { 
-                if (!b) return '';
-                const decoded = window.atob(b.replace(/-/g, '+').replace(/_/g, '/'));
-                const bytes = new Uint8Array(decoded.length);
-                for (let i = 0; i < decoded.length; i++) bytes[i] = decoded.charCodeAt(i);
-                return new TextDecoder().decode(bytes);
-            } catch(e) { 
-                try { return decodeURIComponent(escape(window.atob(b))); } catch(err) { return ''; }
-            } 
         }
 
         function parseCSV(t) { return t.split(/\r?\n/).map(l => { const v=[]; let c='', q=false; for(let i=0;i<l.length;i++){ if(l[i]==='"' && l[i-1]!=='\\') q=!q; else if(l[i]===',' && !q){ v.push(c.trim()); c=''; } else c+=l[i]; } v.push(c.trim()); return v; }).filter(r => r.length > 1); }
