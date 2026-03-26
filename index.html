@@ -82,13 +82,13 @@
       .main-row:hover { background: rgba(255, 255, 255, 0.05); }
       .main-row.open { background: rgba(197, 160, 89, 0.1); }
       .toggle-icon { font-size: 0.5rem; color: var(--text-muted); margin-left: 4px; opacity: 0.5; transition: transform 0.3s; }
-      .main-row.open .toggle-icon { transform: rotate(180deg); }
+      .main-row.open .toggle-icon { transform: rotate(180deg); opacity: 1; }
 
-      .draft-row { display: none; background: rgba(0,0,0,0.5); }
+      .draft-row { display: none; background: rgba(0,0,0,0.45); }
       .draft-row.open { display: table-row; }
-      .expanded-container { padding: 0.75rem 0.5rem; border-left: 3px solid var(--border-gold); }
+      .expanded-container { padding: 1rem 0.75rem; border-left: 3px solid var(--border-gold); }
       
-      .round-breakdown { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-bottom: 1rem; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); }
+      .round-breakdown { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 1rem; background: rgba(0,0,0,0.35); padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); }
       .round-slot { text-align: center; }
       .round-label { font-size: 0.5rem; text-transform: uppercase; font-weight: 800; color: var(--text-muted); display: block; margin-bottom: 2px; }
       .round-val { font-size: 0.85rem; font-weight: 900; color: var(--gold-light); }
@@ -97,7 +97,7 @@
       .draft-item { 
           flex: 0 0 calc(33.33% - 6px); display: flex; flex-direction: column; align-items: center; text-align: center;
           background: rgba(255, 255, 255, 0.03); padding: 8px 4px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.05);
-          min-width: 90px;
+          min-width: 85px;
       }
       .draft-item-avatar { width: 36px; height: 36px; border-radius: 50%; border: 1.5px solid var(--border-gold); background: #000; margin-bottom: 6px; }
       .draft-item-name { color: var(--text-main); font-weight: 700; font-size: 0.6rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; }
@@ -148,6 +148,7 @@
 
     <div id="loading-indicator">Syncing Tournament Data...</div>
 
+    <!-- LIVE VIEW -->
     <div id="view-live" class="content-view active">
         <div class="leaderboard-panel">
             <div class="leaderboard-header">
@@ -176,10 +177,12 @@
         </div>
     </div>
 
+    <!-- UPCOMING VIEW -->
     <div id="view-upcoming" class="content-view">
         <div class="schedule-grid" id="upcoming-list"></div>
     </div>
 
+    <!-- PAST VIEW -->
     <div id="view-past" class="content-view">
         <div id="archive-viewer" style="display:none;">
             <div style="margin-bottom:1rem; color:var(--gold-light); font-size:0.7rem; font-weight:800; cursor:pointer;" onclick="closeArchive()">← BACK TO ARCHIVES</div>
@@ -206,14 +209,15 @@
             dailyDataUrl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTuVpFht1S7pkLdCssZyFR6B3T0f92_cPk_qFMf2KZVm_KTPtKuKvC-2yUfF4oEFpDGIajryZpb3_oV/pub?gid=435355414&single=true&output=csv',
             workerProxy: 'https://rda-worker.coledecker04.workers.dev/',
             REAL_AUTH_TOKEN: 'xnr5VpW3!ApZk8L2E!4fe6e26f-949f-4936-ae3e-16384878932f',
-            REAL_VERSION: '27'
+            REAL_VERSION: '31' 
         };
 
         const DEVICE_UUID = crypto.randomUUID();
         let users = [];
-        let historicalDailyPts = {}; 
+        let historicalDailyData = {}; 
         let masterArchiveData = [];
         let currentProcessedUsers = [];
+        let activeTournamentStartDate = null;
 
         function switchView(v) {
             document.querySelectorAll('.content-view').forEach(el => el.classList.remove('active'));
@@ -257,7 +261,7 @@
         function formatHandle(username) {
             if (!username) return '';
             let clean = username.trim();
-            if (clean.startsWith('@')) return clean;
+            while(clean.startsWith('@')) clean = clean.substring(1);
             return '@' + clean;
         }
 
@@ -267,68 +271,82 @@
             tbody.innerHTML = '';
             
             const synced = users.filter(u => u.hasData);
-            const todayIdx = new Date().getDay(); 
+            const now = new Date();
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            let currentDayIdx = -1; 
 
+            if (activeTournamentStartDate) {
+                const diffTime = today - activeTournamentStartDate;
+                currentDayIdx = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+            }
+
+            const dayKeys = ['thu', 'fri', 'sat', 'sun'];
             const livePts = synced.map(u => u.actualTodayPoints).filter(p => p > 0);
             const sortedLive = [...livePts].sort((a,b) => a - b);
             const medianToday = sortedLive.length ? (sortedLive.length % 2 ? sortedLive[Math.floor(sortedLive.length/2)] : (sortedLive[sortedLive.length/2-1] + sortedLive[sortedLive.length/2])/2) : 0;
             document.getElementById('par-score-display').innerText = `EVEN: ${medianToday.toFixed(1)} PTS`;
             
             currentProcessedUsers = users.map(u => {
-                const normId = u.userId.toLowerCase().trim();
-                const hist = historicalDailyPts[normId] || { thu: 0, fri: 0, sat: 0, sun: 0 };
+                const normId = u.userId.trim().toLowerCase();
+                const hist = historicalDailyData[normId] || {};
                 let rounds = { thu: 0, fri: 0, sat: 0, sun: 0 };
                 
-                ['thu', 'fri', 'sat', 'sun'].forEach(day => {
-                   const allDayPts = synced.map(us => (historicalDailyPts[us.userId.toLowerCase().trim()]?.[day] || 0));
-                   rounds[day] = calculateGolfScore(hist[day], allDayPts);
+                dayKeys.forEach((key, idx) => {
+                    if (idx < currentDayIdx) {
+                        rounds[key] = hist[`${key}_score`] || 0;
+                    } else if (idx === currentDayIdx) {
+                        // Current live day: only use live data if today is within tournament range
+                        rounds[key] = u.actualTodayPoints > 0 ? calculateGolfScore(u.actualTodayPoints, livePts) : 0;
+                    } else {
+                        rounds[key] = 0;
+                    }
                 });
 
-                const todayGolf = u.actualTodayPoints > 0 ? calculateGolfScore(u.actualTodayPoints, livePts) : 0;
-                if (todayIdx === 4) rounds.thu = todayGolf;
-                else if (todayIdx === 5) rounds.fri = todayGolf;
-                else if (todayIdx === 6) rounds.sat = todayGolf;
-                else if (todayIdx === 0) rounds.sun = todayGolf;
-
-                return { ...u, total: rounds.thu + rounds.fri + rounds.sat + rounds.sun, today: todayGolf, rounds };
+                const total = rounds.thu + rounds.fri + rounds.sat + rounds.sun;
+                const todayGolf = currentDayIdx >= 0 && currentDayIdx < 4 ? rounds[dayKeys[currentDayIdx]] : 0;
+                return { ...u, total, today: todayGolf, rounds };
             });
 
             currentProcessedUsers.sort((a,b) => a.total - b.total);
             currentProcessedUsers.forEach((u, i) => {
                 const row = document.createElement('tr');
                 row.className = 'main-row';
-                row.innerHTML = `<td class="col-pos">${u.hasData ? i+1 : '-'}</td><td class="col-player">${formatHandle(u.username)} <span class="toggle-icon">▼</span></td><td class="col-score">${formatToPar(u.total)}</td><td class="col-score">${formatToPar(u.today)}</td>`;
+                const handle = formatHandle(u.username);
+                row.innerHTML = `<td class="col-pos">${u.hasData ? i+1 : '-'}</td><td class="col-player">${handle} <span class="toggle-icon">▼</span></td><td class="col-score">${formatToPar(u.total)}</td><td class="col-score">${formatToPar(u.today)}</td>`;
                 
                 const dr = document.createElement('tr');
                 dr.className = 'draft-row';
-                dr.innerHTML = `<td colspan="4"><div class="expanded-container"><div class="round-breakdown"><div class="round-slot"><span class="round-label">Thu</span><span class="round-val">${formatToPar(u.rounds.thu)}</span></div><div class="round-slot"><span class="round-label">Fri</span><span class="round-val">${formatToPar(u.rounds.fri)}</span></div><div class="round-slot"><span class="round-label">Sat</span><span class="round-val">${formatToPar(u.rounds.sat)}</span></div><div class="round-slot"><span class="round-label">Sun</span><span class="round-val">${formatToPar(u.rounds.sun)}</span></div></div><div class="draft-grid"></div></div></td>`;
+                dr.innerHTML = `<td colspan="4"><div class="expanded-container">
+                    <div class="round-breakdown">
+                        <div class="round-slot"><span class="round-label">Thu</span><span class="round-val">${formatToPar(u.rounds.thu)}</span></div>
+                        <div class="round-slot"><span class="round-label">Fri</span><span class="round-val">${formatToPar(u.rounds.fri)}</span></div>
+                        <div class="round-slot"><span class="round-label">Sat</span><span class="round-val">${formatToPar(u.rounds.sat)}</span></div>
+                        <div class="round-slot"><span class="round-label">Sun</span><span class="round-val">${formatToPar(u.rounds.sun)}</span></div>
+                    </div>
+                    <div class="draft-grid"></div>
+                </div></td>`;
                 
-                row.onclick = () => {
-                    const isOpen = row.classList.contains('open');
+                row.onclick = function() {
+                    const wasOpen = this.classList.contains('open');
                     document.querySelectorAll('.main-row').forEach(r => r.classList.remove('open'));
                     document.querySelectorAll('.draft-row').forEach(r => r.classList.remove('open'));
-                    if (!isOpen) {
-                        row.classList.add('open'); dr.classList.add('open');
+                    
+                    if (!wasOpen) {
+                        this.classList.add('open');
+                        dr.classList.add('open');
                         renderDraft(u.lineup, dr.querySelector('.draft-grid'));
                     }
                 };
+                
                 tbody.appendChild(row);
                 tbody.appendChild(dr);
             });
         }
 
         function renderDraft(data, container) {
-            if (!data || data.length === 0) { container.innerHTML = '<div style="flex:1; text-align:center; font-size:0.7rem;">Syncing lineup...</div>'; return; }
+            if (!data || data.length === 0) { container.innerHTML = '<div style="flex:1; text-align:center; font-size:0.7rem; padding:10px;">Syncing lineup...</div>'; return; }
             container.innerHTML = data.map(g => `<div class="draft-item"><img src="${g.avatar ? `https://media.realapp.link/assets/players/default/large/${g.avatar}.webp` : 'https://placehold.co/40x40/222/fff?text=?'}" class="draft-item-avatar" onerror="this.src='https://placehold.co/40x40/111/fff?text=?'"><span class="draft-item-name">${g.displayName}</span><span class="draft-item-score">${(parseFloat(g.score) || 0).toFixed(1)}</span></div>`).join('');
         }
-
-        const findIndexInHeaders = (h, n) => { 
-            for(const name of n) { 
-                const i = h.findIndex(x => x.toLowerCase().trim().includes(name.toLowerCase())); 
-                if(i !== -1) return i;
-            } 
-            return -1; 
-        };
 
         async function fetchDailyHistoricalData() {
             try {
@@ -336,27 +354,38 @@
                 const text = await res.text();
                 const rows = parseCSV(text);
                 if (rows.length < 2) return;
-                
                 const h = rows[0].map(v => v.toLowerCase().trim());
-                const uIdx = findIndexInHeaders(h, ['user id', 'userid']);
-                const tIdx = h.indexOf('thu');
-                const fIdx = h.indexOf('fri');
-                const saIdx = h.indexOf('sat');
-                const suIdx = h.indexOf('sun');
+                const findCol = (keys) => h.findIndex(v => keys.some(k => v.includes(k)));
+                const uIdx = findCol(['user id', 'userid']);
+                
+                const colMap = {
+                    thu_score: findCol(['thursday golf score', 'thu golf score']),
+                    fri_score: findCol(['friday golf score', 'fri golf score']),
+                    sat_score: findCol(['saturday golf score', 'sat golf score']),
+                    sun_score: findCol(['sunday golf score', 'sun golf score']),
+                    thu_raw: findCol(['thursday raw points', 'thu raw']),
+                    fri_raw: findCol(['friday raw points', 'fri raw']),
+                    sat_raw: findCol(['saturday raw points', 'sat raw']),
+                    sun_raw: findCol(['sunday raw points', 'sun raw'])
+                };
                 
                 if (uIdx === -1) return;
 
                 rows.slice(1).forEach(r => {
                     if (!r[uIdx]) return;
                     const normId = r[uIdx].trim().toLowerCase();
-                    historicalDailyPts[normId] = {
-                        thu: parseFloat(r[tIdx]) || 0,
-                        fri: parseFloat(r[fIdx]) || 0,
-                        sat: parseFloat(r[saIdx]) || 0,
-                        sun: parseFloat(r[suIdx]) || 0
+                    historicalDailyData[normId] = {
+                        thu_score: parseInt(r[colMap.thu_score]) || 0,
+                        fri_score: parseInt(r[colMap.fri_score]) || 0,
+                        sat_score: parseInt(r[colMap.sat_score]) || 0,
+                        sun_score: parseInt(r[colMap.sun_score]) || 0,
+                        thu_raw: parseFloat(r[colMap.thu_raw]) || 0,
+                        fri_raw: parseFloat(r[colMap.fri_raw]) || 0,
+                        sat_raw: parseFloat(r[colMap.sat_raw]) || 0,
+                        sun_raw: parseFloat(r[colMap.sun_raw]) || 0
                     };
                 });
-            } catch (e) { console.error("Daily data fetch failed", e); }
+            } catch (e) { console.error("Daily pts fetch failed", e); }
         }
 
         function generateCSV(rows, filename) {
@@ -367,30 +396,29 @@
             link.click();
         }
 
+        function getCalculatedDate(dayName) {
+            if (!activeTournamentStartDate) return new Date().toISOString().split('T')[0];
+            const base = new Date(activeTournamentStartDate);
+            const offset = { 'thursday': 0, 'friday': 1, 'saturday': 2, 'sunday': 3 };
+            base.setDate(base.getDate() + offset[dayName.toLowerCase()]);
+            return (base.getMonth() + 1) + '/' + base.getDate() + '/' + base.getFullYear();
+        }
+
         function exportDay(dayName) {
-            const dateStr = new Date().toISOString().split('T')[0];
+            const displayDate = getCalculatedDate(dayName);
             const rows = [["username", "user id", "raw points", "golf score", "date"]];
-            
             const dayKey = dayName.substring(0, 3).toLowerCase();
-            const liveDayIdx = new Date().getDay();
+            const now = new Date();
             const dayMap = { 'thursday': 4, 'friday': 5, 'saturday': 6, 'sunday': 0 };
 
             currentProcessedUsers.forEach((u) => {
-                const normId = u.userId.toLowerCase().trim();
-                const hist = historicalDailyPts[normId] || {};
-                
-                let raw = 0;
-                if (liveDayIdx === dayMap[dayName]) {
-                    raw = u.actualTodayPoints;
-                } else {
-                    raw = hist[dayKey] || 0;
-                }
-                
-                const golfScore = u.rounds[dayKey];
-                rows.push([u.username, u.userId, raw.toFixed(1), golfScore, dateStr]);
+                const normId = u.userId.trim().toLowerCase();
+                const hist = historicalDailyData[normId] || {};
+                let raw = (now.getDay() === dayMap[dayName]) ? u.actualTodayPoints : (hist[`${dayKey}_raw`] || 0);
+                rows.push([u.username, u.userId, raw.toFixed(1), u.rounds[dayKey], displayDate]);
             });
 
-            generateCSV(rows, `golf_plug_${dayName}_${dateStr}.csv`);
+            generateCSV(rows, `golf_plug_${dayName}_${displayDate.replace(/\//g, '-')}.csv`);
             document.getElementById('export-menu').style.display = 'none';
         }
 
@@ -408,14 +436,21 @@
         async function loadAllUserScores() {
             const q = users.filter(u => u.golfId && u.userId).map(u => ({ url: `https://web.realsports.io/games/playerratingcontest/${u.golfId}/view/${u.userId}?contestType=sport&source=home`, user: u }));
             const chunkS = 3; let loaded = 0; const statusEl = document.getElementById('sync-status');
+            const hasher = new Hashids("realwebapp", 16);
+
             while (q.length > 0) {
                 const chunk = q.splice(0, chunkS);
                 try {
-                    const results = await fetchBatchViaWorker(chunk.map(c => c.url));
-                    results.forEach((res, idx) => {
+                    const reqToken = hasher.encode(Date.now());
+                    const query = new URLSearchParams(); 
+                    chunk.forEach(item => query.append('url', item.url));
+                    const opts = { headers: { 'real-auth-info': config.REAL_AUTH_TOKEN, 'real-device-name': 'Chrome', 'real-device-type': 'desktop_web', 'real-device-uuid': DEVICE_UUID, 'real-request-token': reqToken, 'real-version': config.REAL_VERSION } };
+
+                    const res = await (await fetch(`${config.workerProxy}?${query.toString()}`, opts)).json();
+                    res.forEach((r, idx) => {
                         const user = chunk[idx].user;
-                        if (res.status === 200) {
-                            const data = JSON.parse(base64ToText(res.body));
+                        if (r.status === 200) {
+                            const data = JSON.parse(base64ToText(r.body));
                             user.actualTotalPoints = parseFloat((data.info?.rankDisplayInfos?.[0]?.scoreDisplay || '0').replace(/[^0-9.]/g, '')) || 0;
                             user.lineup = data.lineup || [];
                             user.actualTodayPoints = user.lineup.reduce((acc, g) => acc + (parseFloat(g.score) || 0), 0);
@@ -423,20 +458,29 @@
                         }
                         loaded++;
                     });
-                    statusEl.innerHTML = `<span class="sync-dot"></span>${loaded}/${chunk.length + queue.length + loaded}`;
+                    statusEl.innerHTML = `<span class="sync-dot"></span>${loaded}/${chunk.length + q.length + loaded}`;
                     renderLeaderboard();
-                } catch (e) {}
+                } catch (e) { console.error("Batch load failed", e); }
                 await new Promise(r => setTimeout(r, 250));
             }
             statusEl.innerHTML = '<span class="sync-dot"></span>LIVE';
         }
 
-        function base64ToText(b) { try { return new TextDecoder().decode(Uint8Array.from(atob(b), c => c.charCodeAt(0))); } catch(e) { return ''; } }
-        async function fetchBatchViaWorker(u) {
-            const q = new URLSearchParams(); u.forEach(url => q.append('url', url));
-            const opts = { headers: { 'real-auth-info': config.REAL_AUTH_TOKEN, 'real-device-name': 'Chrome', 'real-device-type': 'desktop_web', 'real-device-uuid': DEVICE_UUID, 'real-request-token': new Hashids("realwebapp", 16).encode(Date.now()), 'real-version': config.REAL_VERSION } };
-            return await (await fetch(`${config.workerProxy}?${q.toString()}`, opts)).json();
+        function base64ToText(b) { 
+            try { 
+                if (!b) return '';
+                let base64 = b.replace(/-/g, '+').replace(/_/g, '/');
+                while (base64.length % 4) base64 += '=';
+                const binaryString = window.atob(base64);
+                const bytes = new Uint8Array(binaryString.length);
+                for (let i = 0; i < bin.length; i++) bytes[i] = binaryString.charCodeAt(i);
+                return new TextDecoder().decode(bytes);
+            } catch(e) { 
+                // Fallback for environment constraints
+                try { return decodeURIComponent(escape(window.atob(b))); } catch(e2) { return ''; }
+            } 
         }
+
         function parseCSV(t) { return t.split(/\r?\n/).map(l => { const v=[]; let c='', q=false; for(let i=0;i<l.length;i++){ if(l[i]==='"' && l[i-1]!=='\\') q=!q; else if(l[i]===',' && !q){ v.push(c.trim()); c=''; } else c+=l[i]; } v.push(c.trim()); return v; }).filter(r => r.length > 1); }
 
         async function fetchTournamentSchedule() {
@@ -444,17 +488,22 @@
                 const res = await fetch(config.scheduleUrl);
                 const rows = parseCSV(await res.text());
                 const now = new Date(); const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                const day = now.getDay(); const upcoming = [], past = []; let curr = null, next = null;
+                const dayOfWeek = now.getDay(); 
+                const upcoming = [], past = []; let curr = null, next = null;
+
                 for (let i = 1; i < rows.length; i++) {
                     const r = rows[i]; const p = (r[0] || '').split('/'); if (p.length < 2) continue;
                     const start = new Date(today.getFullYear(), parseInt(p[0]) - 1, parseInt(p[1]));
                     const obj = { name: r[1], course: r[2] || '-', date: r[0], start };
                     if (start <= today) { curr = obj; past.unshift(obj); } else { if (!next) next = obj; upcoming.push(obj); }
                 }
+
                 document.getElementById('upcoming-list').innerHTML = upcoming.map(t => `<div class="schedule-card"><div class="card-date">${t.date}</div><div class="card-name">${t.name}</div><div class="card-course">${t.course}</div></div>`).join('');
                 document.getElementById('past-tournament-grid').innerHTML = past.map(t => `<div class="schedule-card clickable" onclick="viewArchive('${t.name.replace(/'/g, "\\'")}')"><div class="card-date">${t.date}</div><div class="card-name">${t.name}</div><div class="card-course">${t.course}</div></div>`).join('');
-                let d = (day === 3 && next) ? { ...next, label: 'Live Tournament' } : (day === 1 || day === 2) ? { ...curr, label: 'Past Tournament' } : { ...curr, label: 'Live Tournament' };
+                
+                let d = (dayOfWeek === 3 && next) ? { ...next, label: 'Live Tournament' } : (dayOfWeek === 1 || dayOfWeek === 2) ? { ...curr, label: 'Past Tournament' } : { ...curr, label: 'Live Tournament' };
                 if (d && d.name) {
+                    activeTournamentStartDate = d.start;
                     document.getElementById('display-tournament-name').innerText = d.name;
                     document.getElementById('display-course-name').innerText = d.course;
                     document.getElementById('display-banner-label').innerText = d.label;
@@ -462,32 +511,36 @@
                 }
             } catch (e) {}
         }
+
         async function fetchUsers() {
             try {
                 const res = await fetch(config.usersDataUrl);
                 const rows = parseCSV(await res.text());
                 const h = rows[0].map(v => v.toLowerCase().trim());
-                const uIdx = h.indexOf('username'), uidIdx = findIndexInHeaders(h, ['user id', 'userid']), gidIdx = findIndexInHeaders(h, ['golf id', 'golfid']);
+                const uIdx = h.indexOf('username'), uidIdx = h.findIndex(v => v.includes('user id') || v.includes('userid')), gidIdx = h.findIndex(v => v.includes('golf id') || v.includes('golfid'));
                 return rows.slice(1).map(r => ({ userId: r[uidIdx].trim(), username: r[uIdx].trim(), golfId: gidIdx !== -1 ? r[gidIdx].trim() : '', actualTotalPoints: 0, actualTodayPoints: 0, hasData: false, lineup: [] })).filter(u => u.username && u.userId);
             } catch (e) { return []; }
         }
+
         function viewArchive(name) {
             const filtered = masterArchiveData.slice(1).filter(r => r[9] === name);
             const tbody = document.getElementById('archive-tbody');
-            tbody.innerHTML = filtered.length ? filtered.map(r => `<tr><td class="col-pos">${r[0]}</td><td class="col-player">${r[1].startsWith('@')?r[1]:'@'+r[1]}</td><td class="col-score">${formatToPar(r[3])}</td><td class="col-score">${r[8]}</td></tr>`).join('') : '<tr><td colspan="4" style="text-align:center; padding:2rem;">No data found.</td></tr>';
+            tbody.innerHTML = filtered.length ? filtered.map(r => `<tr><td class="col-pos">${r[0]}</td><td class="col-player">${formatHandle(r[1])}</td><td class="col-score">${formatToPar(r[3])}</td><td class="col-score">${r[8]}</td></tr>`).join('') : '<tr><td colspan="4" style="text-align:center; padding:2rem;">No archive data found.</td></tr>';
             document.getElementById('archive-header-title').innerText = `${name.toUpperCase()} ARCHIVE`;
             document.getElementById('past-tournament-grid').style.display = 'none';
             document.getElementById('archive-viewer').style.display = 'block';
         }
+
         function handleArchiveUpload(e) {
             const r = new FileReader(); r.onload = (ev) => {
                 const rows = parseCSV(ev.target.result);
-                document.getElementById('archive-tbody').innerHTML = rows.slice(1).map(r => `<tr><td class="col-pos">${r[0]}</td><td class="col-player">${r[1].startsWith('@')?r[1]:'@'+r[1]}</td><td class="col-total">${formatToPar(r[3])}</td><td class="col-today">${formatToPar(r[4])}</td></tr>`).join('');
+                document.getElementById('archive-tbody').innerHTML = rows.slice(1).map(r => `<tr><td class="col-pos">${r[0]}</td><td class="col-player">${formatHandle(r[1])}</td><td class="col-total">${formatToPar(r[3])}</td><td class="col-today">${formatToPar(r[4])}</td></tr>`).join('');
                 document.getElementById('archive-header-title').innerText = "LOCAL FILE";
                 document.getElementById('past-tournament-grid').style.display = 'none';
                 document.getElementById('archive-viewer').style.display = 'block';
             }; r.readAsText(e.target.files[0]);
         }
+
         async function initApp() {
             await fetchTournamentSchedule(); 
             await (async () => { try { masterArchiveData = parseCSV(await (await fetch(config.archiveDataUrl)).text()); } catch (e) {} })();
