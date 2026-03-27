@@ -261,7 +261,6 @@
             document.getElementById('past-tournament-grid').style.display = 'grid';
         }
 
-        // Updated for visual boxes (Text color only now)
         function formatToPar(score) {
             const n = parseInt(score);
             if (isNaN(n) || n === 0) return '<div class="score-box even">E</div>';
@@ -559,6 +558,26 @@
             currentProcessedUsers.forEach((u, i) => { if(u.hasData) rows.push([u.isWD?'WD':(u.isDuplicate?'DUP':i+1), u.username, u.userId, u.total, u.rounds.thu, u.rounds.fri, u.rounds.sat, u.rounds.sun, u.actualTotalPoints.toFixed(2)]); });
             generateCSV(rows, `golf_plug_full_export.csv`);
             document.getElementById('export-menu').style.display = 'none';
+        }
+
+        function viewArchive(name) {
+            const h = masterArchiveData[0].map(v => v.toLowerCase().trim());
+            const tIdx = findIdx(h, ['tournament', 'tourn']);
+            const filtered = masterArchiveData.slice(1).filter(r => r[tIdx] === name);
+            const tbody = document.getElementById('archive-tbody');
+            
+            tbody.innerHTML = filtered.length ? filtered.map(r => `
+                <tr>
+                    <td class="col-pos">${r[0]}</td>
+                    <td class="col-player">${formatHandle(r[1])}</td>
+                    <td class="col-score">${formatToPar(r[3])}</td>
+                    <td class="col-score">${r[8]}</td>
+                </tr>
+            `).join('') : '<tr><td colspan="4" style="text-align:center; padding:2rem;">No data available.</td></tr>';
+            
+            document.getElementById('archive-header-title').innerText = `${name.toUpperCase()} ARCHIVE`;
+            document.getElementById('past-tournament-grid').style.display = 'none';
+            document.getElementById('archive-viewer').style.display = 'block';
         }
 
         async function initApp() {
