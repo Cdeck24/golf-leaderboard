@@ -226,14 +226,14 @@
             dailyDataUrl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTuVpFht1S7pkLdCssZyFR6B3T0f92_cPk_qFMf2KZVm_KTPtKuKvC-2yUfF4oEFpDGIajryZpb3_oV/pub?gid=435355414&single=true&output=csv',
             workerProxy: 'https://rda-worker.coledecker04.workers.dev/',
             REAL_AUTH_TOKEN: 'xnr5VpW3!ApZk8L2E!4fe6e26f-949f-4936-ae3e-16384878932f',
-            REAL_VERSION: '52' 
+            REAL_VERSION: '58' 
         };
 
         const DEVICE_UUID = crypto.randomUUID();
         const REFERENCE_IDS = ['jvbb41pv', 'R37kAWO3', 'gv8D5Q0v', '9JmXRKDn'].map(id => id.toLowerCase().trim());
         
         let users = [];
-        let historicalDailyData = {}; 
+        let historicalDailyDataByDate = {}; // { userId: { "3/26/2026": { score: -2, raw: 100 } } }
         let masterArchiveData = [];
         let currentProcessedUsers = [];
         let activeTournamentStartDate = null;
@@ -273,16 +273,9 @@
             const sorted = [...validPts].sort((a,b) => a - b);
             const idx = sorted.indexOf(pts);
             if (idx === -1) return 0;
-            
             const pr = idx / (sorted.length - 1);
             const z = (pr * 2) - 1; 
-            
-            let score = 0;
-            if (z > 0) {
-                score = -6 * Math.pow(z, 3);
-            } else {
-                score = -5 * Math.pow(z, 3);
-            }
+            let score = (z > 0) ? (-6 * Math.pow(z, 3)) : (-5 * Math.pow(z, 3));
             return Math.round(score);
         }
 
@@ -298,6 +291,12 @@
             return lineup.map(g => (g.displayName || g.player?.displayName || "").trim()).sort().join('|');
         }
 
+        function getFormattedDate(base, daysToAdd) {
+            const d = new Date(base);
+            d.setDate(d.getDate() + daysToAdd);
+            return (d.getMonth() + 1) + '/' + d.getDate() + '/' + d.getFullYear();
+        }
+
         function renderLeaderboard() {
             const tbody = document.getElementById('leaderboard-tbody');
             if (!tbody) return;
@@ -305,12 +304,12 @@
             
             const synced = users.filter(u => u.hasData);
             const now = new Date();
-            const todayDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-            let currentDayIdx = -1; 
+            const todayStr = (now.getMonth() + 1) + '/' + now.getDate() + '/' + now.getFullYear();
 
+            // Calculate exact tournament dates
+            const tDates = [];
             if (activeTournamentStartDate) {
-                const diffTime = todayDate - activeTournamentStartDate;
-                currentDayIdx = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                for (let i = 0; i < 4; i++) tDates.push(getFormattedDate(activeTournamentStartDate, i));
             }
 
             const referenceSignatures = [];
@@ -338,31 +337,36 @@
             const medianToday = sortedPool.length ? (sortedPool.length % 2 ? sortedPool[Math.floor(sortedPool.length/2)] : (sortedPool[sortedPool.length/2-1] + sortedPool[sortedPool.length/2])/2) : 0;
             document.getElementById('par-score-display').innerText = `EVEN: ${medianToday.toFixed(1)} PTS`;
 
-            const dayKeys = ['thu', 'fri', 'sat', 'sun'];
-
             currentProcessedUsers = users.map(u => {
                 const normId = u.userId.trim().toLowerCase();
-                const hist = historicalDailyData[normId] || {};
+                const userHistory = historicalDailyDataByDate[normId] || {};
                 
                 const syncedUser = usersWithStatus.find(su => su.userId === u.userId);
                 const isDuplicate = syncedUser ? syncedUser.isDuplicate : false;
                 const isWD = syncedUser ? syncedUser.isWD : false;
 
                 let rounds = { thu: 0, fri: 0, sat: 0, sun: 0 };
-                dayKeys.forEach((key, idx) => {
-                    if (idx < currentDayIdx) {
-                        rounds[key] = hist[`${key}_score`] || 0;
-                    } else if (idx === currentDayIdx) {
-                        rounds[key] = (u.actualTodayPoints > 0 && !isDuplicate && !isWD) ? calculateGolfScore(u.actualTodayPoints, distributionPool) : 0;
-                    } else {
-                        rounds[key] = 0;
+                let currentPoints = u.actualTotalPoints; // Default to sync points
+
+                // Map specific dates to slots
+                const slotKeys = ['thu', 'fri', 'sat', 'sun'];
+                tDates.forEach((dateStr, i) => {
+                    const hist = userHistory[dateStr];
+                    if (hist) {
+                        rounds[slotKeys[i]] = hist.score;
+                        // If we have CSV data for today, it overrides live points for the total count
+                        if (dateStr === todayStr) currentPoints = hist.raw;
+                    } else if (dateStr === todayStr && !isDuplicate && !isWD) {
+                        rounds[slotKeys[i]] = u.actualTodayPoints > 0 ? calculateGolfScore(u.actualTodayPoints, distributionPool) : 0;
                     }
                 });
 
                 const total = rounds.thu + rounds.fri + rounds.sat + rounds.sun;
-                const todayGolf = (currentDayIdx >= 0 && currentDayIdx < 4) ? rounds[dayKeys[currentDayIdx]] : 0;
+                // Identifying "today" golf score for the column
+                const tIdx = tDates.indexOf(todayStr);
+                const todayGolf = (tIdx !== -1) ? rounds[slotKeys[tIdx]] : 0;
 
-                return { ...u, total, today: todayGolf, rounds, isWD, isDuplicate };
+                return { ...u, total, today: todayGolf, rounds, isWD, isDuplicate, actualTotalPoints: currentPoints };
             });
 
             currentProcessedUsers.sort((a, b) => {
@@ -377,15 +381,15 @@
             const cutScore = ranked.length > 0 ? ranked[Math.max(0, cutRank - 1)].total : 99;
             
             let cutLineInserted = false;
-            const canShowMC = currentDayIdx >= 1; 
+            const tIdx = tDates.indexOf(todayStr);
+            const isCutOfficial = tIdx >= 1; // Friday or later
 
             currentProcessedUsers.forEach((u, i) => {
                 const isBelowCut = u.total > cutScore && !u.isWD && !u.isDuplicate;
-                
                 if (!cutLineInserted && isBelowCut) {
                     const cutRow = document.createElement('tr');
                     cutRow.className = 'cut-line-row';
-                    const label = (currentDayIdx <= 0) ? 'EXPECTED CUT LINE' : 'CUT LINE';
+                    const label = (tIdx <= 0) ? 'EXPECTED CUT LINE' : 'CUT LINE';
                     cutRow.innerHTML = `<td colspan="4">${label} (${formatToPar(cutScore)})</td>`;
                     tbody.appendChild(cutRow);
                     cutLineInserted = true;
@@ -394,12 +398,8 @@
                 const row = document.createElement('tr');
                 row.className = 'main-row';
                 const handle = formatHandle(u.username);
-                
-                let tag = "";
-                if (u.isDuplicate) tag = '<span style="color:var(--danger); font-size:0.6rem;">(DUPLICATE)</span>';
-                else if (canShowMC && isBelowCut) tag = '<span style="color:var(--danger); font-size:0.6rem;">(MC)</span>';
-                
-                const posDisplay = (u.isDuplicate || u.isWD) ? (u.isDuplicate ? 'DUP' : 'WD') : (u.hasData ? i + 1 : '-');
+                let tag = u.isDuplicate ? '<span style="color:var(--danger); font-size:0.6rem;">(DUPLICATE)</span>' : (isCutOfficial && isBelowCut ? '<span style="color:var(--danger); font-size:0.6rem;">(MC)</span>' : '');
+                const posDisplay = u.isDuplicate ? 'DUP' : (u.isWD ? 'WD' : (u.hasData ? i + 1 : '-'));
 
                 row.innerHTML = `
                     <td class="col-pos">${posDisplay}</td>
@@ -417,15 +417,15 @@
                         <div class="round-slot"><span class="round-label">Sat</span><span class="round-val">${(u.isWD || u.isDuplicate) ? '-' : formatToPar(u.rounds.sat)}</span></div>
                         <div class="round-slot"><span class="round-label">Sun</span><span class="round-val">${(u.isWD || u.isDuplicate) ? '-' : formatToPar(u.rounds.sun)}</span></div>
                     </div>
-                    <div class="raw-pts-display">Raw Score: ${u.actualTotalPoints.toFixed(1)} ${u.isWD ? '(WITHDRAWN)' : (u.isDuplicate ? '(DUPLICATE LINEUP)' : '')}</div>
+                    <div class="raw-pts-display">Raw Score: ${u.actualTotalPoints.toFixed(1)} ${u.isWD ? '(WD)' : (u.isDuplicate ? '(DUP)' : '')}</div>
                     <div class="draft-grid"></div>
                 </div></td>`;
                 
                 row.onclick = function() {
-                    const wasOpen = this.classList.contains('open');
+                    const isOpen = this.classList.contains('open');
                     document.querySelectorAll('.main-row').forEach(r => r.classList.remove('open'));
                     document.querySelectorAll('.draft-row').forEach(r => r.classList.remove('open'));
-                    if (!wasOpen) {
+                    if (!isOpen) {
                         this.classList.add('open'); dr.classList.add('open');
                         renderDraft(u, dr.querySelector('.draft-grid'));
                     }
@@ -437,10 +437,7 @@
 
         function renderDraft(user, container) {
             if (!user.hasData) { container.innerHTML = '<div style="flex:1; text-align:center; font-size:0.7rem; padding:10px;">Syncing...</div>'; return; }
-            if (user.isWD || (user.isDuplicate && (!user.lineup || user.lineup.length === 0))) { 
-                container.innerHTML = `<div style="flex:1; text-align:center; font-size:0.7rem; color:var(--danger); padding:10px;">${user.isWD ? 'PLAYER WITHDRAWN' : 'DUPLICATE ENTRY'}</div>`; 
-                return; 
-            }
+            if (user.isWD || user.isDuplicate) { container.innerHTML = `<div style="flex:1; text-align:center; font-size:0.7rem; color:var(--danger); padding:10px;">${user.isWD ? 'PLAYER WITHDRAWN' : 'DUPLICATE LINEUP'}</div>`; return; }
             
             container.innerHTML = user.lineup.map(g => {
                 const name = g.displayName || g.player?.displayName || (g.player?.firstName ? `${g.player.firstName} ${g.player.lastName}` : 'Unknown');
@@ -470,45 +467,53 @@
                 if (rows.length < 2) return;
                 const h = rows[0].map(v => v.toLowerCase().trim());
                 const findCol = (keys) => findIndexInHeaders(h, keys);
-                const uIdx = findCol(['user id', 'userid']), cMap = {
-                    thu: findCol(['thursday golf score', 'thu golf score']),
-                    fri: findCol(['friday golf score', 'fri golf score']),
-                    sat: findCol(['saturday golf score', 'sat golf score']),
-                    sun: findCol(['sunday golf score', 'sun golf score'])
-                };
-                if (uIdx === -1) return;
+                
+                const uIdx = findCol(['user id', 'userid']);
+                const dIdx = findCol(['date']);
+                const rIdx = findCol(['raw points', 'raw pts']);
+                const gIdx = findCol(['golf score']);
+
+                if (uIdx === -1 || dIdx === -1) return;
+
                 rows.slice(1).forEach(r => {
-                    if (!r[uIdx]) return;
-                    historicalDailyData[r[uIdx].trim().toLowerCase()] = {
-                        thu_score: parseInt(r[cMap.thu]) || 0,
-                        fri_score: parseInt(r[cMap.fri]) || 0,
-                        sat_score: parseInt(r[cMap.sat]) || 0,
-                        sun_score: parseInt(r[cMap.sun]) || 0
+                    const uid = r[uIdx]?.trim().toLowerCase();
+                    const dateStr = r[dIdx]?.trim();
+                    if (!uid || !dateStr) return;
+
+                    if (!historicalDailyDataByDate[uid]) historicalDailyDataByDate[uid] = {};
+                    historicalDailyDataByDate[uid][dateStr] = {
+                        score: parseInt(r[gIdx]) || 0,
+                        raw: parseFloat(r[rIdx]) || 0
                     };
                 });
-            } catch (e) {}
+            } catch (e) { console.error("Daily pts fetch failed", e); }
         }
 
-        function getCalculatedDate(dayName) {
-            if (!activeTournamentStartDate) return new Date().toISOString().split('T')[0];
+        function generateCSV(rows, filename) {
+            const blob = new Blob([rows.map(e => e.join(",")).join("\n")], { type: 'text/csv' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            link.click();
+        }
+
+        function exportDay(dayName) {
+            const dateStr = getCalculatedDateForExport(dayName);
+            const rows = [["username", "user id", "raw points", "golf score", "date"]];
+            const dayKey = dayName.substring(0, 3).toLowerCase();
+            currentProcessedUsers.forEach((u) => {
+                rows.push([u.username, u.userId, u.actualTotalPoints.toFixed(1), u.rounds[dayKey], dateStr]);
+            });
+            generateCSV(rows, `golf_plug_${dayName}_${dateStr.replace(/\//g, '-')}.csv`);
+            document.getElementById('export-menu').style.display = 'none';
+        }
+
+        function getCalculatedDateForExport(dayName) {
+            if (!activeTournamentStartDate) return new Date().toLocaleDateString();
             const base = new Date(activeTournamentStartDate);
             const offset = { 'thursday': 0, 'friday': 1, 'saturday': 2, 'sunday': 3 };
             base.setDate(base.getDate() + (offset[dayName.toLowerCase()] || 0));
             return (base.getMonth() + 1) + '/' + base.getDate() + '/' + base.getFullYear();
-        }
-
-        function exportDay(dayName) {
-            const displayDate = getCalculatedDate(dayName);
-            const rows = [["username", "user id", "raw points", "golf score", "date"]];
-            currentProcessedUsers.forEach((u) => {
-                rows.push([u.username, u.userId, u.actualTotalPoints.toFixed(1), u.rounds[dayName.substring(0,3).toLowerCase()], displayDate]);
-            });
-            const blob = new Blob([rows.map(e => e.join(",")).join("\n")], { type: 'text/csv' });
-            const link = document.createElement("a");
-            link.href = URL.createObjectURL(blob);
-            link.download = `golf_plug_${dayName}_${displayDate.replace(/\//g, '-')}.csv`;
-            link.click();
-            document.getElementById('export-menu').style.display = 'none';
         }
 
         function exportScoresToCSV() {
@@ -518,11 +523,7 @@
                 if (!u.hasData) return;
                 rows.push([u.isWD ? 'WD' : (u.isDuplicate ? 'DUP' : index + 1), u.username, u.userId, u.total, u.rounds.thu, u.rounds.fri, u.rounds.sat, u.rounds.sun, u.actualTotalPoints.toFixed(1), tourn]);
             });
-            const blob = new Blob([rows.map(e => e.join(",")).join("\n")], { type: 'text/csv' });
-            const link = document.createElement("a");
-            link.href = URL.createObjectURL(blob);
-            link.download = `golf_plug_full_export.csv`;
-            link.click();
+            generateCSV(rows, `golf_plug_full_export.csv`);
             document.getElementById('export-menu').style.display = 'none';
         }
 
@@ -545,7 +546,6 @@
                                 const bytes = new Uint8Array(decoded.length);
                                 for (let i = 0; i < decoded.length; i++) bytes[i] = decoded.charCodeAt(i);
                                 const dataBody = JSON.parse(new TextDecoder().decode(bytes));
-                                
                                 user.actualTotalPoints = parseFloat((dataBody.info?.rankDisplayInfos?.[0]?.scoreDisplay || '0').replace(/[^0-9.]/g, '')) || 0;
                                 user.lineup = dataBody.lineup || [];
                                 user.actualTodayPoints = user.lineup.reduce((acc, g) => acc + (parseFloat(g.score) || 0), 0);
@@ -554,7 +554,7 @@
                         }
                         loaded++;
                     });
-                    statusEl.innerHTML = `<span class="sync-dot"></span>${loaded}/${chunk.length + q.length + loaded}`;
+                    statusEl.innerHTML = `<span class="sync-dot"></span>${loaded}/${chunk.length + queue.length + loaded}`;
                     renderLeaderboard();
                 } catch (e) {}
                 await new Promise(r => setTimeout(r, 250));
@@ -638,3 +638,4 @@
     </script>
 </body>
 </html>
+
