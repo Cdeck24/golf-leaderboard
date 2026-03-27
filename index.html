@@ -45,6 +45,7 @@
       #tournament-banner { max-width: 800px; margin: 1.5rem auto 0 auto; padding: 0 1rem; display: none; }
       .banner-content { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 1.25rem; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
       .banner-label { font-size: 0.55rem; text-transform: uppercase; letter-spacing: 0.2em; color: var(--gold-light); font-weight: 800; margin-bottom: 0.4rem; }
+      .banner-date { font-size: 0.65rem; color: var(--gold-light); font-weight: 800; margin-bottom: 0.3rem; letter-spacing: 0.05em; }
       .banner-name { font-size: 1.1rem; font-weight: 900; color: #fff; margin-bottom: 0.2rem; line-height: 1.2; }
       .banner-course { font-size: 0.8rem; color: var(--text-muted); font-weight: 500; margin-bottom: 0.2rem; }
       .banner-purse { font-size: 0.75rem; color: var(--gold-light); font-weight: 800; text-transform: uppercase; }
@@ -114,6 +115,18 @@
           margin-bottom: 1rem; text-align: center; background: rgba(255,255,255,0.05); padding: 8px; border-radius: 6px;
       }
 
+      .schedule-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+      .schedule-card { 
+          background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 1.25rem; 
+          cursor: pointer; transition: all 0.2s ease; position: relative; box-shadow: 0 4px 15px rgba(0,0,0,0.2); 
+      }
+      .schedule-card:hover { background: rgba(255, 255, 255, 0.08); border-color: var(--border-gold); transform: translateY(-2px); }
+      .schedule-card.clickable::after { content: "VIEW ARCHIVE →"; position: absolute; bottom: 12px; right: 15px; font-size: 0.55rem; font-weight: 800; color: var(--gold-light); letter-spacing: 0.05em; }
+      .card-date { font-size: 0.65rem; color: var(--gold-light); font-weight: 800; text-transform: uppercase; margin-bottom: 0.4rem; letter-spacing: 0.05em; }
+      .card-name { font-size: 1.1rem; font-weight: 900; color: #fff; margin-bottom: 0.25rem; line-height: 1.2; }
+      .card-course { font-size: 0.8rem; color: var(--text-muted); font-weight: 500; margin-bottom: 0.2rem; }
+      .card-purse { font-size: 0.7rem; color: var(--gold-light); font-weight: 800; text-transform: uppercase; }
+
       .draft-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
       .draft-item { 
           flex: 0 0 calc(33.33% - 6px); display: flex; flex-direction: column; align-items: center; text-align: center;
@@ -129,6 +142,7 @@
       @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
       @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
       
+      @media (min-width: 600px) { .schedule-grid { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); } }
       @media (max-width: 600px) { h1 { font-size: 1.4rem; } .golf-table th, .golf-table td { padding: 0.75rem 0.5rem; } .col-pos { width: 40px; } .col-score { width: 70px; } }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/hashids@2.2.10/dist/hashids.min.js"></script>
@@ -147,6 +161,7 @@
     <div id="tournament-banner">
         <div class="banner-content">
             <div class="banner-label" id="display-banner-label">Tournament Status</div>
+            <div class="banner-date" id="display-banner-date"></div>
             <div class="banner-name" id="display-tournament-name">Loading Schedule...</div>
             <div class="banner-course" id="display-course-name">-</div>
             <div class="banner-purse" id="display-purse"></div>
@@ -232,7 +247,6 @@
             document.getElementById('past-tournament-grid').style.display = 'grid';
         }
 
-        // Updated for integer golf scores
         function formatToPar(score) {
             const n = parseInt(score);
             if (isNaN(n) || n === 0) return '<span class="score-even">E</span>';
@@ -253,7 +267,6 @@
             if (idx === -1) return 0;
             const pr = idx / (sorted.length - 1);
             const z = (pr * 2) - 1; 
-            // Now returning integer as requested
             return Math.round(z > 0 ? (-6 * Math.pow(z, 3)) : (-5 * Math.pow(z, 3)));
         }
 
@@ -463,16 +476,56 @@
                 const h = rows[0].map(v => v.toLowerCase().trim());
                 const dIdx = findIdx(h, ['date']), nIdx = findIdx(h, ['tourn', 'tournament']), cIdx = findIdx(h, ['course']), pIdx = findIdx(h, ['purse']);
                 const upcoming = [], past = []; let curr = null, next = null;
+                
                 for (let i = 1; i < rows.length; i++) {
-                    const r = rows[i]; const p = (r[dIdx] || '').split('/'); if (p.length < 2) continue;
-                    const start = new Date(new Date().getFullYear(), parseInt(p[0]) - 1, parseInt(p[1]));
-                    const obj = { name: r[nIdx], course: r[cIdx] || '-', date: r[dIdx], purse: r[pIdx] || '', start };
-                    if (start <= today) { curr = obj; past.unshift(obj); } else { if (!next) next = obj; upcoming.push(obj); }
+                    const r = rows[i]; 
+                    const rawDate = (r[dIdx] || '');
+                    const p = rawDate.split('/'); if (p.length < 2) continue;
+                    
+                    const start = new Date(today.getFullYear(), parseInt(p[0]) - 1, parseInt(p[1]));
+                    const end = new Date(start);
+                    end.setDate(end.getDate() + 3);
+                    
+                    const rangeStr = `${start.getMonth()+1}/${start.getDate()} - ${end.getMonth()+1}/${end.getDate()}`;
+                    
+                    const obj = { name: r[nIdx], course: r[cIdx] || '-', date: rangeStr, purse: r[pIdx] || '', start };
+                    
+                    if (start <= today) { 
+                        curr = obj; 
+                        past.unshift(obj); 
+                    } else { 
+                        if (!next) next = obj; 
+                        upcoming.push(obj); 
+                    }
                 }
-                document.getElementById('upcoming-list').innerHTML = upcoming.map(t => `<div class="schedule-card"><div class="card-date">${t.date}</div><div class="card-name">${t.name}</div><div class="card-course">${t.course}</div>${t.purse ? `<div class="card-purse">Purse: ${t.purse}</div>` : ''}</div>`).join('');
-                document.getElementById('past-tournament-grid').innerHTML = past.map(t => `<div class="schedule-card clickable" onclick="viewArchive('${t.name.replace(/'/g, "\\'")}')"><div class="card-date">${t.date}</div><div class="card-name">${t.name}</div><div class="card-course">${t.course}</div></div>`).join('');
-                let d = (new Date().getDay() === 3 && next) ? { ...next, label: 'Live Tournament' } : (new Date().getDay() === 1 || new Date().getDay() === 2) ? { ...curr, label: 'Past Tournament' } : { ...curr, label: 'Live Tournament' };
-                if (d && d.name) { activeTournamentStartDate = d.start; document.getElementById('display-tournament-name').innerText = d.name; document.getElementById('display-course-name').innerText = d.course; document.getElementById('display-banner-label').innerText = d.label; document.getElementById('display-purse').innerText = d.purse ? `Purse: ${d.purse}` : ''; document.getElementById('tournament-banner').style.display = 'block'; }
+                
+                document.getElementById('upcoming-list').innerHTML = upcoming.map(t => `
+                    <div class="schedule-card">
+                        <div class="card-date">${t.date}</div>
+                        <div class="card-name">${t.name}</div>
+                        <div class="card-course">${t.course}</div>
+                        ${t.purse ? `<div class="card-purse">Purse: ${t.purse}</div>` : ''}
+                    </div>
+                `).join('');
+
+                document.getElementById('past-tournament-grid').innerHTML = past.map(t => `
+                    <div class="schedule-card clickable" onclick="viewArchive('${t.name.replace(/'/g, "\\'")}')">
+                        <div class="card-date">${t.date}</div>
+                        <div class="card-name">${t.name}</div>
+                        <div class="card-course">${t.course}</div>
+                    </div>
+                `).join('');
+
+                let d = (now.getDay() === 3 && next) ? { ...next, label: 'Live Tournament' } : (now.getDay() === 1 || now.getDay() === 2) ? { ...curr, label: 'Past Tournament' } : { ...curr, label: 'Live Tournament' };
+                if (d && d.name) { 
+                    activeTournamentStartDate = d.start; 
+                    document.getElementById('display-tournament-name').innerText = d.name; 
+                    document.getElementById('display-course-name').innerText = d.course; 
+                    document.getElementById('display-banner-label').innerText = d.label; 
+                    document.getElementById('display-banner-date').innerText = d.date;
+                    document.getElementById('display-purse').innerText = d.purse ? `Purse: ${d.purse}` : ''; 
+                    document.getElementById('tournament-banner').style.display = 'block'; 
+                }
             } catch (e) {}
         }
 
@@ -497,4 +550,3 @@
     </script>
 </body>
 </html>
-
