@@ -313,13 +313,7 @@
                 currentDayIdx = Math.floor(diffTime / (1000 * 60 * 60 * 24));
             }
 
-            const dayKeys = ['thu', 'fri', 'sat', 'sun'];
-            const livePts = synced.map(u => u.actualTodayPoints).filter(p => p > 0);
-            const sortedLive = [...livePts].sort((a,b) => a - b);
-            const medianToday = sortedLive.length ? (sortedLive.length % 2 ? sortedLive[Math.floor(sortedLive.length/2)] : (sortedLive[sortedLive.length/2-1] + sortedLive[sortedLive.length/2])/2) : 0;
-            document.getElementById('par-score-display').innerText = `EVEN: ${medianToday.toFixed(1)} PTS`;
-            
-            // Build reference signatures for duplicate detection
+            // Identify reference signatures for duplicate detection
             const referenceSignatures = [];
             synced.forEach(u => {
                 if (REFERENCE_IDS.includes(u.userId.toLowerCase().trim())) {
@@ -328,16 +322,43 @@
                 }
             });
 
+            // Preliminary Pass: Determine Status for every synced user
+            const usersWithStatus = synced.map(u => {
+                const sig = getLineupSignature(u.lineup);
+                const isReferenceAccount = REFERENCE_IDS.includes(u.userId.toLowerCase().trim());
+                const isDuplicate = !isReferenceAccount && sig !== "" && referenceSignatures.includes(sig);
+                const isWD = !u.lineup || u.lineup.length === 0;
+                return { ...u, isDuplicate, isWD };
+            });
+
+            // Scoring Pool: Exclude Duplicates and WDs from contributing to the distribution
+            const distributionPool = usersWithStatus
+                .filter(u => !u.isDuplicate && !u.isWD)
+                .map(u => u.actualTodayPoints)
+                .filter(p => p > 0);
+
+            const sortedPool = [...distributionPool].sort((a,b) => a - b);
+            const medianToday = sortedPool.length ? (sortedPool.length % 2 ? sortedPool[Math.floor(sortedPool.length/2)] : (sortedPool[sortedPool.length/2-1] + sortedPool[sortedPool.length/2])/2) : 0;
+            document.getElementById('par-score-display').innerText = `EVEN: ${medianToday.toFixed(1)} PTS`;
+
+            const dayKeys = ['thu', 'fri', 'sat', 'sun'];
+
+            // Final Pass: Build currentProcessedUsers with scores calculated against the cleaned pool
             currentProcessedUsers = users.map(u => {
                 const normId = u.userId.trim().toLowerCase();
                 const hist = historicalDailyData[normId] || {};
-                let rounds = { thu: 0, fri: 0, sat: 0, sun: 0 };
                 
+                const syncedUser = usersWithStatus.find(su => su.userId === u.userId);
+                const isDuplicate = syncedUser ? syncedUser.isDuplicate : false;
+                const isWD = syncedUser ? syncedUser.isWD : false;
+
+                let rounds = { thu: 0, fri: 0, sat: 0, sun: 0 };
                 dayKeys.forEach((key, idx) => {
                     if (idx < currentDayIdx) {
                         rounds[key] = hist[`${key}_score`] || 0;
                     } else if (idx === currentDayIdx) {
-                        rounds[key] = u.actualTodayPoints > 0 ? calculateGolfScore(u.actualTodayPoints, livePts) : 0;
+                        // Scoring distribution now uses the filtered distributionPool
+                        rounds[key] = (u.actualTodayPoints > 0 && !isDuplicate && !isWD) ? calculateGolfScore(u.actualTodayPoints, distributionPool) : 0;
                     } else {
                         rounds[key] = 0;
                     }
@@ -345,17 +366,11 @@
 
                 const total = rounds.thu + rounds.fri + rounds.sat + rounds.sun;
                 const todayGolf = (currentDayIdx >= 0 && currentDayIdx < 4) ? rounds[dayKeys[currentDayIdx]] : 0;
-                const isWD = u.hasData && (!u.lineup || u.lineup.length === 0);
-
-                // Duplicate Detection logic
-                const mySig = getLineupSignature(u.lineup);
-                const isReferenceAccount = REFERENCE_IDS.includes(u.userId.toLowerCase().trim());
-                const isDuplicate = !isReferenceAccount && mySig !== "" && referenceSignatures.includes(mySig);
 
                 return { ...u, total, today: todayGolf, rounds, isWD, isDuplicate };
             });
 
-            // Sorting: Primary by Duplicate status (last), then WD (last), then Golf score (Asc), then Raw points (Desc)
+            // Sorting: Duplicates last, WDs last, Golf Score Asc, Raw Points Desc
             currentProcessedUsers.sort((a, b) => {
                 if (a.isDuplicate !== b.isDuplicate) return a.isDuplicate ? 1 : -1;
                 if (a.isWD !== b.isWD) return a.isWD ? 1 : -1;
@@ -473,8 +488,8 @@
                     historicalDailyData[r[uIdx].trim().toLowerCase()] = {
                         thu_score: parseInt(r[cMap.thu]) || 0,
                         fri_score: parseInt(r[cMap.fri]) || 0,
-                        sat_score: parseInt(r[colMap?.sat || 0]) || 0,
-                        sun_score: parseInt(r[colMap?.sun || 0]) || 0
+                        sat_score: parseInt(r[cMap.sat]) || 0,
+                        sun_score: parseInt(r[cMap.sun]) || 0
                     };
                 });
             } catch (e) {}
