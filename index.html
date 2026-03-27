@@ -167,7 +167,7 @@
 
     <div id="loading-indicator">Syncing Tournament Data...</div>
 
-    <!-- LIVE VIEW -->
+    <!-- STANDINGS VIEW -->
     <div id="view-live" class="content-view active">
         <div class="leaderboard-panel">
             <div class="leaderboard-header">
@@ -313,7 +313,6 @@
                 currentDayIdx = Math.floor(diffTime / (1000 * 60 * 60 * 24));
             }
 
-            // Identify reference signatures for duplicate detection
             const referenceSignatures = [];
             synced.forEach(u => {
                 if (REFERENCE_IDS.includes(u.userId.toLowerCase().trim())) {
@@ -322,7 +321,6 @@
                 }
             });
 
-            // Preliminary Pass: Determine Status for every synced user
             const usersWithStatus = synced.map(u => {
                 const sig = getLineupSignature(u.lineup);
                 const isReferenceAccount = REFERENCE_IDS.includes(u.userId.toLowerCase().trim());
@@ -331,7 +329,6 @@
                 return { ...u, isDuplicate, isWD };
             });
 
-            // Scoring Pool: Exclude Duplicates and WDs from contributing to the distribution
             const distributionPool = usersWithStatus
                 .filter(u => !u.isDuplicate && !u.isWD)
                 .map(u => u.actualTodayPoints)
@@ -343,7 +340,6 @@
 
             const dayKeys = ['thu', 'fri', 'sat', 'sun'];
 
-            // Final Pass: Build currentProcessedUsers with scores calculated against the cleaned pool
             currentProcessedUsers = users.map(u => {
                 const normId = u.userId.trim().toLowerCase();
                 const hist = historicalDailyData[normId] || {};
@@ -357,7 +353,6 @@
                     if (idx < currentDayIdx) {
                         rounds[key] = hist[`${key}_score`] || 0;
                     } else if (idx === currentDayIdx) {
-                        // Scoring distribution now uses the filtered distributionPool
                         rounds[key] = (u.actualTodayPoints > 0 && !isDuplicate && !isWD) ? calculateGolfScore(u.actualTodayPoints, distributionPool) : 0;
                     } else {
                         rounds[key] = 0;
@@ -370,7 +365,6 @@
                 return { ...u, total, today: todayGolf, rounds, isWD, isDuplicate };
             });
 
-            // Sorting: Duplicates last, WDs last, Golf Score Asc, Raw Points Desc
             currentProcessedUsers.sort((a, b) => {
                 if (a.isDuplicate !== b.isDuplicate) return a.isDuplicate ? 1 : -1;
                 if (a.isWD !== b.isWD) return a.isWD ? 1 : -1;
@@ -383,7 +377,7 @@
             const cutScore = ranked.length > 0 ? ranked[Math.max(0, cutRank - 1)].total : 99;
             
             let cutLineInserted = false;
-            const canShowMC = currentDayIdx >= 1; // Friday onwards
+            const canShowMC = currentDayIdx >= 1; 
 
             currentProcessedUsers.forEach((u, i) => {
                 const isBelowCut = u.total > cutScore && !u.isWD && !u.isDuplicate;
@@ -547,8 +541,11 @@
                         const user = chunk[idx].user;
                         if (r.status === 200) {
                             try {
-                                const rawBody = window.atob(r.body.replace(/-/g, '+').replace(/_/g, '/'));
-                                const dataBody = JSON.parse(new TextDecoder().decode(Uint8Array.from(rawBody, c => c.charCodeAt(0))));
+                                const decoded = window.atob(r.body.replace(/-/g, '+').replace(/_/g, '/'));
+                                const bytes = new Uint8Array(decoded.length);
+                                for (let i = 0; i < decoded.length; i++) bytes[i] = decoded.charCodeAt(i);
+                                const dataBody = JSON.parse(new TextDecoder().decode(bytes));
+                                
                                 user.actualTotalPoints = parseFloat((dataBody.info?.rankDisplayInfos?.[0]?.scoreDisplay || '0').replace(/[^0-9.]/g, '')) || 0;
                                 user.lineup = dataBody.lineup || [];
                                 user.actualTodayPoints = user.lineup.reduce((acc, g) => acc + (parseFloat(g.score) || 0), 0);
