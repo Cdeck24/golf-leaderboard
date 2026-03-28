@@ -30,17 +30,35 @@
 
       header {
         background: var(--golf-green-dark);
-        padding: 1.5rem 1rem 0.5rem 1rem;
+        padding: 2rem 1rem 1.5rem 1rem;
         text-align: center;
         position: relative;
         border-bottom: 1px solid var(--border-gold);
       }
 
-      h1 { color: var(--gold-light); font-size: 1.8rem; font-weight: 900; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 1.25rem; }
+      header .sub-label {
+          display: block;
+          font-size: 0.6rem;
+          font-weight: 900;
+          text-transform: uppercase;
+          color: var(--border-gold);
+          letter-spacing: 0.3em;
+          margin-bottom: 0.5rem;
+      }
 
-      .main-nav { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 1rem; max-width: 600px; margin-left: auto; margin-right: auto; }
-      .nav-tab { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(197, 160, 89, 0.3); color: var(--text-muted); padding: 12px 4px; font-size: 0.65rem; font-weight: 800; text-transform: uppercase; border-radius: 6px; cursor: pointer; text-align: center; }
-      .nav-tab.active { background: var(--border-gold); color: #000; border-color: var(--border-gold); }
+      h1 { 
+        color: var(--gold-light); 
+        font-size: 1.8rem; 
+        font-weight: 900; 
+        letter-spacing: 0.02em; 
+        text-transform: uppercase; 
+        margin-bottom: 1.5rem;
+        line-height: 1;
+      }
+
+      .main-nav { display: flex; justify-content: center; gap: 8px; margin-bottom: 1rem; max-width: 600px; margin-left: auto; margin-right: auto; }
+      .nav-tab { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(197, 160, 89, 0.3); color: var(--text-muted); padding: 10px 16px; font-size: 0.65rem; font-weight: 800; text-transform: uppercase; border-radius: 20px; cursor: pointer; text-align: center; transition: all 0.2s; }
+      .nav-tab.active { background: var(--border-gold); color: #000; border-color: var(--border-gold); transform: scale(1.05); }
 
       #tournament-banner { max-width: 800px; margin: 1.5rem auto 0 auto; padding: 0 1rem; display: none; }
       .banner-content { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 1.25rem; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
@@ -49,6 +67,20 @@
       .banner-name { font-size: 1.1rem; font-weight: 900; color: #fff; margin-bottom: 0.2rem; line-height: 1.2; }
       .banner-course { font-size: 0.8rem; color: var(--text-muted); font-weight: 500; margin-bottom: 0.2rem; }
       .banner-purse { font-size: 0.75rem; color: var(--gold-light); font-weight: 800; text-transform: uppercase; }
+
+      /* Champion Billboard Style */
+      .champion-spotlight {
+          background: rgba(197, 160, 89, 0.1);
+          border: 2px solid var(--border-gold);
+          border-radius: 12px;
+          padding: 1.5rem;
+          text-align: center;
+          margin-bottom: 1.5rem;
+          animation: fadeIn 0.6s ease-out;
+      }
+      .champ-label { font-size: 0.6rem; font-weight: 900; text-transform: uppercase; color: var(--border-gold); letter-spacing: 0.3em; margin-bottom: 0.5rem; }
+      .champ-name { font-size: 1.8rem; font-weight: 900; color: #fff; margin-bottom: 0.2rem; }
+      .champ-score { font-size: 1rem; font-weight: 700; color: var(--gold-light); }
 
       .content-view { max-width: 800px; margin: 1rem auto 3rem auto; padding: 0 1rem; display: none; }
       .content-view.active { display: block; animation: fadeIn 0.4s ease-out; }
@@ -81,7 +113,6 @@
       .col-player { width: auto; font-weight: 700; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
       .col-score { width: 85px; text-align: center; font-variant-numeric: tabular-nums; }
 
-      /* Score Typography Only */
       .score-box {
         display: inline-block;
         font-weight: 900;
@@ -163,6 +194,7 @@
 <body>
 
     <header>
+        <span class="sub-label">The Official</span>
         <h1>Golf Plug Leaderboard</h1>
         <div class="main-nav">
             <button id="tab-live" class="nav-tab active" onclick="switchView('live')">Standings</button>
@@ -195,7 +227,7 @@
                             <button onclick="exportDay('friday')">Export Fri</button>
                             <button onclick="exportDay('saturday')">Export Sat</button>
                             <button onclick="exportDay('sunday')">Export Sun</button>
-                            <button onclick="exportScoresToCSV()" style="color:var(--gold-light);">Export Full</button>
+                            <button onclick="exportScoresToCSV()" style="color:var(--gold-light);">Export Full Records</button>
                         </div>
                     </div>
                     <div class="status-text">
@@ -218,6 +250,9 @@
     <div id="view-past" class="content-view">
         <div id="archive-viewer" style="display:none;">
             <div style="margin-bottom:1rem; color:var(--gold-light); font-size:0.7rem; font-weight:800; cursor:pointer;" onclick="closeArchive()">← BACK TO ARCHIVES</div>
+            
+            <div id="archive-champ-display"></div>
+
             <div class="leaderboard-panel">
                 <div class="leaderboard-header" id="archive-header-title">ARCHIVE DATA</div>
                 <table class="golf-table">
@@ -246,6 +281,7 @@
         let users = [];
         let historicalDailyDataByDate = {}; 
         let masterArchiveData = [];
+        let currentProcessedUsers = [];
         let activeTournamentStartDate = null;
 
         function switchView(v) {
@@ -362,23 +398,43 @@
             const medianVal = sortedPool.length ? (sortedPool.length % 2 ? sortedPool[Math.floor(sortedPool.length/2)] : (sortedPool[sortedPool.length/2-1] + sortedPool[sortedPool.length/2])/2) : 0;
             document.getElementById('par-score-display').innerText = `EVEN: ${medianVal.toFixed(2)} ${activeIdx === 0 ? 'PTS' : 'IMPROVE'}`;
 
+            // Calculate Friday (Day 2) cutoff for MC logic
+            const friField = playerStates.map(p => {
+                const thuG = p.dayPieces[0] > 0 ? calculateGolfScore(p.dayPieces[0], pools[0]) : 0;
+                const impr = (p.pts[1] > 0 && p.pts[0] > 0) ? (p.pts[1] - p.pts[0]) : 0;
+                const friG = impr !== 0 ? calculateGolfScore(impr, pools[1]) : 0;
+                return { userId: p.userId, totFri: thuG + friG, isWD: p.isWD, isDup: p.isDuplicate };
+            }).filter(f => !f.isWD && !f.isDup);
+            
+            friField.sort((a,b) => a.totFri - b.totFri);
+            const cutIdxFri = Math.floor(friField.length * 0.45);
+            const cutScoreFri = friField.length > 0 ? friField[Math.max(0, cutIdxFri - 1)].totFri : 99;
+
             const slotKeys = ['thu', 'fri', 'sat', 'sun'];
             currentProcessedUsers = playerStates.map(p => {
                 let rounds = { thu: 0, fri: 0, sat: 0, sun: 0 };
-                tDates.forEach((_, i) => {
-                    if (i === 0) {
-                        rounds[slotKeys[i]] = p.dayPieces[0] > 0 ? calculateGolfScore(p.dayPieces[0], pools[0]) : 0;
-                    } else {
-                        const improvement = (p.pts[i] > 0 && p.pts[i-1] > 0) ? (p.pts[i] - p.pts[i-1]) : 0;
-                        rounds[slotKeys[i]] = improvement !== 0 ? calculateGolfScore(improvement, pools[i]) : 0;
-                    }
-                });
+                
+                rounds.thu = p.dayPieces[0] > 0 ? calculateGolfScore(p.dayPieces[0], pools[0]) : 0;
+                const friImpr = (p.pts[1] > 0 && p.pts[0] > 0) ? (p.pts[1] - p.pts[0]) : 0;
+                rounds.fri = friImpr !== 0 ? calculateGolfScore(friImpr, pools[1]) : 0;
+                
+                const madeCut = (rounds.thu + rounds.fri) <= cutScoreFri;
+
+                // Freeze Sat/Sun if missed cut
+                if (madeCut) {
+                    const satImpr = (p.pts[2] > 0 && p.pts[1] > 0) ? (p.pts[2] - p.pts[1]) : 0;
+                    rounds.sat = satImpr !== 0 ? calculateGolfScore(satImpr, pools[2]) : 0;
+                    const sunImpr = (p.pts[3] > 0 && p.pts[2] > 0) ? (p.pts[3] - p.pts[2]) : 0;
+                    rounds.sun = sunImpr !== 0 ? calculateGolfScore(sunImpr, pools[3]) : 0;
+                } else {
+                    rounds.sat = 0; rounds.sun = 0;
+                }
 
                 const total = rounds.thu + rounds.fri + rounds.sat + rounds.sun;
                 const todayGolf = activeIdx !== -1 ? rounds[slotKeys[activeIdx]] : 0;
                 const finalRaw = (activeIdx !== -1 && p.pts[activeIdx] > 0) ? p.pts[activeIdx] : (p.hasData ? p.actualTotalPoints : 0);
 
-                return { ...p, total, today: todayGolf, rounds, actualTotalPoints: finalRaw };
+                return { ...p, total, today: todayGolf, rounds, actualTotalPoints: finalRaw, madeCut };
             });
 
             currentProcessedUsers.sort((a, b) => {
@@ -402,7 +458,8 @@
 
                 const row = document.createElement('tr'); row.className = 'main-row';
                 const tag = u.isDuplicate ? '<span style="color:var(--danger); font-size:0.6rem;">(DUP)</span>' : (activeIdx >= 2 && isBelowCut ? '<span style="color:var(--danger); font-size:0.6rem;">(MC)</span>' : '');
-                row.innerHTML = `<td class="col-pos">${u.isDuplicate?'DUP':(u.isWD?'WD':(u.hasData?i+1:'-'))}</td><td class="col-player">${formatHandle(u.username)} ${tag} <span class="toggle-icon">▼</span></td><td class="col-score">${(u.isWD||u.isDuplicate)?'-':formatToPar(u.total)}</td><td class="col-score">${(u.isWD||u.isDuplicate)?'-':formatToPar(u.today)}</td>`;
+                const handle = formatHandle(u.username);
+                row.innerHTML = `<td class="col-pos">${u.isDuplicate?'DUP':(u.isWD?'WD':(u.hasData?i+1:'-'))}</td><td class="col-player">${handle} ${tag} <span class="toggle-icon">▼</span></td><td class="col-score">${(u.isWD||u.isDuplicate)?'-':formatToPar(u.total)}</td><td class="col-score">${(u.isWD||u.isDuplicate)?'-':formatToPar(u.today)}</td>`;
                 
                 const dr = document.createElement('tr'); dr.className = 'draft-row';
                 dr.innerHTML = `<td colspan="4"><div class="expanded-container"><div class="round-breakdown">
@@ -497,20 +554,10 @@
                     const p = rawDate.split('/'); if (p.length < 2) continue;
                     
                     const start = new Date(today.getFullYear(), parseInt(p[0]) - 1, parseInt(p[1]));
-                    const end = new Date(start);
-                    end.setDate(end.getDate() + 3);
-                    
+                    const end = new Date(start); end.setDate(end.getDate() + 3);
                     const rangeStr = `${start.getMonth()+1}/${start.getDate()} - ${end.getMonth()+1}/${end.getDate()}`;
-                    
                     const obj = { name: r[nIdx], course: r[cIdx] || '-', date: rangeStr, purse: r[pIdx] || '', start };
-                    
-                    if (start <= today) { 
-                        curr = obj; 
-                        past.unshift(obj); 
-                    } else { 
-                        if (!next) next = obj; 
-                        upcoming.push(obj); 
-                    }
+                    if (start <= today) { curr = obj; past.unshift(obj); } else { if (!next) next = obj; upcoming.push(obj); }
                 }
                 
                 document.getElementById('upcoming-list').innerHTML = upcoming.map(t => `<div class="schedule-card"><div class="card-date">${t.date}</div><div class="card-name">${t.name}</div><div class="card-course">${t.course}</div>${t.purse ? `<div class="card-purse">Purse: ${t.purse}</div>` : ''}</div>`).join('');
@@ -543,19 +590,21 @@
             const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = filename; link.click();
         }
 
-        function exportDay(dayName) {
-            const d = new Date(activeTournamentStartDate);
-            d.setDate(d.getDate() + ({thursday:0, friday:1, saturday:2, sunday:3}[dayName]||0));
-            const dateStr = (d.getMonth()+1)+'/'+d.getDate()+'/'+d.getFullYear();
-            const rows = [["username", "user id", "raw points", "golf score", "date"]];
-            currentProcessedUsers.forEach(u => rows.push([u.username, u.userId, u.actualTotalPoints.toFixed(2), u.rounds[dayName.substring(0,3)], dateStr]));
-            generateCSV(rows, `golf_plug_${dayName}_${dateStr.replace(/\//g, '-')}.csv`);
-            document.getElementById('export-menu').style.display = 'none';
-        }
-
         function exportScoresToCSV() {
-            const rows = [["position", "username", "user id", "total score", "thursday", "friday", "saturday", "sunday", "raw points"]];
-            currentProcessedUsers.forEach((u, i) => { if(u.hasData) rows.push([u.isWD?'WD':(u.isDuplicate?'DUP':i+1), u.username, u.userId, u.total, u.rounds.thu, u.rounds.fri, u.rounds.sat, u.rounds.sun, u.actualTotalPoints.toFixed(2)]); });
+            const ranked = currentProcessedUsers.filter(u => !u.isWD && !u.isDuplicate);
+            const cutScore = ranked.length > 0 ? ranked[Math.max(0, Math.floor(ranked.length * 0.45) - 1)].total : 99;
+
+            const rows = [["position", "username", "user id", "total score", "status", "thursday", "friday", "saturday", "sunday", "raw points"]];
+            currentProcessedUsers.forEach((u, i) => { 
+                if(u.hasData) {
+                    let status = "MADE CUT";
+                    if (u.isWD) status = "WD";
+                    else if (u.isDuplicate) status = "DUP";
+                    else if (!u.madeCut) status = "MISSED CUT";
+
+                    rows.push([u.isWD?'WD':(u.isDuplicate?'DUP':i+1), u.username, u.userId, u.total, status, u.rounds.thu, u.rounds.fri, u.rounds.sat, u.rounds.sun, u.actualTotalPoints.toFixed(2)]); 
+                }
+            });
             generateCSV(rows, `golf_plug_full_export.csv`);
             document.getElementById('export-menu').style.display = 'none';
         }
@@ -565,19 +614,58 @@
             const tIdx = findIdx(h, ['tournament', 'tourn']);
             const filtered = masterArchiveData.slice(1).filter(r => r[tIdx] === name);
             const tbody = document.getElementById('archive-tbody');
+            const champDiv = document.getElementById('archive-champ-display');
             
-            tbody.innerHTML = filtered.length ? filtered.map(r => `
-                <tr>
-                    <td class="col-pos">${r[0]}</td>
-                    <td class="col-player">${formatHandle(r[1])}</td>
-                    <td class="col-score">${formatToPar(r[3])}</td>
-                    <td class="col-score">${r[8]}</td>
-                </tr>
-            `).join('') : '<tr><td colspan="4" style="text-align:center; padding:2rem;">No data available.</td></tr>';
+            // Calculate cut line for archive
+            const valid = filtered.filter(r => r[3] !== '-' && r[3] !== 'WD' && r[3] !== 'DUP');
+            const sorted = [...valid].sort((a,b) => parseInt(a[3]) - parseInt(b[3]));
+            const cutIdx = Math.floor(sorted.length * 0.45);
+            const cutScore = sorted.length > 0 ? parseInt(sorted[Math.max(0, cutIdx - 1)][3]) : 99;
+
+            // Handle Champion Display
+            if (sorted.length > 0) {
+                const winner = sorted[0];
+                const scoreInt = parseInt(winner[3]);
+                champDiv.innerHTML = `
+                    <div class="champion-spotlight">
+                        <div class="champ-label">Tournament Champion</div>
+                        <div class="champ-name">🏆 ${formatHandle(winner[1])}</div>
+                        <div class="champ-score">Final Score: ${scoreInt > 0 ? '+' : ''}${scoreInt} (${parseFloat(winner[8]).toFixed(2)} PTS)</div>
+                    </div>
+                `;
+            } else { champDiv.innerHTML = ''; }
+
+            let cutInserted = false;
+            tbody.innerHTML = '';
+
+            filtered.forEach((r) => {
+                const scoreNum = parseInt(r[3]);
+                if (!cutInserted && scoreNum > cutScore) {
+                    const cr = document.createElement('tr'); cr.className = 'cut-line-row';
+                    cr.innerHTML = `<td colspan="4">OFFICIAL CUT LINE (${formatToPar(cutScore)})</td>`;
+                    tbody.appendChild(cr);
+                    cutInserted = true;
+                }
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td class="col-pos">${r[0]}</td><td class="col-player">${formatHandle(r[1])}</td><td class="col-score">${formatToPar(r[3])}</td><td class="col-score">${parseFloat(r[8]).toFixed(2)}</td>`;
+                tbody.appendChild(tr);
+            });
+
+            if (filtered.length === 0) tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:2rem;">No data available.</td></tr>';
             
             document.getElementById('archive-header-title').innerText = `${name.toUpperCase()} ARCHIVE`;
             document.getElementById('past-tournament-grid').style.display = 'none';
             document.getElementById('archive-viewer').style.display = 'block';
+        }
+
+        function exportDay(dayName) {
+            const d = new Date(activeTournamentStartDate);
+            d.setDate(d.getDate() + ({thursday:0, friday:1, saturday:2, sunday:3}[dayName]||0));
+            const dateStr = (d.getMonth()+1)+'/'+d.getDate()+'/'+d.getFullYear();
+            const rows = [["username", "user id", "raw points", "golf score", "date"]];
+            currentProcessedUsers.forEach(u => rows.push([u.username, u.userId, u.actualTotalPoints.toFixed(2), u.rounds[dayName.substring(0,3)], dateStr]));
+            generateCSV(rows, `golf_plug_${dayName}_${dateStr.replace(/\//g, '-')}.csv`);
+            document.getElementById('export-menu').style.display = 'none';
         }
 
         async function initApp() {
