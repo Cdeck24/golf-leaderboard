@@ -8,16 +8,17 @@
       @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
       :root {
-        --golf-green-dark: #0b3d2c;
-        --golf-green-mid: #145943;
+        --golf-green-dark: #062118;
+        --golf-green-mid: #0b3d2c;
         --golf-green-bright: #00ff88;
         --text-main: #f8f9fa;
         --text-muted: #a0aec0;
         --border-gold: #c5a059;
         --gold-glow: rgba(197, 160, 89, 0.4);
-        --gold-light: #f3e5ab;
+        --gold-light: #fdf2d0;
         --bg-body: #05140d;
         --danger: #ff5555;
+        --glass-border: rgba(255, 255, 255, 0.1);
       }
 
       * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -44,7 +45,7 @@
 
       header .sub-label {
           display: block;
-          font-size: 0.6rem;
+          font-size: 0.65rem;
           font-weight: 900;
           text-transform: uppercase;
           color: var(--border-gold);
@@ -53,9 +54,9 @@
       }
 
       h1 { 
-        font-size: 1.8rem; 
+        font-size: 1.9rem; 
         font-weight: 900; 
-        letter-spacing: -0.02em; 
+        letter-spacing: -0.01em; 
         text-transform: uppercase; 
         margin-bottom: 1.5rem;
         background: linear-gradient(to bottom, #fff 20%, var(--border-gold) 100%);
@@ -65,35 +66,33 @@
       }
 
       .main-nav { display: flex; justify-content: center; gap: 10px; margin-bottom: 0.5rem; max-width: 600px; margin-left: auto; margin-right: auto; }
-      .nav-tab { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(197, 160, 89, 0.3); color: var(--text-muted); padding: 10px 20px; font-size: 0.65rem; font-weight: 800; text-transform: uppercase; border-radius: 25px; cursor: pointer; text-align: center; transition: all 0.2s; }
-      .nav-tab.active { background: var(--border-gold); color: #000; border-color: var(--border-gold); transform: scale(1.05); box-shadow: 0 0 15px rgba(197, 160, 89, 0.4); }
+      .nav-tab { background: rgba(255, 255, 255, 0.05); border: 1px solid var(--glass-border); color: var(--text-muted); padding: 10px 20px; font-size: 0.65rem; font-weight: 800; text-transform: uppercase; border-radius: 25px; cursor: pointer; text-align: center; transition: all 0.2s; }
+      .nav-tab.active { background: var(--border-gold); color: #000; border-color: var(--border-gold); transform: scale(1.05); box-shadow: 0 0 15px var(--gold-glow); }
 
       #tournament-banner { max-width: 800px; margin: 2rem auto 0 auto; padding: 0 1rem; display: none; }
-      .banner-content { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; padding: 1.5rem; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+      .banner-content { background: rgba(255, 255, 255, 0.03); border: 1px solid var(--glass-border); border-radius: 16px; padding: 1.5rem; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
       .banner-label { font-size: 0.55rem; text-transform: uppercase; letter-spacing: 0.2em; color: var(--gold-light); font-weight: 800; margin-bottom: 0.5rem; }
       .banner-date { font-size: 0.7rem; color: var(--text-muted); font-weight: 700; margin-bottom: 0.4rem; letter-spacing: 0.05em; }
       .banner-name { font-size: 1.4rem; font-weight: 900; color: #fff; margin-bottom: 0.3rem; line-height: 1.1; }
-      .banner-course { font-size: 0.9rem; color: var(--text-muted); font-weight: 500; margin-bottom: 0.5rem; }
-      .banner-purse { font-size: 0.75rem; color: var(--gold-light); font-weight: 800; text-transform: uppercase; }
+      .banner-course { font-size: 0.9rem; color: var(--text-muted); font-weight: 500; }
 
       .champion-spotlight {
-          background: linear-gradient(135deg, rgba(197, 160, 89, 0.15) 0%, rgba(11, 61, 44, 0.4) 100%);
+          background: linear-gradient(135deg, rgba(197, 160, 89, 0.2) 0%, rgba(11, 61, 44, 0.4) 100%);
           border: 2px solid var(--border-gold);
           border-radius: 16px;
           padding: 1.75rem;
           text-align: center;
-          margin-bottom: 1.5rem;
-          box-shadow: 0 10px 40px rgba(0,0,0,0.5);
-          animation: fadeIn 0.6s ease-out;
+          margin-bottom: 2rem;
+          box-shadow: 0 15px 40px rgba(0,0,0,0.5);
       }
-      .champ-label { font-size: 0.65rem; font-weight: 900; text-transform: uppercase; color: var(--border-gold); letter-spacing: 0.4em; margin-bottom: 0.5rem; }
-      .champ-name { font-size: 2rem; font-weight: 900; color: #fff; margin-bottom: 0.4rem; letter-spacing: -0.02em; }
-      .champ-score { font-size: 1.1rem; font-weight: 700; color: var(--gold-light); }
+      .champ-label { font-size: 0.65rem; font-weight: 900; text-transform: uppercase; color: var(--border-gold); letter-spacing: 0.4em; margin-bottom: 0.75rem; }
+      .champ-name { font-size: 2rem; font-weight: 900; color: #fff; margin-bottom: 0.4rem; letter-spacing: -0.01em; }
+      .champ-score { font-size: 1rem; font-weight: 700; color: var(--gold-light); }
 
       .content-view { max-width: 850px; margin: 1.5rem auto 4rem auto; padding: 0 1rem; display: none; }
       .content-view.active { display: block; animation: fadeIn 0.4s ease-out; }
 
-      .leaderboard-panel { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.4); }
+      .leaderboard-panel { background: rgba(15, 23, 42, 0.4); border: 1px solid var(--glass-border); border-radius: 16px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.4); }
       .leaderboard-header { background: rgba(13, 51, 38, 0.6); padding: 1.25rem; display: flex; justify-content: space-between; align-items: center; position: relative; }
 
       .export-container { position: relative; }
@@ -112,7 +111,7 @@
       .sync-dot { display: inline-block; width: 6px; height: 6px; background: var(--golf-green-bright); border-radius: 50%; margin-right: 6px; box-shadow: 0 0 10px var(--golf-green-bright); }
 
       .golf-table { width: 100%; border-collapse: collapse; text-align: left; table-layout: fixed; }
-      .golf-table th { background: rgba(0,0,0,0.4); color: var(--text-muted); font-size: 0.65rem; font-weight: 900; text-transform: uppercase; padding: 1.1rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.05); letter-spacing: 0.05em; }
+      .golf-table th { background: rgba(0,0,0,0.4); color: var(--text-muted); font-size: 0.65rem; font-weight: 900; text-transform: uppercase; padding: 1.1rem 1rem; border-bottom: 1px solid var(--glass-border); letter-spacing: 0.05em; }
       .golf-table td { padding: 1.25rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.02); font-size: 1rem; }
 
       .col-pos { width: 50px; text-align: center; color: var(--border-gold); font-weight: 900; }
@@ -162,7 +161,7 @@
 
       .schedule-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; width: 100%; }
       .schedule-card { 
-          background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.1); 
+          background: rgba(255, 255, 255, 0.04); border: 1px solid var(--glass-border); 
           border-left: 4px solid var(--border-gold); border-radius: 12px; padding: 1.5rem; 
           cursor: pointer; transition: all 0.2s ease; position: relative; box-shadow: 0 8px 25px rgba(0,0,0,0.3); 
           display: flex; flex-direction: column; min-height: 160px; justify-content: space-between;
@@ -179,16 +178,16 @@
           background: rgba(255, 255, 255, 0.03); padding: 12px 6px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.05);
           min-width: 100px;
       }
-      .draft-item-avatar { width: 50px; height: 50px; border-radius: 50%; border: 2px solid var(--border-gold); background: #000; margin-bottom: 8px; object-fit: cover; }
+      .draft-item-avatar { width: 48px; height: 48px; min-width: 48px; min-height: 48px; border-radius: 50%; border: 2px solid var(--border-gold); background: #000; margin-bottom: 8px; object-fit: cover; overflow: hidden; display: block; }
       .draft-item-name { color: var(--text-main); font-weight: 700; font-size: 0.65rem; white-space: normal; line-height: 1.2; width: 100%; margin-bottom: 4px; }
       .draft-item-score { font-weight: 900; font-size: 0.9rem; color: var(--gold-light); font-variant-numeric: tabular-nums; }
 
       #loading-indicator { text-align: center; padding: 3rem; color: var(--gold-light); font-weight: 800; animation: pulse 1.5s infinite; letter-spacing: 0.2em; text-transform: uppercase; }
 
-      @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+      @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
       @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
       
-      @media (max-width: 600px) { h1 { font-size: 1.4rem; } .golf-table th, .golf-table td { padding: 0.85rem 0.6rem; } .col-pos { width: 45px; } .col-score { width: 85px; } .nav-tab { padding: 8px 14px; font-size: 0.6rem; } }
+      @media (max-width: 600px) { h1 { font-size: 1.4rem; } .golf-table th, .golf-table td { padding: 0.75rem 0.5rem; } .col-pos { width: 40px; } .col-score { width: 85px; } .nav-tab { padding: 8px 14px; font-size: 0.6rem; } }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/hashids@2.2.10/dist/hashids.min.js"></script>
 </head>
@@ -210,17 +209,17 @@
             <div class="banner-date" id="display-banner-date"></div>
             <div class="banner-name" id="display-tournament-name">Loading Schedule...</div>
             <div class="banner-course" id="display-course-name">-</div>
-            <div class="banner-purse" id="display-purse"></div>
         </div>
     </div>
 
     <div id="loading-indicator">Syncing Tournament Data...</div>
 
+    <!-- LIVE STANDINGS -->
     <div id="view-live" class="content-view active">
         <div class="leaderboard-panel">
             <div class="leaderboard-header">
                 <span style="font-weight: 900; font-size: 0.8rem; letter-spacing: 0.05em;"><span style="margin-right: 8px;">⛳</span>STANDINGS</span>
-                <div style="display:flex; align-items:center; gap:12px;">
+                <div style="display:flex; align-items:center; gap:10px;">
                     <div class="export-container">
                         <button class="export-btn" onclick="toggleExportMenu()">Export</button>
                         <div id="export-menu" class="export-menu">
@@ -250,7 +249,7 @@
 
     <div id="view-past" class="content-view">
         <div id="archive-viewer" style="display:none;">
-            <div style="margin-bottom:1.5rem; color:var(--border-gold); font-size:0.75rem; font-weight:800; cursor:pointer; text-transform:uppercase; letter-spacing:0.1em;" onclick="closeArchive()">← BACK TO ARCHIVES</div>
+            <div style="margin-bottom:1.5rem; color:var(--border-gold); font-size:0.75rem; font-weight:800; cursor:pointer;" onclick="closeArchive()">← BACK TO ARCHIVES</div>
             <div id="archive-champ-display"></div>
             <div class="leaderboard-panel">
                 <div class="leaderboard-header" id="archive-header-title">ARCHIVE DATA</div>
@@ -311,7 +310,7 @@
         }
 
         function calculateGolfScore(val, pool) {
-            if (!val || isNaN(val) || pool.length < 2) return 0;
+            if (isNaN(val) || pool.length < 2) return 0;
             const sorted = [...pool].sort((a,b) => a - b);
             const idx = sorted.indexOf(val);
             if (idx === -1) return 0;
@@ -376,11 +375,14 @@
                 const isRef = REFERENCE_IDS.includes(normId);
                 const isDup = !isRef && sig !== "" && refSigs.includes(sig);
                 
-                // FIXED Logic: Allow negative values if they exist in raw data
+                // FIXED Logic: Use tolerance check for tiny floats, and only calculate change if pts[i] is current-day data or historical
                 const dayPieces = [pts[0], 0, 0, 0];
-                if (pts[1] !== 0) dayPieces[1] = pts[1] - pts[0];
-                if (pts[2] !== 0) dayPieces[2] = pts[2] - pts[1];
-                if (pts[3] !== 0) dayPieces[3] = pts[3] - pts[2];
+                for (let i = 1; i < 4; i++) {
+                    if (pts[i] !== 0) {
+                        const diff = pts[i] - pts[i-1];
+                        dayPieces[i] = Math.abs(diff) < 0.001 ? 0 : diff;
+                    }
+                }
 
                 return { ...u, pts, dayPieces, isWD, isDuplicate: isDup };
             });
@@ -390,8 +392,8 @@
                 playerStates.forEach(p => {
                     if (!p.isWD && !p.isDuplicate) {
                         const piece = p.dayPieces[i];
-                        if (i === 0 && piece !== 0) pools[0].push(piece);
-                        else if (i > 0 && p.pts[i] !== 0 && p.pts[i-1] !== 0) pools[i].push(p.pts[i] - p.pts[i-1]);
+                        // If no scoring change occurred for this day, don't pollute the pool
+                        if (Math.abs(piece) > 0.001) pools[i].push(piece);
                     }
                 });
             });
@@ -401,11 +403,10 @@
             const medianVal = sortedPool.length ? (sortedPool.length % 2 ? sortedPool[Math.floor(sortedPool.length/2)] : (sortedPool[sortedPool.length/2-1] + sortedPool[sortedPool.length/2])/2) : 0;
             document.getElementById('par-score-display').innerText = `EVEN: ${medianVal.toFixed(2)} ${activeIdx === 0 ? 'PTS' : 'IMPROVE'}`;
 
-            // Calculate Friday Cut
+            // Friday Cut Calculation
             const friField = playerStates.map(p => {
-                const thuG = p.dayPieces[0] !== 0 ? calculateGolfScore(p.dayPieces[0], pools[0]) : 0;
-                const impr = (p.pts[1] !== 0 && p.pts[0] !== 0) ? (p.pts[1] - p.pts[0]) : 0;
-                const friG = impr !== 0 ? calculateGolfScore(impr, pools[1]) : 0;
+                const thuG = Math.abs(p.dayPieces[0]) > 0.001 ? calculateGolfScore(p.dayPieces[0], pools[0]) : 0;
+                const friG = Math.abs(p.dayPieces[1]) > 0.001 ? calculateGolfScore(p.dayPieces[1], pools[1]) : 0;
                 return { userId: p.userId, totFri: thuG + friG, isWD: p.isWD, isDup: p.isDuplicate };
             }).filter(f => !f.isWD && !f.isDup);
             friField.sort((a,b) => a.totFri - b.totFri);
@@ -415,20 +416,16 @@
             const slotKeys = ['thu', 'fri', 'sat', 'sun'];
             currentProcessedUsers = playerStates.map(p => {
                 let rounds = { thu: 0, fri: 0, sat: 0, sun: 0 };
-                rounds.thu = p.dayPieces[0] !== 0 ? calculateGolfScore(p.dayPieces[0], pools[0]) : 0;
-                const friImpr = (p.pts[1] !== 0 && p.pts[0] !== 0) ? (p.pts[1] - p.pts[0]) : 0;
-                rounds.fri = friImpr !== 0 ? calculateGolfScore(friImpr, pools[1]) : 0;
+                rounds.thu = Math.abs(p.dayPieces[0]) > 0.001 ? calculateGolfScore(p.dayPieces[0], pools[0]) : 0;
+                rounds.fri = Math.abs(p.dayPieces[1]) > 0.001 ? calculateGolfScore(p.dayPieces[1], pools[1]) : 0;
                 
                 const madeCut = (rounds.thu + rounds.fri) <= globalCutScoreFri;
-                
-                // If they made cut, calculate weekend. If not, golf score is 0 contribution.
                 if (madeCut) {
-                    const satImpr = (p.pts[2] !== 0 && p.pts[1] !== 0) ? (p.pts[2] - p.pts[1]) : 0;
-                    rounds.sat = satImpr !== 0 ? calculateGolfScore(satImpr, pools[2]) : 0;
-                    const sunImpr = (p.pts[3] !== 0 && p.pts[2] !== 0) ? (p.pts[3] - p.pts[2]) : 0;
-                    rounds.sun = sunImpr !== 0 ? calculateGolfScore(sunImpr, pools[3]) : 0;
+                    rounds.sat = Math.abs(p.dayPieces[2]) > 0.001 ? calculateGolfScore(p.dayPieces[2], pools[2]) : 0;
+                    rounds.sun = Math.abs(p.dayPieces[3]) > 0.001 ? calculateGolfScore(p.dayPieces[3], pools[3]) : 0;
+                } else {
+                    rounds.sat = 0; rounds.sun = 0;
                 }
-
                 const total = rounds.thu + rounds.fri + rounds.sat + rounds.sun;
                 return { ...p, total, today: activeIdx !== -1 ? rounds[slotKeys[activeIdx]] : 0, rounds, actualTotalPoints: (activeIdx !== -1 && p.pts[activeIdx] !== 0) ? p.pts[activeIdx] : (p.hasData ? p.actualTotalPoints : 0), madeCut };
             });
@@ -450,18 +447,18 @@
                 }
                 const row = document.createElement('tr'); row.className = 'main-row';
                 const tag = u.isDuplicate ? '<span style="color:var(--danger); font-size:0.6rem;">(DUP)</span>' : (activeIdx >= 2 && !u.madeCut ? '<span style="color:var(--danger); font-size:0.6rem;">(MC)</span>' : '');
-                row.innerHTML = `<td class="col-pos">${u.isDuplicate?'DUP':(u.isWD?'WD':(u.hasData?i+1:'-'))}</td><td class="col-player">${formatHandle(u.username)} ${tag} <span class="toggle-icon">▼</span></td><td class="col-score">${(u.isWD||u.isDuplicate)?'-':formatToPar(u.total)}</td><td class="col-score">${(u.isWD||u.isDuplicate)?'-':formatToPar(u.today)}</td>`;
+                row.innerHTML = `<td class="col-pos">${u.isDuplicate?'DUP':(u.isWD?'WD':(u.hasData?currentProcessedUsers.indexOf(u)+1:'-'))}</td><td class="col-player">${formatHandle(u.username)} ${tag} <span class="toggle-icon">▼</span></td><td class="col-score">${(u.isWD||u.isDuplicate)?'-':formatToPar(u.total)}</td><td class="col-score">${(u.isWD||u.isDuplicate)?'-':formatToPar(u.today)}</td>`;
                 
-                // SAT/SUN rendering logic for MC
+                const dr = document.createElement('tr'); dr.className = 'draft-row';
                 const satVal = u.madeCut ? formatToPar(u.rounds.sat) : '<div class="score-box mc">MC</div>';
                 const sunVal = u.madeCut ? formatToPar(u.rounds.sun) : '<div class="score-box mc">MC</div>';
+                const sanitize = (val) => (val === 0 ? 0 : val).toFixed(2);
 
-                const dr = document.createElement('tr'); dr.className = 'draft-row';
                 dr.innerHTML = `<td colspan="4"><div class="expanded-container"><div class="round-breakdown">
-                    <div class="round-slot"><span class="round-label">Thu</span><span class="round-val">${(u.isWD||u.isDuplicate)?'-':formatToPar(u.rounds.thu)}</span><span class="round-piece">${u.dayPieces[0].toFixed(2)} PTS</span></div>
-                    <div class="round-slot"><span class="round-label">Fri</span><span class="round-val">${(u.isWD||u.isDuplicate)?'-':formatToPar(u.rounds.fri)}</span><span class="round-piece">${u.dayPieces[1].toFixed(2)} PTS</span></div>
-                    <div class="round-slot"><span class="round-label">Sat</span><span class="round-val">${(u.isWD||u.isDuplicate)?'-':satVal}</span><span class="round-piece">${u.dayPieces[2].toFixed(2)} PTS</span></div>
-                    <div class="round-slot"><span class="round-label">Sun</span><span class="round-val">${(u.isWD||u.isDuplicate)?'-':sunVal}</span><span class="round-piece">${u.dayPieces[3].toFixed(2)} PTS</span></div>
+                    <div class="round-slot"><span class="round-label">Thu</span><span class="round-val">${(u.isWD||u.isDuplicate)?'-':formatToPar(u.rounds.thu)}</span><span class="round-piece">${sanitize(u.dayPieces[0])} PTS</span></div>
+                    <div class="round-slot"><span class="round-label">Fri</span><span class="round-val">${(u.isWD||u.isDuplicate)?'-':formatToPar(u.rounds.fri)}</span><span class="round-piece">${sanitize(u.dayPieces[1])} PTS</span></div>
+                    <div class="round-slot"><span class="round-label">Sat</span><span class="round-val">${(u.isWD||u.isDuplicate)?'-':satVal}</span><span class="round-piece">${sanitize(u.dayPieces[2])} PTS</span></div>
+                    <div class="round-slot"><span class="round-label">Sun</span><span class="round-val">${(u.isWD||u.isDuplicate)?'-':sunVal}</span><span class="round-piece">${sanitize(u.dayPieces[3])} PTS</span></div>
                 </div><div class="raw-pts-display">Total Raw Score: ${u.actualTotalPoints.toFixed(2)} ${u.isWD?'(WD)':''}</div><div class="draft-grid"></div></div></td>`;
                 
                 row.onclick = function() {
@@ -557,7 +554,6 @@
                     document.getElementById('display-course-name').innerText = d.course; 
                     document.getElementById('display-banner-label').innerText = d.label; 
                     document.getElementById('display-banner-date').innerText = d.date;
-                    document.getElementById('display-purse').innerText = ''; 
                     document.getElementById('tournament-banner').style.display = 'block'; 
                 }
             } catch (e) {}
@@ -578,8 +574,6 @@
         }
 
         function exportScoresToCSV() {
-            const ranked = currentProcessedUsers.filter(u => !u.isWD && !u.isDuplicate);
-            const cutScore = ranked.length > 0 ? ranked[Math.max(0, Math.floor(ranked.length * 0.45) - 1)].total : 99;
             const rows = [["position", "username", "user id", "total score", "status", "thursday", "friday", "saturday", "sunday", "raw points"]];
             currentProcessedUsers.forEach((u, i) => { 
                 if(u.hasData) {
@@ -628,16 +622,6 @@
             document.getElementById('archive-header-title').innerText = `${name.toUpperCase()} ARCHIVE`;
             document.getElementById('past-tournament-grid').style.display = 'none';
             document.getElementById('archive-viewer').style.display = 'block';
-        }
-
-        function exportDay(dayName) {
-            const d = new Date(activeTournamentStartDate);
-            d.setDate(d.getDate() + ({thursday:0, friday:1, saturday:2, sunday:3}[dayName]||0));
-            const dateStr = (d.getMonth()+1)+'/'+d.getDate()+'/'+d.getFullYear();
-            const rows = [["username", "user id", "raw points", "golf score", "date"]];
-            currentProcessedUsers.forEach(u => rows.push([u.username, u.userId, u.actualTotalPoints.toFixed(2), u.rounds[dayName.substring(0,3)], dateStr]));
-            generateCSV(rows, `golf_plug_${dayName}_${dateStr.replace(/\//g, '-')}.csv`);
-            document.getElementById('export-menu').style.display = 'none';
         }
 
         async function initApp() {
