@@ -77,17 +77,18 @@
       .banner-course { font-size: 0.9rem; color: var(--text-muted); font-weight: 500; }
 
       .champion-spotlight {
-          background: linear-gradient(135deg, rgba(197, 160, 89, 0.2) 0%, rgba(11, 61, 44, 0.4) 100%);
+          background: linear-gradient(135deg, rgba(197, 160, 89, 0.15) 0%, rgba(11, 61, 44, 0.4) 100%);
           border: 2px solid var(--border-gold);
           border-radius: 16px;
           padding: 1.75rem;
           text-align: center;
           margin-bottom: 2rem;
-          box-shadow: 0 15px 40px rgba(0,0,0,0.5);
+          box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+          animation: fadeIn 0.6s ease-out;
       }
-      .champ-label { font-size: 0.65rem; font-weight: 900; text-transform: uppercase; color: var(--border-gold); letter-spacing: 0.4em; margin-bottom: 0.75rem; }
+      .champ-label { font-size: 0.65rem; font-weight: 900; text-transform: uppercase; color: var(--border-gold); letter-spacing: 0.4em; margin-bottom: 0.5rem; }
       .champ-name { font-size: 2rem; font-weight: 900; color: #fff; margin-bottom: 0.4rem; letter-spacing: -0.01em; }
-      .champ-score { font-size: 1rem; font-weight: 700; color: var(--gold-light); }
+      .champ-score { font-size: 1.1rem; font-weight: 700; color: var(--gold-light); }
 
       .content-view { max-width: 850px; margin: 1.5rem auto 4rem auto; padding: 0 1rem; display: none; }
       .content-view.active { display: block; animation: fadeIn 0.4s ease-out; }
@@ -99,10 +100,10 @@
       .export-btn { background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-gold); color: var(--gold-light); font-size: 0.65rem; padding: 8px 16px; border-radius: 6px; font-weight: 800; text-transform: uppercase; cursor: pointer; }
       .export-menu { 
           display: none; position: absolute; right: 0; top: 115%; background: #0a1f18; border: 1px solid var(--border-gold); 
-          border-radius: 10px; z-index: 2000; min-width: 160px; box-shadow: 0 15px 40px rgba(0,0,0,0.8); overflow: hidden;
+          border-radius: 10px; z-index: 2000; min-width: 175px; box-shadow: 0 25px 60px rgba(0,0,0,0.9); overflow: hidden;
       }
       .export-menu button { 
-          width: 100%; padding: 12px 16px; background: transparent; border: none; border-bottom: 1px solid rgba(255,255,255,0.05);
+          width: 100%; padding: 14px 16px; background: transparent; border: none; border-bottom: 1px solid rgba(255,255,255,0.05);
           color: #fff; font-size: 0.7rem; font-weight: 700; text-align: left; cursor: pointer; text-transform: uppercase;
       }
       .export-menu button:hover { background: var(--golf-green-mid); }
@@ -126,7 +127,7 @@
 
       .main-row { cursor: pointer; transition: background 0.2s; }
       .main-row:hover { background: rgba(255, 255, 255, 0.05); }
-      .main-row.open { background: rgba(197, 160, 89, 0.08); }
+      .main-row.open { background: rgba(197, 160, 89, 0.1); }
       .toggle-icon { font-size: 0.5rem; color: var(--text-muted); margin-left: 6px; opacity: 0.5; transition: transform 0.3s; }
       .main-row.open .toggle-icon { transform: rotate(180deg); opacity: 1; color: var(--border-gold); }
 
@@ -184,8 +185,8 @@
 
       #loading-indicator { text-align: center; padding: 3rem; color: var(--gold-light); font-weight: 800; animation: pulse 1.5s infinite; letter-spacing: 0.2em; text-transform: uppercase; }
 
-      @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-      @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
+      @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+      @keyframes pulse { 0% { opacity: 0.4; } 50% { opacity: 1; } 100% { opacity: 0.4; } }
       
       @media (max-width: 600px) { h1 { font-size: 1.4rem; } .golf-table th, .golf-table td { padding: 0.75rem 0.5rem; } .col-pos { width: 40px; } .col-score { width: 85px; } .nav-tab { padding: 8px 14px; font-size: 0.6rem; } }
     </style>
@@ -214,14 +215,14 @@
 
     <div id="loading-indicator">Syncing Tournament Data...</div>
 
-    <!-- LIVE STANDINGS -->
+    <!-- STANDINGS -->
     <div id="view-live" class="content-view active">
         <div class="leaderboard-panel">
             <div class="leaderboard-header">
                 <span style="font-weight: 900; font-size: 0.8rem; letter-spacing: 0.05em;"><span style="margin-right: 8px;">⛳</span>STANDINGS</span>
                 <div style="display:flex; align-items:center; gap:10px;">
                     <div class="export-container">
-                        <button class="export-btn" onclick="toggleExportMenu()">Export</button>
+                        <button class="export-btn" id="export-main-btn" onclick="toggleExportMenu()">Export</button>
                         <div id="export-menu" class="export-menu">
                             <button onclick="exportDay('thursday')">Export Thu</button>
                             <button onclick="exportDay('friday')">Export Fri</button>
@@ -375,12 +376,12 @@
                 const isRef = REFERENCE_IDS.includes(normId);
                 const isDup = !isRef && sig !== "" && refSigs.includes(sig);
                 
-                // FIXED Logic: Use tolerance check for tiny floats, and only calculate change if pts[i] is current-day data or historical
+                // FIXED Logic: Strict tolerance check to eliminate artifacts like -0.00
                 const dayPieces = [pts[0], 0, 0, 0];
                 for (let i = 1; i < 4; i++) {
-                    if (pts[i] !== 0) {
+                    if (pts[i] !== 0 && pts[i-1] !== 0) {
                         const diff = pts[i] - pts[i-1];
-                        dayPieces[i] = Math.abs(diff) < 0.001 ? 0 : diff;
+                        dayPieces[i] = Math.abs(diff) < 0.01 ? 0 : diff;
                     }
                 }
 
@@ -392,8 +393,8 @@
                 playerStates.forEach(p => {
                     if (!p.isWD && !p.isDuplicate) {
                         const piece = p.dayPieces[i];
-                        // If no scoring change occurred for this day, don't pollute the pool
-                        if (Math.abs(piece) > 0.001) pools[i].push(piece);
+                        // If no real scoring change occured, ignore in pool to keep "Even" stable
+                        if (Math.abs(piece) > 0.01) pools[i].push(piece);
                     }
                 });
             });
@@ -403,10 +404,10 @@
             const medianVal = sortedPool.length ? (sortedPool.length % 2 ? sortedPool[Math.floor(sortedPool.length/2)] : (sortedPool[sortedPool.length/2-1] + sortedPool[sortedPool.length/2])/2) : 0;
             document.getElementById('par-score-display').innerText = `EVEN: ${medianVal.toFixed(2)} ${activeIdx === 0 ? 'PTS' : 'IMPROVE'}`;
 
-            // Friday Cut Calculation
+            // Friday Cut Logic
             const friField = playerStates.map(p => {
-                const thuG = Math.abs(p.dayPieces[0]) > 0.001 ? calculateGolfScore(p.dayPieces[0], pools[0]) : 0;
-                const friG = Math.abs(p.dayPieces[1]) > 0.001 ? calculateGolfScore(p.dayPieces[1], pools[1]) : 0;
+                const thuG = Math.abs(p.dayPieces[0]) > 0.01 ? calculateGolfScore(p.dayPieces[0], pools[0]) : 0;
+                const friG = Math.abs(p.dayPieces[1]) > 0.01 ? calculateGolfScore(p.dayPieces[1], pools[1]) : 0;
                 return { userId: p.userId, totFri: thuG + friG, isWD: p.isWD, isDup: p.isDuplicate };
             }).filter(f => !f.isWD && !f.isDup);
             friField.sort((a,b) => a.totFri - b.totFri);
@@ -416,13 +417,13 @@
             const slotKeys = ['thu', 'fri', 'sat', 'sun'];
             currentProcessedUsers = playerStates.map(p => {
                 let rounds = { thu: 0, fri: 0, sat: 0, sun: 0 };
-                rounds.thu = Math.abs(p.dayPieces[0]) > 0.001 ? calculateGolfScore(p.dayPieces[0], pools[0]) : 0;
-                rounds.fri = Math.abs(p.dayPieces[1]) > 0.001 ? calculateGolfScore(p.dayPieces[1], pools[1]) : 0;
+                rounds.thu = Math.abs(p.dayPieces[0]) > 0.01 ? calculateGolfScore(p.dayPieces[0], pools[0]) : 0;
+                rounds.fri = Math.abs(p.dayPieces[1]) > 0.01 ? calculateGolfScore(p.dayPieces[1], pools[1]) : 0;
                 
                 const madeCut = (rounds.thu + rounds.fri) <= globalCutScoreFri;
                 if (madeCut) {
-                    rounds.sat = Math.abs(p.dayPieces[2]) > 0.001 ? calculateGolfScore(p.dayPieces[2], pools[2]) : 0;
-                    rounds.sun = Math.abs(p.dayPieces[3]) > 0.001 ? calculateGolfScore(p.dayPieces[3], pools[3]) : 0;
+                    rounds.sat = Math.abs(p.dayPieces[2]) > 0.01 ? calculateGolfScore(p.dayPieces[2], pools[2]) : 0;
+                    rounds.sun = Math.abs(p.dayPieces[3]) > 0.01 ? calculateGolfScore(p.dayPieces[3], pools[3]) : 0;
                 } else {
                     rounds.sat = 0; rounds.sun = 0;
                 }
@@ -449,11 +450,11 @@
                 const tag = u.isDuplicate ? '<span style="color:var(--danger); font-size:0.6rem;">(DUP)</span>' : (activeIdx >= 2 && !u.madeCut ? '<span style="color:var(--danger); font-size:0.6rem;">(MC)</span>' : '');
                 row.innerHTML = `<td class="col-pos">${u.isDuplicate?'DUP':(u.isWD?'WD':(u.hasData?currentProcessedUsers.indexOf(u)+1:'-'))}</td><td class="col-player">${formatHandle(u.username)} ${tag} <span class="toggle-icon">▼</span></td><td class="col-score">${(u.isWD||u.isDuplicate)?'-':formatToPar(u.total)}</td><td class="col-score">${(u.isWD||u.isDuplicate)?'-':formatToPar(u.today)}</td>`;
                 
-                const dr = document.createElement('tr'); dr.className = 'draft-row';
                 const satVal = u.madeCut ? formatToPar(u.rounds.sat) : '<div class="score-box mc">MC</div>';
                 const sunVal = u.madeCut ? formatToPar(u.rounds.sun) : '<div class="score-box mc">MC</div>';
                 const sanitize = (val) => (val === 0 ? 0 : val).toFixed(2);
 
+                const dr = document.createElement('tr'); dr.className = 'draft-row';
                 dr.innerHTML = `<td colspan="4"><div class="expanded-container"><div class="round-breakdown">
                     <div class="round-slot"><span class="round-label">Thu</span><span class="round-val">${(u.isWD||u.isDuplicate)?'-':formatToPar(u.rounds.thu)}</span><span class="round-piece">${sanitize(u.dayPieces[0])} PTS</span></div>
                     <div class="round-slot"><span class="round-label">Fri</span><span class="round-val">${(u.isWD||u.isDuplicate)?'-':formatToPar(u.rounds.fri)}</span><span class="round-piece">${sanitize(u.dayPieces[1])} PTS</span></div>
@@ -542,7 +543,7 @@
                     const start = new Date(today.getFullYear(), parseInt(p[0]) - 1, parseInt(p[1]));
                     const end = new Date(start); end.setDate(end.getDate() + 3);
                     const rangeStr = `${start.getMonth()+1}/${start.getDate()} - ${end.getMonth()+1}/${end.getDate()}`;
-                    const obj = { name: r[nIdx], course: r[cIdx] || '-', date: rangeStr, purse: '', start };
+                    const obj = { name: r[nIdx], course: r[cIdx] || '-', date: rangeStr, start };
                     if (start <= today) { curr = obj; past.unshift(obj); } else { if (!next) next = obj; upcoming.push(obj); }
                 }
                 document.getElementById('upcoming-list').innerHTML = upcoming.map(t => `<div class="schedule-card"><div class="card-date">${t.date}</div><div class="card-name">${t.name}</div><div class="card-course">${t.course}</div></div>`).join('');
@@ -583,6 +584,16 @@
                 }
             });
             generateCSV(rows, `golf_plug_full_export.csv`);
+            document.getElementById('export-menu').style.display = 'none';
+        }
+
+        function exportDay(dayName) {
+            const d = new Date(activeTournamentStartDate);
+            d.setDate(d.getDate() + ({thursday:0, friday:1, saturday:2, sunday:3}[dayName]||0));
+            const dateStr = (d.getMonth()+1)+'/'+d.getDate()+'/'+d.getFullYear();
+            const rows = [["username", "user id", "raw points", "golf score", "date"]];
+            currentProcessedUsers.forEach(u => rows.push([u.username, u.userId, u.actualTotalPoints.toFixed(2), u.rounds[dayName.substring(0,3)], dateStr]));
+            generateCSV(rows, `golf_plug_${dayName}_${dateStr.replace(/\//g, '-')}.csv`);
             document.getElementById('export-menu').style.display = 'none';
         }
 
