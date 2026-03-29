@@ -15,7 +15,7 @@
         --text-muted: #a0aec0;
         --border-gold: #c5a059;
         --gold-glow: rgba(197, 160, 89, 0.4);
-        --gold-light: #fdf2d0;
+        --gold-light: #f3e5ab;
         --bg-body: #05140d;
         --danger: #ff5555;
         --glass-border: rgba(255, 255, 255, 0.1);
@@ -74,7 +74,8 @@
       .banner-label { font-size: 0.55rem; text-transform: uppercase; letter-spacing: 0.2em; color: var(--gold-light); font-weight: 800; margin-bottom: 0.5rem; }
       .banner-date { font-size: 0.7rem; color: var(--text-muted); font-weight: 700; margin-bottom: 0.4rem; letter-spacing: 0.05em; }
       .banner-name { font-size: 1.4rem; font-weight: 900; color: #fff; margin-bottom: 0.3rem; line-height: 1.1; }
-      .banner-course { font-size: 0.9rem; color: var(--text-muted); font-weight: 500; }
+      .banner-course { font-size: 0.9rem; color: var(--text-muted); font-weight: 500; margin-bottom: 0.5rem; }
+      .banner-purse { font-size: 0.75rem; color: var(--gold-light); font-weight: 800; text-transform: uppercase; margin-top: 0.5rem; }
 
       .champion-spotlight {
           background: linear-gradient(135deg, rgba(197, 160, 89, 0.15) 0%, rgba(11, 61, 44, 0.4) 100%);
@@ -84,7 +85,6 @@
           text-align: center;
           margin-bottom: 2rem;
           box-shadow: 0 10px 40px rgba(0,0,0,0.5);
-          animation: fadeIn 0.6s ease-out;
       }
       .champ-label { font-size: 0.65rem; font-weight: 900; text-transform: uppercase; color: var(--border-gold); letter-spacing: 0.4em; margin-bottom: 0.5rem; }
       .champ-name { font-size: 2rem; font-weight: 900; color: #fff; margin-bottom: 0.4rem; letter-spacing: -0.01em; }
@@ -100,12 +100,13 @@
       .export-btn { background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-gold); color: var(--gold-light); font-size: 0.65rem; padding: 8px 16px; border-radius: 6px; font-weight: 800; text-transform: uppercase; cursor: pointer; }
       .export-menu { 
           display: none; position: absolute; right: 0; top: 115%; background: #0a1f18; border: 1px solid var(--border-gold); 
-          border-radius: 10px; z-index: 2000; min-width: 175px; box-shadow: 0 25px 60px rgba(0,0,0,0.9); overflow: hidden;
+          border-radius: 10px; z-index: 2000; min-width: 160px; box-shadow: 0 15px 40px rgba(0,0,0,0.8); overflow: hidden;
       }
       .export-menu button { 
-          width: 100%; padding: 14px 16px; background: transparent; border: none; border-bottom: 1px solid rgba(255,255,255,0.05);
+          width: 100%; padding: 12px 16px; background: transparent; border: none; border-bottom: 1px solid rgba(255,255,255,0.05);
           color: #fff; font-size: 0.7rem; font-weight: 700; text-align: left; cursor: pointer; text-transform: uppercase;
       }
+      .export-menu button:last-child { border-bottom: none; }
       .export-menu button:hover { background: var(--golf-green-mid); }
 
       .status-text { text-align: right; font-size: 0.65rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
@@ -127,7 +128,7 @@
 
       .main-row { cursor: pointer; transition: background 0.2s; }
       .main-row:hover { background: rgba(255, 255, 255, 0.05); }
-      .main-row.open { background: rgba(197, 160, 89, 0.1); }
+      .main-row.open { background: rgba(197, 160, 89, 0.08); }
       .toggle-icon { font-size: 0.5rem; color: var(--text-muted); margin-left: 6px; opacity: 0.5; transition: transform 0.3s; }
       .main-row.open .toggle-icon { transform: rotate(180deg); opacity: 1; color: var(--border-gold); }
 
@@ -172,6 +173,7 @@
       .card-date { font-size: 0.75rem; color: var(--gold-light); font-weight: 900; text-transform: uppercase; margin-bottom: 0.5rem; letter-spacing: 0.05em; }
       .card-name { font-size: 1.25rem; font-weight: 900; color: #fff; margin-bottom: 0.3rem; line-height: 1.1; }
       .card-course { font-size: 0.9rem; color: var(--text-muted); font-weight: 500; }
+      .card-purse { font-size: 0.7rem; color: var(--gold-light); font-weight: 800; text-transform: uppercase; margin-top: 8px; opacity: 0.9; }
 
       .draft-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
       .draft-item { 
@@ -210,17 +212,17 @@
             <div class="banner-date" id="display-banner-date"></div>
             <div class="banner-name" id="display-tournament-name">Loading Schedule...</div>
             <div class="banner-course" id="display-course-name">-</div>
+            <div class="banner-purse" id="display-purse"></div>
         </div>
     </div>
 
     <div id="loading-indicator">Syncing Tournament Data...</div>
 
-    <!-- STANDINGS -->
     <div id="view-live" class="content-view active">
         <div class="leaderboard-panel">
             <div class="leaderboard-header">
                 <span style="font-weight: 900; font-size: 0.8rem; letter-spacing: 0.05em;"><span style="margin-right: 8px;">⛳</span>STANDINGS</span>
-                <div style="display:flex; align-items:center; gap:10px;">
+                <div style="display:flex; align-items:center; gap:12px;">
                     <div class="export-container">
                         <button class="export-btn" id="export-main-btn" onclick="toggleExportMenu()">Export</button>
                         <div id="export-menu" class="export-menu">
@@ -393,7 +395,6 @@
                 playerStates.forEach(p => {
                     if (!p.isWD && !p.isDuplicate) {
                         const piece = p.dayPieces[i];
-                        // If no real scoring change occured, ignore in pool to keep "Even" stable
                         if (Math.abs(piece) > 0.01) pools[i].push(piece);
                     }
                 });
@@ -450,11 +451,11 @@
                 const tag = u.isDuplicate ? '<span style="color:var(--danger); font-size:0.6rem;">(DUP)</span>' : (activeIdx >= 2 && !u.madeCut ? '<span style="color:var(--danger); font-size:0.6rem;">(MC)</span>' : '');
                 row.innerHTML = `<td class="col-pos">${u.isDuplicate?'DUP':(u.isWD?'WD':(u.hasData?currentProcessedUsers.indexOf(u)+1:'-'))}</td><td class="col-player">${formatHandle(u.username)} ${tag} <span class="toggle-icon">▼</span></td><td class="col-score">${(u.isWD||u.isDuplicate)?'-':formatToPar(u.total)}</td><td class="col-score">${(u.isWD||u.isDuplicate)?'-':formatToPar(u.today)}</td>`;
                 
+                const dr = document.createElement('tr'); dr.className = 'draft-row';
                 const satVal = u.madeCut ? formatToPar(u.rounds.sat) : '<div class="score-box mc">MC</div>';
                 const sunVal = u.madeCut ? formatToPar(u.rounds.sun) : '<div class="score-box mc">MC</div>';
                 const sanitize = (val) => (val === 0 ? 0 : val).toFixed(2);
 
-                const dr = document.createElement('tr'); dr.className = 'draft-row';
                 dr.innerHTML = `<td colspan="4"><div class="expanded-container"><div class="round-breakdown">
                     <div class="round-slot"><span class="round-label">Thu</span><span class="round-val">${(u.isWD||u.isDuplicate)?'-':formatToPar(u.rounds.thu)}</span><span class="round-piece">${sanitize(u.dayPieces[0])} PTS</span></div>
                     <div class="round-slot"><span class="round-label">Fri</span><span class="round-val">${(u.isWD||u.isDuplicate)?'-':formatToPar(u.rounds.fri)}</span><span class="round-piece">${sanitize(u.dayPieces[1])} PTS</span></div>
@@ -464,6 +465,7 @@
                 
                 row.onclick = function() {
                     const isOpen = this.classList.contains('open');
+                    document.getElementById('export-menu').style.display = 'none';
                     document.querySelectorAll('.main-row').forEach(r => r.classList.remove('open'));
                     document.querySelectorAll('.draft-row').forEach(r => r.classList.remove('open'));
                     if (!isOpen) { this.classList.add('open'); dr.classList.add('open'); renderDraft(u, dr.querySelector('.draft-grid')); }
@@ -476,6 +478,34 @@
             if (!u.hasData) { container.innerHTML = '<div style="flex:1; text-align:center; font-size:0.7rem; padding:10px;">Syncing...</div>'; return; }
             if (u.isWD || u.isDuplicate) { container.innerHTML = `<div style="flex:1; text-align:center; font-size:0.7rem; color:var(--danger); padding:10px;">${u.isWD?'PLAYER WITHDRAWN':'DUPLICATE ENTRY'}</div>`; return; }
             container.innerHTML = u.lineup.map(g => `<div class="draft-item"><img src="${(g.avatar||g.player?.avatar) ? `https://media.realapp.link/assets/players/default/large/${g.avatar||g.player.avatar}.webp` : 'https://placehold.co/48x48/111/fff?text=?'}" class="draft-item-avatar" onerror="this.src='https://placehold.co/48x48/111/fff?text=?'"><span class="draft-item-name">${g.displayName||g.player?.displayName||'Unknown'}</span><span class="draft-item-score">${(parseFloat(g.score)||0).toFixed(2)}</span></div>`).join('');
+        }
+
+        function generateCSV(rows, filename) {
+            const blob = new Blob([rows.map(e => e.join(",")).join("\n")], { type: 'text/csv' });
+            const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = filename; link.click();
+        }
+
+        function exportScoresToCSV() {
+            const rows = [["position", "username", "user id", "total score", "status", "thursday", "friday", "saturday", "sunday", "raw points"]];
+            currentProcessedUsers.forEach((u, i) => { 
+                if(u.hasData) {
+                    let status = u.madeCut ? "MADE CUT" : "MISSED CUT";
+                    if (u.isWD) status = "WD"; else if (u.isDuplicate) status = "DUP";
+                    rows.push([u.isWD?'WD':(u.isDuplicate?'DUP':i+1), u.username, u.userId, u.total, status, u.rounds.thu, u.rounds.fri, u.rounds.sat, u.rounds.sun, u.actualTotalPoints.toFixed(2)]); 
+                }
+            });
+            generateCSV(rows, `golf_plug_full_export.csv`);
+            document.getElementById('export-menu').style.display = 'none';
+        }
+
+        function exportDay(dayName) {
+            const d = new Date(activeTournamentStartDate);
+            d.setDate(d.getDate() + ({thursday:0, friday:1, saturday:2, sunday:3}[dayName]||0));
+            const dateStr = (d.getMonth()+1)+'/'+d.getDate()+'/'+d.getFullYear();
+            const rows = [["username", "user id", "raw points", "golf score", "date"]];
+            currentProcessedUsers.forEach(u => rows.push([u.username, u.userId, u.actualTotalPoints.toFixed(2), u.rounds[dayName.substring(0,3)], dateStr]));
+            generateCSV(rows, `golf_plug_${dayName}_${dateStr.replace(/\//g, '-')}.csv`);
+            document.getElementById('export-menu').style.display = 'none';
         }
 
         const findIdx = (h, n) => { for(const name of n) { const i = h.findIndex(x => x.toLowerCase().trim().includes(name.toLowerCase())); if(i !== -1) return i; } return -1; };
@@ -536,18 +566,18 @@
                 const rows = parseCSV(await res.text());
                 const now = new Date(); const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
                 const h = rows[0].map(v => v.toLowerCase().trim());
-                const dIdx = findIdx(h, ['date']), nIdx = findIdx(h, ['tourn', 'tournament']), cIdx = findIdx(h, ['course']);
+                const dIdx = findIdx(h, ['date']), nIdx = findIdx(h, ['tourn', 'tournament']), cIdx = findIdx(h, ['course']), pIdx = findIdx(h, ['purse']);
                 const upcoming = [], past = []; let curr = null, next = null;
                 for (let i = 1; i < rows.length; i++) {
                     const r = rows[i]; const p = (r[dIdx] || '').split('/'); if (p.length < 2) continue;
                     const start = new Date(today.getFullYear(), parseInt(p[0]) - 1, parseInt(p[1]));
                     const end = new Date(start); end.setDate(end.getDate() + 3);
                     const rangeStr = `${start.getMonth()+1}/${start.getDate()} - ${end.getMonth()+1}/${end.getDate()}`;
-                    const obj = { name: r[nIdx], course: r[cIdx] || '-', date: rangeStr, start };
+                    const obj = { name: r[nIdx], course: r[cIdx] || '-', date: rangeStr, purse: r[pIdx] || '', start };
                     if (start <= today) { curr = obj; past.unshift(obj); } else { if (!next) next = obj; upcoming.push(obj); }
                 }
-                document.getElementById('upcoming-list').innerHTML = upcoming.map(t => `<div class="schedule-card"><div class="card-date">${t.date}</div><div class="card-name">${t.name}</div><div class="card-course">${t.course}</div></div>`).join('');
-                document.getElementById('past-tournament-grid').innerHTML = past.map(t => `<div class="schedule-card clickable" onclick="viewArchive('${t.name.replace(/'/g, "\\'")}')"><div class="card-date">${t.date}</div><div class="card-name">${t.name}</div><div class="card-course">${t.course}</div></div>`).join('');
+                document.getElementById('upcoming-list').innerHTML = upcoming.map(t => `<div class="schedule-card"><div class="card-date">${t.date}</div><div class="card-name">${t.name}</div><div class="card-course">${t.course}</div>${t.purse ? `<div class="card-purse">Purse: ${t.purse}</div>` : ''}</div>`).join('');
+                document.getElementById('past-tournament-grid').innerHTML = past.map(t => `<div class="schedule-card clickable" onclick="viewArchive('${t.name.replace(/'/g, "\\'")}')"><div class="card-date">${t.date}</div><div class="card-name">${t.name}</div><div class="card-course">${t.course}</div>${t.purse ? `<div class="card-purse">Purse: ${t.purse}</div>` : ''}</div>`).join('');
                 let d = (now.getDay() === 3 && next) ? { ...next, label: 'Live Tournament' } : (now.getDay() === 1 || now.getDay() === 2) ? { ...curr, label: 'Past Tournament' } : { ...curr, label: 'Live Tournament' };
                 if (d && d.name) { 
                     activeTournamentStartDate = d.start; 
@@ -555,6 +585,7 @@
                     document.getElementById('display-course-name').innerText = d.course; 
                     document.getElementById('display-banner-label').innerText = d.label; 
                     document.getElementById('display-banner-date').innerText = d.date;
+                    document.getElementById('display-purse').innerText = d.purse ? `Purse: ${d.purse}` : ''; 
                     document.getElementById('tournament-banner').style.display = 'block'; 
                 }
             } catch (e) {}
@@ -567,34 +598,6 @@
                 const uIdx = findIdx(h, ['username']), uidIdx = findIdx(h, ['user id', 'userid']), gidIdx = findIdx(h, ['golf id', 'golfid']);
                 return rows.slice(1).map(r => ({ userId: r[uidIdx].trim(), username: r[uIdx].trim(), golfId: gidIdx !== -1 ? r[gidIdx].trim() : '', actualTotalPoints: 0, hasData: false, lineup: [] })).filter(u => u.username && u.userId);
             } catch (e) { return []; }
-        }
-
-        function generateCSV(rows, filename) {
-            const blob = new Blob([rows.map(e => e.join(",")).join("\n")], { type: 'text/csv' });
-            const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = filename; link.click();
-        }
-
-        function exportScoresToCSV() {
-            const rows = [["position", "username", "user id", "total score", "status", "thursday", "friday", "saturday", "sunday", "raw points"]];
-            currentProcessedUsers.forEach((u, i) => { 
-                if(u.hasData) {
-                    let status = u.madeCut ? "MADE CUT" : "MISSED CUT";
-                    if (u.isWD) status = "WD"; else if (u.isDuplicate) status = "DUP";
-                    rows.push([u.isWD?'WD':(u.isDuplicate?'DUP':i+1), u.username, u.userId, u.total, status, u.rounds.thu, u.rounds.fri, u.rounds.sat, u.rounds.sun, u.actualTotalPoints.toFixed(2)]); 
-                }
-            });
-            generateCSV(rows, `golf_plug_full_export.csv`);
-            document.getElementById('export-menu').style.display = 'none';
-        }
-
-        function exportDay(dayName) {
-            const d = new Date(activeTournamentStartDate);
-            d.setDate(d.getDate() + ({thursday:0, friday:1, saturday:2, sunday:3}[dayName]||0));
-            const dateStr = (d.getMonth()+1)+'/'+d.getDate()+'/'+d.getFullYear();
-            const rows = [["username", "user id", "raw points", "golf score", "date"]];
-            currentProcessedUsers.forEach(u => rows.push([u.username, u.userId, u.actualTotalPoints.toFixed(2), u.rounds[dayName.substring(0,3)], dateStr]));
-            generateCSV(rows, `golf_plug_${dayName}_${dateStr.replace(/\//g, '-')}.csv`);
-            document.getElementById('export-menu').style.display = 'none';
         }
 
         function viewArchive(name) {
