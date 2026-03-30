@@ -15,7 +15,7 @@
         --text-muted: #a0aec0;
         --border-gold: #c5a059;
         --gold-glow: rgba(197, 160, 89, 0.4);
-        --gold-light: #f3e5ab;
+        --gold-light: #fdf2d0;
         --bg-body: #05140d;
         --danger: #ff5555;
         --glass-border: rgba(255, 255, 255, 0.1);
@@ -129,7 +129,7 @@
       .main-row { cursor: pointer; transition: background 0.2s; }
       .main-row:hover { background: rgba(255, 255, 255, 0.05); }
       .main-row.open { background: rgba(197, 160, 89, 0.08); }
-      .toggle-icon { font-size: 0.5rem; color: var(--text-muted); margin-left: 6px; opacity: 0.5; transition: transform 0.3s; }
+      .toggle-icon { font-size: 0.5rem; color: var(--text-muted); margin-left: 4px; opacity: 0.5; transition: transform 0.3s; }
       .main-row.open .toggle-icon { transform: rotate(180deg); opacity: 1; color: var(--border-gold); }
 
       .cut-line-row td {
@@ -185,10 +185,10 @@
       .draft-item-name { color: var(--text-main); font-weight: 700; font-size: 0.65rem; white-space: normal; line-height: 1.2; width: 100%; margin-bottom: 4px; }
       .draft-item-score { font-weight: 900; font-size: 0.9rem; color: var(--gold-light); font-variant-numeric: tabular-nums; }
 
-      #loading-indicator { text-align: center; padding: 3rem; color: var(--gold-light); font-weight: 800; animation: pulse 1.5s infinite; letter-spacing: 0.2em; text-transform: uppercase; }
+      #loading-indicator { text-align: center; padding: 3rem; color: var(--gold-light); font-weight: 700; animation: pulse 1.5s infinite; letter-spacing: 0.2em; text-transform: uppercase; }
 
       @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-      @keyframes pulse { 0% { opacity: 0.4; } 50% { opacity: 1; } 100% { opacity: 0.4; } }
+      @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
       
       @media (max-width: 600px) { h1 { font-size: 1.4rem; } .golf-table th, .golf-table td { padding: 0.75rem 0.5rem; } .col-pos { width: 40px; } .col-score { width: 85px; } .nav-tab { padding: 8px 14px; font-size: 0.6rem; } }
     </style>
@@ -465,7 +465,6 @@
                 
                 row.onclick = function() {
                     const isOpen = this.classList.contains('open');
-                    document.getElementById('export-menu').style.display = 'none';
                     document.querySelectorAll('.main-row').forEach(r => r.classList.remove('open'));
                     document.querySelectorAll('.draft-row').forEach(r => r.classList.remove('open'));
                     if (!isOpen) { this.classList.add('open'); dr.classList.add('open'); renderDraft(u, dr.querySelector('.draft-grid')); }
@@ -486,15 +485,24 @@
         }
 
         function exportScoresToCSV() {
-            const rows = [["position", "username", "user id", "total score", "status", "thursday", "friday", "saturday", "sunday", "raw points"]];
+            const rows = [["position", "username", "user id", "status", "total_golf", "thu_golf", "fri_golf", "sat_golf", "sun_golf", "total_raw", "thu_raw", "fri_raw", "sat_raw", "sun_raw"]];
             currentProcessedUsers.forEach((u, i) => { 
                 if(u.hasData) {
                     let status = u.madeCut ? "MADE CUT" : "MISSED CUT";
                     if (u.isWD) status = "WD"; else if (u.isDuplicate) status = "DUP";
-                    rows.push([u.isWD?'WD':(u.isDuplicate?'DUP':i+1), u.username, u.userId, u.total, status, u.rounds.thu, u.rounds.fri, u.rounds.sat, u.rounds.sun, u.actualTotalPoints.toFixed(2)]); 
+                    rows.push([
+                        u.isWD?'WD':(u.isDuplicate?'DUP':i+1), 
+                        u.username, 
+                        u.userId, 
+                        status,
+                        u.total, 
+                        u.rounds.thu, u.rounds.fri, u.rounds.sat, u.rounds.sun,
+                        u.actualTotalPoints.toFixed(2),
+                        u.pts[0].toFixed(2), u.pts[1].toFixed(2), u.pts[2].toFixed(2), u.pts[3].toFixed(2)
+                    ]); 
                 }
             });
-            generateCSV(rows, `golf_plug_full_export.csv`);
+            generateCSV(rows, `golf_plug_full_records.csv`);
             document.getElementById('export-menu').style.display = 'none';
         }
 
