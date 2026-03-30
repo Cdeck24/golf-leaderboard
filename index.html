@@ -216,7 +216,10 @@
       .golf-table td { padding: 1.25rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.03); font-size: 1rem; }
 
       .col-pos { width: 55px; text-align: center; color: var(--border-gold); font-weight: 900; }
-      .col-player { width: auto; font-weight: 700; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .col-player { width: auto; font-weight: 700; color: var(--text-main); }
+      .player-flex { display: flex; align-items: center; gap: 6px; width: 100%; }
+      .p-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 0 1 auto; }
+      .p-tag { color: var(--danger); font-size: 0.6rem; font-weight: 900; flex: 0 0 auto; letter-spacing: 0.05em; }
       .col-score { width: 90px; text-align: center; font-variant-numeric: tabular-nums; }
       .col-stat { width: 75px; text-align: center; color: var(--gold-light); font-weight: 800; font-size: 0.9rem; }
 
@@ -229,7 +232,7 @@
       .main-row { cursor: pointer; transition: background 0.3s; }
       .main-row:hover { background: rgba(255, 255, 255, 0.06); }
       .main-row.open { background: rgba(197, 160, 89, 0.1); }
-      .toggle-icon { font-size: 0.5rem; color: var(--text-muted); margin-left: 6px; opacity: 0.5; transition: transform 0.3s; }
+      .toggle-icon { font-size: 0.5rem; color: var(--text-muted); margin-left: 6px; opacity: 0.5; transition: transform 0.3s; flex: 0 0 auto; }
       .main-row.open .toggle-icon { transform: rotate(180deg); opacity: 1; color: var(--border-gold); }
 
       .cut-line-row td {
@@ -294,11 +297,20 @@
       @keyframes pulse { 0% { opacity: 0.4; } 50% { opacity: 1; } 100% { opacity: 0.4; } }
        
       @media (max-width: 600px) { 
-          h1 { font-size: 1.6rem; margin-bottom: 1.5rem; } 
-          .golf-table th, .golf-table td { padding: 0.85rem 0.6rem; } 
-          .col-pos { width: 40px; } 
-          .col-score { width: 85px; } 
-          .nav-tab { padding: 8px 14px; font-size: 0.6rem; } 
+          h1 { font-size: 1.5rem; margin-bottom: 1.25rem; } 
+          .golf-table th { padding: 0.8rem 0.3rem; font-size: 0.6rem; } 
+          .golf-table td { padding: 0.8rem 0.3rem; font-size: 0.85rem; } 
+          .col-pos { width: 35px; } 
+          .col-score { width: 68px; } 
+          .col-stat { width: 50px; }
+          .score-box { font-size: 1rem; }
+          .score-box.mc { font-size: 0.85rem; }
+          .nav-tab { padding: 8px 12px; font-size: 0.6rem; } 
+          .player-flex { gap: 4px; }
+          .toggle-icon { margin-left: 2px; }
+          .round-breakdown { gap: 4px; padding: 12px 8px; }
+          .round-val { font-size: 1.05rem; }
+          .round-piece { font-size: 0.6rem; padding: 2px 4px; }
           
           /* Points Card Mobile Fixes */
           .points-key-card { padding: 1rem 0.75rem; }
@@ -684,7 +696,8 @@
                 const row = document.createElement('tr'); row.className = 'main-row';
                 const tag = u.isDuplicate ? '(DUP)' : (activeIdx >= 2 && !u.madeCut ? '(MC)' : '');
                 const pos = (u.isWD) ? 'WD' : (u.isDuplicate) ? 'DUP' : (u.hasData ? currentProcessedUsers.filter(x => !x.isWD && !x.isDuplicate).indexOf(u)+1 : '-');
-                row.innerHTML = `<td class="col-pos">${pos}</td><td class="col-player">${formatHandle(u.username)} ${tag} <span class="toggle-icon">▼</span></td><td class="col-score">${(u.isWD||u.isDuplicate)?'-':formatToPar(u.total)}</td><td class="col-score">${(u.isWD||u.isDuplicate)?'-':formatToPar(u.today)}</td>`;
+                const playerContent = `<div class="player-flex"><span class="p-name">${formatHandle(u.username)}</span>${tag ? `<span class="p-tag">${tag}</span>` : ''}<span class="toggle-icon">▼</span></div>`;
+                row.innerHTML = `<td class="col-pos">${pos}</td><td class="col-player">${playerContent}</td><td class="col-score">${(u.isWD||u.isDuplicate)?'-':formatToPar(u.total)}</td><td class="col-score">${(u.isWD||u.isDuplicate)?'-':formatToPar(u.today)}</td>`;
                 
                 const dr = document.createElement('tr'); dr.className = 'draft-row';
                 const satVal = u.madeCut ? formatToPar(u.rounds.sat) : '<div class="score-box mc">MC</div>';
@@ -764,7 +777,7 @@
                 .sort((a,b) => b.points - a.points || b.wins - a.wins);
             sorted.forEach((p, i) => {
                 const row = document.createElement('tr');
-                row.innerHTML = `<td class="col-pos">${i+1}</td><td class="col-player">${formatHandle(p.name)}</td><td class="col-stat">${p.points}</td><td class="col-stat">${p.wins}</td><td class="col-stat">${p.starts}</td>`;
+                row.innerHTML = `<td class="col-pos">${i+1}</td><td class="col-player"><div class="player-flex"><span class="p-name">${formatHandle(p.name)}</span></div></td><td class="col-stat">${p.points}</td><td class="col-stat">${p.wins}</td><td class="col-stat">${p.starts}</td>`;
                 tbody.appendChild(row);
             });
         }
@@ -848,7 +861,8 @@
                 }
                 const mainRow = document.createElement('tr'); mainRow.className = 'main-row';
                 const tag = (item.status === "DUP") ? '(DUP)' : (item.status === "WD") ? '(WD)' : (!item.madeCut ? '(MC)' : '');
-                mainRow.innerHTML = `<td class="col-pos">${isInv ? item.status : item.r[0]}</td><td class="col-player">${formatHandle(item.r[1])} <span style="color:var(--danger); font-size:0.6rem;">${tag}</span> <span class="toggle-icon">▼</span></td><td class="col-score">${isInv?'-':formatToPar(item.totalGolf)}</td><td class="col-score">${item.totalRaw.toFixed(2)}</td>`;
+                const playerContent = `<div class="player-flex"><span class="p-name">${formatHandle(item.r[1])}</span>${tag ? `<span class="p-tag">${tag}</span>` : ''}<span class="toggle-icon">▼</span></div>`;
+                mainRow.innerHTML = `<td class="col-pos">${isInv ? item.status : item.r[0]}</td><td class="col-player">${playerContent}</td><td class="col-score">${isInv?'-':formatToPar(item.totalGolf)}</td><td class="col-score">${item.totalRaw.toFixed(2)}</td>`;
                 const detailRow = document.createElement('tr'); detailRow.className = 'draft-row';
                 const satDisp = item.madeCut ? formatToPar(item.rounds.sat) : (isInv ? '-' : '<div class="score-box mc">MC</div>');
                 const sunDisp = item.madeCut ? formatToPar(item.rounds.sun) : (isInv ? '-' : '<div class="score-box mc">MC</div>');
