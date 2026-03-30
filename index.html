@@ -185,14 +185,19 @@
       }
       .points-col:hover { transform: translateY(-3px); border-color: rgba(197, 160, 89, 0.4); border-top-color: var(--gold-light); }
       .points-col-title { font-size: 0.65rem; color: var(--text-muted); font-weight: 900; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.1em; opacity: 0.9; }
-      .points-col-val { font-size: 0.8rem; color: #fff; font-weight: 700; line-height: 1.8; flex: 1; display: flex; flex-direction: column; justify-content: center; }
+      
+      .points-col-val { display: flex; flex-direction: column; gap: 6px; align-items: center; justify-content: center; flex: 1; width: 100%; }
+      .pt-row { display: flex; justify-content: space-between; align-items: center; width: 100%; max-width: 80px; }
+      .pt-row.wide { max-width: 120px; }
+      .pt-note { font-size: 0.65rem; color: var(--text-muted); margin: 2px 0; }
+      
       .pt-badge { 
           color: var(--gold-light); font-weight: 900; background: rgba(197, 160, 89, 0.15); 
           padding: 2px 6px; border-radius: 6px; margin: 0 2px; display: inline-block; 
           border: 1px solid rgba(197, 160, 89, 0.3); font-variant-numeric: tabular-nums; 
           box-shadow: 0 2px 4px rgba(0,0,0,0.2); line-height: 1.2;
       }
-      .pt-divider { color: var(--text-muted); font-weight: 400; margin: 0 4px; opacity: 0.4; }
+      .danger-badge { color: var(--danger); background: rgba(255,85,85,0.1); border-color: rgba(255,85,85,0.3); font-size: 1.2rem; padding: 4px 16px; }
 
       /* How It Works Specific Styles */
       .rules-container { display: flex; flex-direction: column; gap: 1.5rem; }
@@ -288,7 +293,21 @@
       @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
       @keyframes pulse { 0% { opacity: 0.4; } 50% { opacity: 1; } 100% { opacity: 0.4; } }
        
-      @media (max-width: 600px) { h1 { font-size: 1.6rem; margin-bottom: 1.5rem; } .golf-table th, .golf-table td { padding: 0.85rem 0.6rem; } .col-pos { width: 40px; } .col-score { width: 85px; } .nav-tab { padding: 8px 14px; font-size: 0.6rem; } }
+      @media (max-width: 600px) { 
+          h1 { font-size: 1.6rem; margin-bottom: 1.5rem; } 
+          .golf-table th, .golf-table td { padding: 0.85rem 0.6rem; } 
+          .col-pos { width: 40px; } 
+          .col-score { width: 85px; } 
+          .nav-tab { padding: 8px 14px; font-size: 0.6rem; } 
+          
+          /* Points Card Mobile Fixes */
+          .points-key-card { padding: 1rem 0.75rem; }
+          .points-grid { gap: 8px; }
+          .points-col { padding: 0.85rem 0.5rem; flex: 1 1 calc(50% - 8px); }
+          .pt-row { max-width: 90px; font-size: 0.85rem; }
+          .pt-row.wide { max-width: 130px; font-size: 0.8rem; }
+          .pt-badge { padding: 1px 5px; font-size: 0.75rem; }
+      }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/hashids@2.2.10/dist/hashids.min.js"></script>
 </head>
@@ -356,44 +375,44 @@
             <div class="points-grid">
                 <div class="points-col">
                     <div class="points-col-title">Top 5</div>
-                    <div class="points-col-val" style="display: flex; flex-direction: column; gap: 6px; align-items: center;">
-                        <div style="display: flex; justify-content: space-between; width: 75px;"><span>1st</span> <span class="pt-badge">100</span></div>
-                        <div style="display: flex; justify-content: space-between; width: 75px;"><span>2nd</span> <span class="pt-badge">60</span></div>
-                        <div style="display: flex; justify-content: space-between; width: 75px;"><span>3rd</span> <span class="pt-badge">45</span></div>
-                        <div style="display: flex; justify-content: space-between; width: 75px;"><span>4th</span> <span class="pt-badge">35</span></div>
-                        <div style="display: flex; justify-content: space-between; width: 75px;"><span>5th</span> <span class="pt-badge">30</span></div>
+                    <div class="points-col-val">
+                        <div class="pt-row"><span>1st</span> <span class="pt-badge">100</span></div>
+                        <div class="pt-row"><span>2nd</span> <span class="pt-badge">60</span></div>
+                        <div class="pt-row"><span>3rd</span> <span class="pt-badge">45</span></div>
+                        <div class="pt-row"><span>4th</span> <span class="pt-badge">35</span></div>
+                        <div class="pt-row"><span>5th</span> <span class="pt-badge">30</span></div>
                     </div>
                 </div>
                 <div class="points-col">
                     <div class="points-col-title">6th–10th</div>
-                    <div class="points-col-val" style="display: flex; flex-direction: column; gap: 6px; align-items: center;">
-                        <div style="display: flex; justify-content: space-between; width: 75px;"><span>6th</span> <span class="pt-badge">25</span></div>
-                        <div style="display: flex; justify-content: space-between; width: 75px;"><span>7th</span> <span class="pt-badge">22</span></div>
-                        <div style="display: flex; justify-content: space-between; width: 75px;"><span>8th</span> <span class="pt-badge">20</span></div>
-                        <div style="display: flex; justify-content: space-between; width: 75px;"><span>9th</span> <span class="pt-badge">18</span></div>
-                        <div style="display: flex; justify-content: space-between; width: 75px;"><span>10th</span> <span class="pt-badge">16</span></div>
+                    <div class="points-col-val">
+                        <div class="pt-row"><span>6th</span> <span class="pt-badge">25</span></div>
+                        <div class="pt-row"><span>7th</span> <span class="pt-badge">22</span></div>
+                        <div class="pt-row"><span>8th</span> <span class="pt-badge">20</span></div>
+                        <div class="pt-row"><span>9th</span> <span class="pt-badge">18</span></div>
+                        <div class="pt-row"><span>10th</span> <span class="pt-badge">16</span></div>
                     </div>
                 </div>
                 <div class="points-col">
                     <div class="points-col-title">11th–20th</div>
-                    <div class="points-col-val" style="display: flex; flex-direction: column; gap: 6px; align-items: center;">
-                        <div style="display: flex; justify-content: space-between; width: 80px;"><span>11th</span> <span class="pt-badge">14</span></div>
-                        <div style="display: flex; justify-content: space-between; width: 80px;"><span>12th</span> <span class="pt-badge">13</span></div>
-                        <div style="font-size: 0.65rem; color: var(--text-muted); margin: 2px 0;">↓ -1 pt / pos ↓</div>
-                        <div style="display: flex; justify-content: space-between; width: 80px;"><span>20th</span> <span class="pt-badge">5</span></div>
+                    <div class="points-col-val">
+                        <div class="pt-row"><span>11th</span> <span class="pt-badge">14</span></div>
+                        <div class="pt-row"><span>12th</span> <span class="pt-badge">13</span></div>
+                        <div class="pt-note">↓ -1 pt / pos ↓</div>
+                        <div class="pt-row"><span>20th</span> <span class="pt-badge">5</span></div>
                     </div>
                 </div>
                 <div class="points-col">
                     <div class="points-col-title">21st to End</div>
-                    <div class="points-col-val" style="display: flex; flex-direction: column; gap: 8px; align-items: center;">
-                        <div style="display: flex; justify-content: space-between; width: 105px;"><span>Made Cut</span> <span class="pt-badge">3</span></div>
-                        <div style="display: flex; justify-content: space-between; width: 105px;"><span>Missed Cut</span> <span class="pt-badge">2</span></div>
+                    <div class="points-col-val" style="gap: 8px;">
+                        <div class="pt-row wide"><span>Made Cut</span> <span class="pt-badge">3</span></div>
+                        <div class="pt-row wide"><span>Missed Cut</span> <span class="pt-badge">2</span></div>
                     </div>
                 </div>
                 <div class="points-col" style="border-top-color: var(--danger);">
                     <div class="points-col-title">WD / DUP</div>
-                    <div class="points-col-val" style="align-items: center; justify-content: center;">
-                        <span class="pt-badge" style="color: var(--danger); background: rgba(255,85,85,0.1); border-color: rgba(255,85,85,0.3); font-size: 1.2rem; padding: 4px 16px;">0</span>
+                    <div class="points-col-val">
+                        <span class="pt-badge danger-badge">0</span>
                     </div>
                 </div>
             </div>
