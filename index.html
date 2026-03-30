@@ -157,6 +157,54 @@
       .status-text { text-align: right; font-size: 0.65rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
       .sync-dot { display: inline-block; width: 8px; height: 8px; background: var(--golf-green-bright); border-radius: 50%; margin-right: 6px; box-shadow: 0 0 10px var(--golf-green-bright); }
 
+      /* Points Key Card Styles */
+      .points-key-card { 
+          background: linear-gradient(180deg, rgba(6, 26, 19, 0.8) 0%, rgba(5, 20, 13, 0.95) 100%); 
+          border: 1px solid rgba(197, 160, 89, 0.3); 
+          border-radius: 16px; 
+          padding: 1.5rem; 
+          margin-bottom: 2rem; 
+          box-shadow: 0 15px 35px rgba(0,0,0,0.5); 
+      }
+      .points-key-title { 
+          font-size: 0.8rem; font-weight: 900; color: var(--border-gold); 
+          text-transform: uppercase; letter-spacing: 0.15em; text-align: center; 
+          margin-bottom: 1.25rem; display: flex; align-items: center; justify-content: center; gap: 12px;
+      }
+      .points-key-title::before, .points-key-title::after {
+          content: ""; height: 1px; background: linear-gradient(90deg, transparent, var(--border-gold), transparent);
+          flex: 1; max-width: 120px; opacity: 0.4;
+      }
+      .points-grid { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; align-items: stretch; }
+      .points-col { 
+          background: linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%); 
+          padding: 1rem; border-radius: 12px; text-align: center; 
+          border: 1px solid rgba(197, 160, 89, 0.15); border-top: 3px solid var(--border-gold); 
+          flex: 1 1 130px; display: flex; flex-direction: column; 
+          box-shadow: 0 4px 15px rgba(0,0,0,0.2); transition: transform 0.2s ease, border-color 0.2s ease;
+      }
+      .points-col:hover { transform: translateY(-3px); border-color: rgba(197, 160, 89, 0.4); border-top-color: var(--gold-light); }
+      .points-col-title { font-size: 0.65rem; color: var(--text-muted); font-weight: 900; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.1em; opacity: 0.9; }
+      .points-col-val { font-size: 0.8rem; color: #fff; font-weight: 700; line-height: 1.8; flex: 1; display: flex; flex-direction: column; justify-content: center; }
+      .pt-badge { 
+          color: var(--gold-light); font-weight: 900; background: rgba(197, 160, 89, 0.15); 
+          padding: 2px 6px; border-radius: 6px; margin: 0 2px; display: inline-block; 
+          border: 1px solid rgba(197, 160, 89, 0.3); font-variant-numeric: tabular-nums; 
+          box-shadow: 0 2px 4px rgba(0,0,0,0.2); line-height: 1.2;
+      }
+      .pt-divider { color: var(--text-muted); font-weight: 400; margin: 0 4px; opacity: 0.4; }
+
+      /* How It Works Specific Styles */
+      .rules-container { display: flex; flex-direction: column; gap: 1.5rem; }
+      .rules-card { background: rgba(15, 23, 42, 0.4); border: 1px solid var(--glass-border); border-left: 4px solid var(--border-gold); border-radius: 12px; padding: 1.5rem; box-shadow: 0 10px 30px rgba(0,0,0,0.4); transition: transform 0.2s; }
+      .rules-card:hover { transform: translateY(-3px); border-left-color: #fff; }
+      .rules-title { font-size: 1.1rem; font-weight: 900; color: #fff; margin-bottom: 0.8rem; display: flex; align-items: center; gap: 8px; letter-spacing: -0.01em; }
+      .rules-text { color: var(--text-muted); font-size: 0.9rem; line-height: 1.6; margin-bottom: 0.8rem; }
+      .rules-list { list-style: none; margin-left: 0.5rem; }
+      .rules-list li { position: relative; padding-left: 1.5rem; margin-bottom: 0.6rem; color: var(--text-muted); font-size: 0.9rem; line-height: 1.5; }
+      .rules-list li::before { content: "•"; color: var(--border-gold); font-weight: bold; position: absolute; left: 0; font-size: 1.2rem; line-height: 1.2; }
+      .rules-list li strong { color: var(--gold-light); font-weight: 800; }
+
       /* Table Styles */
       .golf-table { width: 100%; border-collapse: collapse; text-align: left; table-layout: fixed; }
       .golf-table th { background: rgba(0,0,0,0.4); color: var(--text-muted); font-size: 0.65rem; font-weight: 900; text-transform: uppercase; padding: 1.1rem 1rem; border-bottom: 1px solid var(--glass-border); letter-spacing: 0.05em; }
@@ -195,7 +243,7 @@
       .draft-row { display: none; background: rgba(0,0,0,0.45); }
       .draft-row.open { display: table-row; }
       .expanded-container { padding: 1.5rem 1rem; border-left: 4px solid var(--border-gold); }
-      
+       
       /* Round Breakdowns */
       .round-breakdown { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 1.25rem; background: rgba(0,0,0,0.35); padding: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); }
       .round-slot { text-align: center; }
@@ -239,7 +287,7 @@
 
       @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
       @keyframes pulse { 0% { opacity: 0.4; } 50% { opacity: 1; } 100% { opacity: 0.4; } }
-      
+       
       @media (max-width: 600px) { h1 { font-size: 1.6rem; margin-bottom: 1.5rem; } .golf-table th, .golf-table td { padding: 0.85rem 0.6rem; } .col-pos { width: 40px; } .col-score { width: 85px; } .nav-tab { padding: 8px 14px; font-size: 0.6rem; } }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/hashids@2.2.10/dist/hashids.min.js"></script>
@@ -254,6 +302,7 @@
             <button id="tab-rankings" class="nav-tab" onclick="switchView('rankings')">Rankings</button>
             <button id="tab-upcoming" class="nav-tab" onclick="switchView('upcoming')">Schedule</button>
             <button id="tab-past" class="nav-tab" onclick="switchView('past')">Archives</button>
+            <button id="tab-rules" class="nav-tab" onclick="switchView('rules')">How It Works</button>
         </div>
     </header>
 
@@ -300,6 +349,56 @@
 
     <!-- RANKINGS VIEW -->
     <div id="view-rankings" class="content-view">
+        
+        <!-- NEW POINTS KEY CARD -->
+        <div class="points-key-card">
+            <div class="points-key-title">Ranking Points System</div>
+            <div class="points-grid">
+                <div class="points-col">
+                    <div class="points-col-title">Top 5</div>
+                    <div class="points-col-val" style="display: flex; flex-direction: column; gap: 6px; align-items: center;">
+                        <div style="display: flex; justify-content: space-between; width: 75px;"><span>1st</span> <span class="pt-badge">100</span></div>
+                        <div style="display: flex; justify-content: space-between; width: 75px;"><span>2nd</span> <span class="pt-badge">60</span></div>
+                        <div style="display: flex; justify-content: space-between; width: 75px;"><span>3rd</span> <span class="pt-badge">45</span></div>
+                        <div style="display: flex; justify-content: space-between; width: 75px;"><span>4th</span> <span class="pt-badge">35</span></div>
+                        <div style="display: flex; justify-content: space-between; width: 75px;"><span>5th</span> <span class="pt-badge">30</span></div>
+                    </div>
+                </div>
+                <div class="points-col">
+                    <div class="points-col-title">6th–10th</div>
+                    <div class="points-col-val" style="display: flex; flex-direction: column; gap: 6px; align-items: center;">
+                        <div style="display: flex; justify-content: space-between; width: 75px;"><span>6th</span> <span class="pt-badge">25</span></div>
+                        <div style="display: flex; justify-content: space-between; width: 75px;"><span>7th</span> <span class="pt-badge">22</span></div>
+                        <div style="display: flex; justify-content: space-between; width: 75px;"><span>8th</span> <span class="pt-badge">20</span></div>
+                        <div style="display: flex; justify-content: space-between; width: 75px;"><span>9th</span> <span class="pt-badge">18</span></div>
+                        <div style="display: flex; justify-content: space-between; width: 75px;"><span>10th</span> <span class="pt-badge">16</span></div>
+                    </div>
+                </div>
+                <div class="points-col">
+                    <div class="points-col-title">11th–20th</div>
+                    <div class="points-col-val" style="display: flex; flex-direction: column; gap: 6px; align-items: center;">
+                        <div style="display: flex; justify-content: space-between; width: 80px;"><span>11th</span> <span class="pt-badge">14</span></div>
+                        <div style="display: flex; justify-content: space-between; width: 80px;"><span>12th</span> <span class="pt-badge">13</span></div>
+                        <div style="font-size: 0.65rem; color: var(--text-muted); margin: 2px 0;">↓ -1 pt / pos ↓</div>
+                        <div style="display: flex; justify-content: space-between; width: 80px;"><span>20th</span> <span class="pt-badge">5</span></div>
+                    </div>
+                </div>
+                <div class="points-col">
+                    <div class="points-col-title">21st to End</div>
+                    <div class="points-col-val" style="display: flex; flex-direction: column; gap: 8px; align-items: center;">
+                        <div style="display: flex; justify-content: space-between; width: 105px;"><span>Made Cut</span> <span class="pt-badge">3</span></div>
+                        <div style="display: flex; justify-content: space-between; width: 105px;"><span>Missed Cut</span> <span class="pt-badge">2</span></div>
+                    </div>
+                </div>
+                <div class="points-col" style="border-top-color: var(--danger);">
+                    <div class="points-col-title">WD / DUP</div>
+                    <div class="points-col-val" style="align-items: center; justify-content: center;">
+                        <span class="pt-badge" style="color: var(--danger); background: rgba(255,85,85,0.1); border-color: rgba(255,85,85,0.3); font-size: 1.2rem; padding: 4px 16px;">0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="leaderboard-panel">
             <div class="leaderboard-header">
                 <span style="font-weight: 900; font-size: 0.8rem; letter-spacing: 0.05em;">🏆 SEASON RANKINGS</span>
@@ -312,10 +411,12 @@
         </div>
     </div>
 
+    <!-- UPCOMING VIEW -->
     <div id="view-upcoming" class="content-view">
         <div class="schedule-grid" id="upcoming-list"></div>
     </div>
 
+    <!-- ARCHIVES VIEW -->
     <div id="view-past" class="content-view">
         <div id="archive-viewer" style="display:none;">
             <div style="margin-bottom:1.5rem; color:var(--border-gold); font-size:0.75rem; font-weight:800; cursor:pointer;" onclick="closeArchive()">← BACK TO ARCHIVES</div>
@@ -329,6 +430,49 @@
             </div>
         </div>
         <div id="past-tournament-grid" class="schedule-grid"></div>
+    </div>
+
+    <!-- HOW IT WORKS VIEW -->
+    <div id="view-rules" class="content-view">
+        <div class="rules-container">
+            <div class="rules-card">
+                <div class="rules-title">🏌️ The Core Gameplay: Playing the Field</div>
+                <div class="rules-text">Instead of playing against a fixed Par, you play against the other participants.</div>
+                <ul class="rules-list">
+                    <li><strong>The Daily Baseline (E):</strong> Every day, the average (median) score of all player lineups is calculated. That average is set as Even (E).</li>
+                    <li><strong>Performance Points:</strong> If you perform better than the average, you get a negative score (e.g., -2, -5). If you perform worse than the average, you get a positive score (e.g., +1, +4).</li>
+                </ul>
+            </div>
+
+            <div class="rules-card">
+                <div class="rules-title">✂️ The Cut Line</div>
+                <ul class="rules-list">
+                    <li><strong>When:</strong> The cut happens after the second day (Friday).</li>
+                    <li><strong>How:</strong> The top 45% of the field (based on the total of your Thu/Fri scores) makes the cut. This includes any ties in score.</li>
+                    <li><strong>The Penalty:</strong> If you miss the cut, you stop earning performance points for Saturday and Sunday.</li>
+                </ul>
+            </div>
+
+            <div class="rules-card">
+                <div class="rules-title">🏆 Season Rankings (Points System)</div>
+                <div class="rules-text">Every tournament finish awards "Season Points" to determine the overall champion:</div>
+                <ul class="rules-list">
+                    <li><strong>Top 5:</strong> 1st (100), 2nd (60), 3rd (45), 4th (35), 5th (30).</li>
+                    <li><strong>Top 10:</strong> Points scale down from 25 to 16.</li>
+                    <li><strong>Top 20:</strong> Points scale down from 14 to 5.</li>
+                    <li><strong>Finishing the Tournament:</strong> Made Cut (3 points), Missed Cut (2 points).</li>
+                    <li><strong>WD / DUP:</strong> 0 points.</li>
+                </ul>
+            </div>
+
+            <div class="rules-card">
+                <div class="rules-title">🚫 Fair Play Rules</div>
+                <ul class="rules-list">
+                    <li><strong>No Duplicates:</strong> If your lineup is an exact copy of a groups lineup, you are marked as DUP and receive 0 points.</li>
+                    <li><strong>No Withdrawals:</strong> If a player withdraws (WD) or fails to submit data, they earn 0 points and do not count as a "start" toward season stats.</li>
+                </ul>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -357,6 +501,14 @@
             document.getElementById(`view-${v}`).classList.add('active');
             document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
             document.getElementById(`tab-${v}`).classList.add('active');
+            
+            const banner = document.getElementById('tournament-banner');
+            if (v === 'live' && activeTournamentStartDate) {
+                banner.style.display = 'block';
+            } else {
+                banner.style.display = 'none';
+            }
+
             if (v === 'past') closeArchive();
             if (v === 'rankings') renderRankings();
         }
@@ -538,37 +690,37 @@
 
         // --- RANKINGS LOGIC ---
         function getSeasonPoints(pos, status) {
-    if (status === "WD" || status === "DUP") return 0;
-    
-    const p = parseInt(pos); 
-    if (isNaN(p)) return 0;
+            if (status === "WD" || status === "DUP") return 0;
+            
+            const p = parseInt(pos); 
+            if (isNaN(p)) return 0;
 
-    // Top 5
-    if (p === 1) return 100;
-    if (p === 2) return 60;
-    if (p === 3) return 45;
-    if (p === 4) return 35;
-    if (p === 5) return 30;
+            // Top 5
+            if (p === 1) return 100;
+            if (p === 2) return 60;
+            if (p === 3) return 45;
+            if (p === 4) return 35;
+            if (p === 5) return 30;
 
-    // 6th–10th
-    if (p === 6) return 25;
-    if (p === 7) return 22;
-    if (p === 8) return 20;
-    if (p === 9) return 18;
-    if (p === 10) return 16;
+            // 6th–10th
+            if (p === 6) return 25;
+            if (p === 7) return 22;
+            if (p === 8) return 20;
+            if (p === 9) return 18;
+            if (p === 10) return 16;
 
-    // 11th–20th (Scales from 14 down to 5)
-    // Formula: 14 - (position - 11)
-    if (p >= 11 && p <= 20) return 14 - (p - 11);
+            // 11th–20th (Scales from 14 down to 5)
+            // Formula: 14 - (position - 11)
+            if (p >= 11 && p <= 20) return 14 - (p - 11);
 
-    // 21st to End
-    if (p >= 21) {
-        if (status == "MADE CUT") return 3
-        else return 2        
-    }
+            // 21st to End
+            if (p >= 21) {
+                if (status == "MADE CUT") return 3
+                else return 2        
+            }
 
-    return 0;
-}
+            return 0;
+        }
 
         function renderRankings() {
             const tbody = document.getElementById('rankings-tbody');
@@ -773,7 +925,10 @@
                     document.getElementById('display-banner-date').innerText = d.date;
                     document.getElementById('display-course-name').innerText = d.course;
                     document.getElementById('display-purse').innerText = d.purse ? `Purse: ${d.purse}` : ''; 
-                    document.getElementById('tournament-banner').style.display = 'block'; 
+                    
+                    if (document.getElementById('view-live').classList.contains('active')) {
+                        document.getElementById('tournament-banner').style.display = 'block'; 
+                    }
                 }
             } catch (e) {}
         }
