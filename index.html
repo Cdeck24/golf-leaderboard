@@ -954,7 +954,16 @@
                 }
                 document.getElementById('upcoming-list').innerHTML = upcoming.map(t => `<div class="schedule-card"><div class="card-date">${t.date}</div><div class="card-name">${t.name}</div><div class="card-course">${t.course}</div>${t.purse ? `<div class="card-purse">Purse: ${t.purse}</div>` : ''}</div>`).join('');
                 document.getElementById('past-tournament-grid').innerHTML = past.map(t => `<div class="schedule-card clickable" onclick="viewArchive('${t.name.replace(/'/g, "\\'")}')"><div class="card-date">${t.date}</div><div class="card-name">${t.name}</div><div class="card-course">${t.course}</div>${t.purse ? `<div class="card-purse">Purse: ${t.purse}</div>` : ''}</div>`).join('');
-                let d = (now.getDay() === 3 && next) ? { ...next, label: 'Live Tournament' } : (now.getDay() === 1 || now.getDay() === 2) ? { ...curr, label: 'Past Tournament' } : { ...curr, label: 'Live Tournament' };
+                
+                const currentDay = now.getDay();
+                let d = null;
+                // Mon (1), Tue (2), Wed (3) show Upcoming. Thu-Sun show Live.
+                if (currentDay >= 1 && currentDay <= 3) {
+                    d = next ? { ...next, label: 'Upcoming Tournament' } : (curr ? { ...curr, label: 'Live Tournament' } : null);
+                } else {
+                    d = curr ? { ...curr, label: 'Live Tournament' } : null;
+                }
+
                 if (d && d.name) { 
                     activeTournamentStartDate = d.start; 
                     document.getElementById('display-tournament-name').innerText = d.name; 
