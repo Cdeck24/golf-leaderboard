@@ -918,6 +918,13 @@
                         if (r.status === 200) {
                             try {
                                 const data = JSON.parse(base64ToText(r.body));
+                                
+                                // Extract username from API if available, otherwise rely on the CSV user.username
+                                const apiUsername = data.owner?.username || data.user?.username || data.author?.username || data.owner?.displayName || data.user?.displayName;
+                                if (apiUsername) {
+                                    user.username = apiUsername;
+                                }
+
                                 user.actualTotalPoints = parseFloat((data.info?.rankDisplayInfos?.[0]?.scoreDisplay || '0').replace(/[^0-9.]/g, '')) || 0;
                                 user.lineup = data.lineup || [];
                                 user.actualTodayPoints = user.lineup.reduce((acc, g) => acc + (parseFloat(g.score) || 0), 0);
