@@ -157,6 +157,16 @@
       .status-text { text-align: right; font-size: 0.65rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
       .sync-dot { display: inline-block; width: 8px; height: 8px; background: var(--golf-green-bright); border-radius: 50%; margin-right: 6px; box-shadow: 0 0 10px var(--golf-green-bright); }
 
+      /* Search Bar */
+      .search-container { padding: 1rem; background: rgba(0,0,0,0.2); border-bottom: 1px solid var(--glass-border); }
+      .player-search-input { 
+          width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); 
+          color: var(--text-main); padding: 10px 16px; border-radius: 8px; 
+          font-family: 'Inter', sans-serif; font-size: 0.85rem; outline: none; transition: border-color 0.2s; 
+      }
+      .player-search-input:focus { border-color: var(--border-gold); }
+      .player-search-input::placeholder { color: var(--text-muted); }
+
       /* Points Key Card Styles */
       .points-key-card { 
           background: linear-gradient(180deg, rgba(6, 26, 19, 0.8) 0%, rgba(5, 20, 13, 0.95) 100%); 
@@ -319,6 +329,10 @@
           .pt-row { max-width: 90px; font-size: 0.85rem; }
           .pt-row.wide { max-width: 130px; font-size: 0.8rem; }
           .pt-badge { padding: 1px 5px; font-size: 0.75rem; }
+
+          /* Search Bar */
+          .search-container { padding: 0.75rem; }
+          .player-search-input { padding: 8px 12px; font-size: 0.8rem; }
       }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/hashids@2.2.10/dist/hashids.min.js"></script>
@@ -371,6 +385,12 @@
                     </div>
                 </div>
             </div>
+            
+            <!-- SEARCH BAR -->
+            <div class="search-container">
+                <input type="text" id="player-search" class="player-search-input" placeholder="Search for a player..." oninput="filterLeaderboard()">
+            </div>
+
             <table class="golf-table">
                 <thead><tr><th class="col-pos">Pos</th><th class="col-player">Player</th><th class="col-score">Total</th><th class="col-score">Today</th></tr></thead>
                 <tbody id="leaderboard-tbody"></tbody>
@@ -595,6 +615,43 @@
             } catch(e) { return ''; }
         }
 
+        // --- SEARCH BAR LOGIC ---
+        function filterLeaderboard() {
+            const input = document.getElementById('player-search');
+            if (!input) return;
+            const filter = input.value.toLowerCase();
+            const tbody = document.getElementById('leaderboard-tbody');
+            if (!tbody) return;
+            
+            const rows = tbody.children;
+            let currentMain = null;
+            
+            for (let i = 0; i < rows.length; i++) {
+                const row = rows[i];
+                
+                // Handle Cut Line
+                if (row.classList.contains('cut-line-row')) {
+                    row.style.display = filter ? 'none' : '';
+                    continue;
+                }
+                
+                if (row.classList.contains('main-row')) {
+                    currentMain = row;
+                    const nameEl = row.querySelector('.p-name');
+                    if (nameEl && nameEl.textContent.toLowerCase().includes(filter)) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                        row.classList.remove('open');
+                    }
+                } else if (row.classList.contains('draft-row')) {
+                    if (currentMain && currentMain.style.display === 'none') {
+                        row.classList.remove('open');
+                    }
+                }
+            }
+        }
+
         function renderLeaderboard() {
             const tbody = document.getElementById('leaderboard-tbody');
             if (!tbody) return;
@@ -718,6 +775,9 @@
                 };
                 tbody.appendChild(row); tbody.appendChild(dr);
             });
+
+            // Re-apply the search filter after syncing new data
+            filterLeaderboard();
         }
 
         // --- RANKINGS LOGIC ---
