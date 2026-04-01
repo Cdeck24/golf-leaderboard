@@ -965,7 +965,7 @@
 
         async function loadAllUserScores() {
             const q = [...users].filter(u => u.golfId && u.userId);
-            const chunkS = 3; let loaded = 0; const statusEl = document.getElementById('sync-status');
+            const chunkS = 6; let loaded = 0; const statusEl = document.getElementById('sync-status');
             const hasher = new Hashids("realwebapp", 16);
             while (q.length > 0) {
                 const chunk = q.splice(0, chunkS);
