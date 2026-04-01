@@ -680,7 +680,7 @@
                     if (hist[d]) pts[i] = hist[d].raw;
                     else if (d === todayStr && u.hasData) pts[i] = u.actualTodayPoints;
                 });
-                const isWD = u.hasData && (!u.lineup || u.lineup.length === 0);
+                const isWD = u.hasData && !u.syncFailed && (!u.lineup || u.lineup.length === 0);
                 const sig = getLineupSignature(u.lineup);
                 const isRef = REFERENCE_IDS.includes(normId);
                 const isDup = !isRef && sig !== "" && refSigs.includes(sig);
@@ -734,8 +734,8 @@
             });
 
             currentProcessedUsers.sort((a, b) => {
-                const aInv = a.isWD || a.isDuplicate;
-                const bInv = b.isWD || b.isDuplicate;
+                const aInv = a.isWD || a.isDuplicate || a.syncFailed;
+                const bInv = b.isWD || b.isDuplicate || b.syncFailed;
                 if (aInv !== bInv) return aInv ? 1 : -1;
                 if (aInv && bInv) { if (a.isWD !== b.isWD) return a.isWD ? -1 : 1; return 0; }
                 if (a.madeCut !== b.madeCut) return a.madeCut ? -1 : 1; 
@@ -745,27 +745,27 @@
 
             let cutLineInserted = false;
             currentProcessedUsers.forEach((u, i) => {
-                if (!cutLineInserted && !u.madeCut && !u.isWD && !u.isDuplicate) {
+                if (!cutLineInserted && !u.madeCut && !u.isWD && !u.isDuplicate && !u.syncFailed) {
                     const row = document.createElement('tr'); row.className = 'cut-line-row';
                     row.innerHTML = `<td colspan="4">${activeIdx < 2 ? 'EXPECTED CUT LINE' : 'OFFICIAL CUT LINE'} (${formatToPar(globalCutScoreFri)})</td>`;
                     tbody.appendChild(row); cutLineInserted = true;
                 }
                 const row = document.createElement('tr'); row.className = 'main-row';
-                const tag = u.isDuplicate ? '(DUP)' : (activeIdx >= 2 && !u.madeCut ? '(MC)' : '');
-                const pos = (u.isWD) ? 'WD' : (u.isDuplicate) ? 'DUP' : (u.hasData ? currentProcessedUsers.filter(x => !x.isWD && !x.isDuplicate).indexOf(u)+1 : '-');
+                const tag = u.isDuplicate ? '(DUP)' : (u.syncFailed ? '(ERR)' : (activeIdx >= 2 && !u.madeCut ? '(MC)' : ''));
+                const pos = (u.isWD) ? 'WD' : (u.isDuplicate) ? 'DUP' : (u.syncFailed ? 'ERR' : (u.hasData ? currentProcessedUsers.filter(x => !x.isWD && !x.isDuplicate && !x.syncFailed).indexOf(u)+1 : '-'));
                 const playerContent = `<div class="player-flex"><span class="p-name">${formatHandle(u.username)}</span>${tag ? `<span class="p-tag">${tag}</span>` : ''}<span class="toggle-icon">▼</span></div>`;
-                row.innerHTML = `<td class="col-pos">${pos}</td><td class="col-player">${playerContent}</td><td class="col-score">${(u.isWD||u.isDuplicate)?'-':formatToPar(u.total)}</td><td class="col-score">${(u.isWD||u.isDuplicate)?'-':formatToPar(u.today)}</td>`;
+                row.innerHTML = `<td class="col-pos">${pos}</td><td class="col-player">${playerContent}</td><td class="col-score">${(u.isWD||u.isDuplicate||u.syncFailed)?'-':formatToPar(u.total)}</td><td class="col-score">${(u.isWD||u.isDuplicate||u.syncFailed)?'-':formatToPar(u.today)}</td>`;
                 
                 const dr = document.createElement('tr'); dr.className = 'draft-row';
                 const satVal = u.madeCut ? formatToPar(u.rounds.sat) : '<div class="score-box mc">MC</div>';
                 const sunVal = u.madeCut ? formatToPar(u.rounds.sun) : '<div class="score-box mc">MC</div>';
                 const sanitize = (val) => (val === 0 ? 0 : val).toFixed(2);
                 dr.innerHTML = `<td colspan="4"><div class="expanded-container"><div class="round-breakdown">
-                    <div class="round-slot"><span class="round-label">Thu</span><span class="round-val">${(u.isWD||u.isDuplicate)?'-':formatToPar(u.rounds.thu)}</span><span class="round-piece">${sanitize(u.dayPieces[0])} PTS</span></div>
-                    <div class="round-slot"><span class="round-label">Fri</span><span class="round-val">${(u.isWD||u.isDuplicate)?'-':formatToPar(u.rounds.fri)}</span><span class="round-piece">${sanitize(u.dayPieces[1])} PTS</span></div>
-                    <div class="round-slot"><span class="round-label">Sat</span><span class="round-val">${(u.isWD||u.isDuplicate)?'-':satVal}</span><span class="round-piece">${sanitize(u.dayPieces[2])} PTS</span></div>
-                    <div class="round-slot"><span class="round-label">Sun</span><span class="round-val">${(u.isWD||u.isDuplicate)?'-':sunVal}</span><span class="round-piece">${sanitize(u.dayPieces[3])} PTS</span></div>
-                </div><div class="raw-pts-display">Total Raw Score: ${u.actualTotalPoints.toFixed(2)} ${u.isWD?'(WD)':''}</div><div class="draft-grid"></div></div></td>`;
+                    <div class="round-slot"><span class="round-label">Thu</span><span class="round-val">${(u.isWD||u.isDuplicate||u.syncFailed)?'-':formatToPar(u.rounds.thu)}</span><span class="round-piece">${(u.isWD||u.isDuplicate||u.syncFailed)?'-':sanitize(u.dayPieces[0])} PTS</span></div>
+                    <div class="round-slot"><span class="round-label">Fri</span><span class="round-val">${(u.isWD||u.isDuplicate||u.syncFailed)?'-':formatToPar(u.rounds.fri)}</span><span class="round-piece">${(u.isWD||u.isDuplicate||u.syncFailed)?'-':sanitize(u.dayPieces[1])} PTS</span></div>
+                    <div class="round-slot"><span class="round-label">Sat</span><span class="round-val">${(u.isWD||u.isDuplicate||u.syncFailed)?'-':satVal}</span><span class="round-piece">${(u.isWD||u.isDuplicate||u.syncFailed)?'-':sanitize(u.dayPieces[2])} PTS</span></div>
+                    <div class="round-slot"><span class="round-label">Sun</span><span class="round-val">${(u.isWD||u.isDuplicate||u.syncFailed)?'-':sunVal}</span><span class="round-piece">${(u.isWD||u.isDuplicate||u.syncFailed)?'-':sanitize(u.dayPieces[3])} PTS</span></div>
+                </div><div class="raw-pts-display">Total Raw Score: ${u.actualTotalPoints.toFixed(2)} ${u.isWD?'(WD)':(u.syncFailed?'(ERR)':'')}</div><div class="draft-grid"></div></div></td>`;
                 
                 row.onclick = function() {
                     const isOpen = this.classList.contains('open');
@@ -843,6 +843,7 @@
         }
 
         function renderDraft(u, container) {
+            if (u.syncFailed) { container.innerHTML = '<div style="flex:1; text-align:center; font-size:0.7rem; color:var(--text-muted); padding:10px;">Failed to load data (Rate limited or not found). Please refresh later.</div>'; return; }
             if (!u.hasData) { container.innerHTML = '<div style="flex:1; text-align:center; font-size:0.7rem; padding:10px;">Syncing...</div>'; return; }
             if (u.isWD || u.isDuplicate) { container.innerHTML = `<div style="flex:1; text-align:center; font-size:0.7rem; color:var(--danger); padding:10px;">${u.isWD?'PLAYER WITHDRAWN':'DUPLICATE ENTRY'}</div>`; return; }
             container.innerHTML = u.lineup.map(g => `<div class="draft-item"><img src="${(g.avatar||g.player?.avatar) ? `https://media.realapp.link/assets/players/default/large/${g.avatar||g.player.avatar}.webp` : 'https://placehold.co/48x48/111/fff?text=?'}" class="draft-item-avatar" onerror="this.src='https://placehold.co/48x48/111/fff?text=?'"><span class="draft-item-name">${g.displayName||g.player?.displayName||'Unknown'}</span><span class="draft-item-score">${(parseFloat(g.score)||0).toFixed(2)}</span></div>`).join('');
@@ -964,39 +965,85 @@
         }
 
         async function loadAllUserScores() {
-            const q = [...users].filter(u => u.golfId && u.userId);
-            const chunkS = 3; let loaded = 0; const statusEl = document.getElementById('sync-status');
+            const validUsers = [...users].filter(u => u.golfId && u.userId);
+            validUsers.forEach(u => { u.retries = 0; u.syncFailed = false; });
+            
+            let q = [...validUsers];
+            const chunkS = 5; 
+            let loaded = 0; 
+            const statusEl = document.getElementById('sync-status');
             const hasher = new Hashids("realwebapp", 16);
+            
             while (q.length > 0) {
                 const chunk = q.splice(0, chunkS);
+                
                 try {
-                    const query = new URLSearchParams(); chunk.forEach(item => query.append('url', `https://web.realsports.io/games/playerratingcontest/${item.golfId}/view/${item.userId}?contestType=sport&source=home`));
+                    const query = new URLSearchParams(); 
+                    chunk.forEach(item => query.append('url', `https://web.realsports.io/games/playerratingcontest/${item.golfId}/view/${item.userId}?contestType=sport&source=home`));
+                    
                     const opts = { headers: { 'real-auth-info': config.REAL_AUTH_TOKEN, 'real-device-name': 'Chrome', 'real-device-type': 'desktop_web', 'real-device-uuid': DEVICE_UUID, 'real-request-token': hasher.encode(Date.now()), 'real-version': config.REAL_VERSION } };
-                    const res = await (await fetch(`${config.workerProxy}?${query.toString()}`, opts)).json();
-                    res.forEach((r, idx) => {
-                        const user = chunk[idx];
-                        if (r.status === 200) {
-                            try {
-                                const data = JSON.parse(base64ToText(r.body));
-                                
-                                // Extract username from API if available, otherwise rely on the CSV user.username
-                                const apiUsername = data.owner?.username || data.user?.username || data.author?.username || data.owner?.displayName || data.user?.displayName;
-                                if (apiUsername) {
-                                    user.username = apiUsername;
-                                }
+                    const response = await fetch(`${config.workerProxy}?${query.toString()}`, opts);
+                    
+                    if (!response.ok) {
+                        // Proxy level failure (e.g., 500, 429 from worker)
+                        chunk.forEach(u => {
+                            u.retries++;
+                            if (u.retries < 3) q.push(u);
+                            else { u.hasData = true; u.syncFailed = true; loaded++; }
+                        });
+                        await new Promise(r => setTimeout(r, 1000));
+                    } else {
+                        const res = await response.json();
+                        if (Array.isArray(res) && res.length === chunk.length) {
+                            res.forEach((r, idx) => {
+                                const user = chunk[idx];
+                                if (r.status === 200) {
+                                    try {
+                                        const data = JSON.parse(base64ToText(r.body));
+                                        
+                                        const apiUsername = data.owner?.username || data.user?.username || data.author?.username || data.owner?.displayName || data.user?.displayName;
+                                        if (apiUsername) user.username = apiUsername;
 
-                                user.actualTotalPoints = parseFloat((data.info?.rankDisplayInfos?.[0]?.scoreDisplay || '0').replace(/[^0-9.]/g, '')) || 0;
-                                user.lineup = data.lineup || [];
-                                user.actualTodayPoints = user.lineup.reduce((acc, g) => acc + (parseFloat(g.score) || 0), 0);
-                                user.hasData = true;
-                            } catch(e) {}
+                                        user.actualTotalPoints = parseFloat((data.info?.rankDisplayInfos?.[0]?.scoreDisplay || '0').replace(/[^0-9.]/g, '')) || 0;
+                                        user.lineup = data.lineup || [];
+                                        user.actualTodayPoints = user.lineup.reduce((acc, g) => acc + (parseFloat(g.score) || 0), 0);
+                                        user.hasData = true;
+                                        loaded++;
+                                    } catch(e) {
+                                        user.retries++;
+                                        if (user.retries < 3) q.push(user);
+                                        else { user.hasData = true; user.syncFailed = true; loaded++; }
+                                    }
+                                } else {
+                                    // Rate limit / failure for this specific user inside the chunk
+                                    user.retries++;
+                                    if (user.retries < 3) {
+                                        q.push(user); // Send back to the queue to try again!
+                                    } else { 
+                                        user.hasData = true; user.syncFailed = true; loaded++; 
+                                    }
+                                }
+                            });
+                        } else {
+                            chunk.forEach(u => {
+                                u.retries++;
+                                if (u.retries < 3) q.push(u);
+                                else { u.hasData = true; u.syncFailed = true; loaded++; }
+                            });
                         }
-                        loaded++;
+                    }
+                } catch (e) {
+                    chunk.forEach(u => {
+                        u.retries++;
+                        if (u.retries < 3) q.push(u);
+                        else { u.hasData = true; u.syncFailed = true; loaded++; }
                     });
-                    statusEl.innerHTML = `<span class="sync-dot"></span>${loaded}/${chunk.length + q.length + loaded}`;
-                    renderLeaderboard();
-                } catch (e) {}
-                await new Promise(r => setTimeout(r, 250));
+                    await new Promise(r => setTimeout(r, 1000));
+                }
+                
+                statusEl.innerHTML = `<span class="sync-dot"></span>${loaded}/${validUsers.length}`;
+                renderLeaderboard();
+                await new Promise(r => setTimeout(r, 150)); 
             }
             statusEl.innerHTML = '<span class="sync-dot"></span>LIVE';
         }
