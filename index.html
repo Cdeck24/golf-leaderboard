@@ -718,13 +718,16 @@
             
             const data = rawProLeaderboardData;
             const leaderboard = data.leaderboard || [];
+            const cutLine = data.cutLine;
             
             if (leaderboard.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 2rem; color: var(--text-muted);">Leaderboard not available yet.</td></tr>';
                 return;
             }
 
-            tbody.innerHTML = leaderboard.map(l => {
+            const rowsHtml = [];
+
+            leaderboard.forEach((l, index) => {
                 const pidStr = String(l.playerId);
                 
                 // Directly pull from the leaderboard array object, fallback to global memory
@@ -747,7 +750,7 @@
                 const picks = globalPlayers[pidStr] ? (globalPlayers[pidStr].pickCount || 0) : 0;
                 const picksBadge = picks > 0 ? `<span style="font-size: 0.65rem; color: var(--border-gold); font-weight: 800; background: rgba(197, 160, 89, 0.1); padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(197, 160, 89, 0.2); flex: 0 0 auto;">👥 ${picks}</span>` : '';
                 
-                return `
+                rowsHtml.push(`
                     <tr class="main-row">
                         <td class="col-pos">${pos}</td>
                         <td class="col-player">
@@ -761,8 +764,19 @@
                         <td class="col-score" style="color: var(--gold-light); font-weight: 800;">${rating}</td>
                         <td class="col-stat" style="color: var(--text-muted);">${thru}</td>
                     </tr>
-                `;
-            }).join('');
+                `);
+
+                // Add the cut line if the current index matches the cutLine.index
+                if (cutLine && cutLine.index === (index + 1)) {
+                    rowsHtml.push(`
+                        <tr class="cut-line-row">
+                            <td colspan="5">${cutLine.displayText ? cutLine.displayText.toUpperCase() : 'OFFICIAL CUT LINE'}</td>
+                        </tr>
+                    `);
+                }
+            });
+
+            tbody.innerHTML = rowsHtml.join('');
             
             console.log(`[ProBoard] Rendered ${leaderboard.length} players.`);
             statusEl.innerHTML = '<span class="sync-dot"></span>LIVE';
