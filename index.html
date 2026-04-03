@@ -538,7 +538,7 @@
         };
 
         const DEVICE_UUID = crypto.randomUUID();
-        const REFERENCE_IDS = ['jvbb41pv', 'R37kAWO3', 'gv8D5Q0v', '9JmXRKDn', 'PJPWjGpn'].map(id => id.toLowerCase().trim());
+        const REFERENCE_IDS = ['jvbb41pv', 'R37kAWO3', 'gv8D5Q0v', '9JmXRKDn'].map(id => id.toLowerCase().trim());
         
         let users = [];
         let historicalDailyDataByDate = {}; 
@@ -973,9 +973,11 @@
             let loaded = 0; 
             const statusEl = document.getElementById('sync-status');
             const hasher = new Hashids("realwebapp", 16);
+            const MAX_RETRIES = 25; // Drastically increased to ensure rate-limited users finish
             
             while (q.length > 0) {
                 const chunk = q.splice(0, chunkS);
+                let hasErrorInChunk = false;
                 
                 try {
                     const query = new URLSearchParams(); 
@@ -986,12 +988,12 @@
                     
                     if (!response.ok) {
                         // Proxy level failure (e.g., 500, 429 from worker)
+                        hasErrorInChunk = true;
                         chunk.forEach(u => {
                             u.retries++;
-                            if (u.retries < 3) q.push(u);
+                            if (u.retries < MAX_RETRIES) q.push(u);
                             else { u.hasData = true; u.syncFailed = true; loaded++; }
                         });
-                        await new Promise(r => setTimeout(r, 1000));
                     } else {
                         const res = await response.json();
                         if (Array.isArray(res) && res.length === chunk.length) {
@@ -1010,14 +1012,19 @@
                                         user.hasData = true;
                                         loaded++;
                                     } catch(e) {
+                                        hasErrorInChunk = true;
                                         user.retries++;
-                                        if (user.retries < 3) q.push(user);
+                                        if (user.retries < MAX_RETRIES) q.push(user);
                                         else { user.hasData = true; user.syncFailed = true; loaded++; }
                                     }
+                                } else if (r.status === 404) {
+                                    // User explicitly not found, no point in retrying endlessly
+                                    user.hasData = true; user.syncFailed = true; loaded++;
                                 } else {
-                                    // Rate limit / failure for this specific user inside the chunk
+                                    // Rate limit (429) or other failure for this specific user
+                                    hasErrorInChunk = true;
                                     user.retries++;
-                                    if (user.retries < 3) {
+                                    if (user.retries < MAX_RETRIES) {
                                         q.push(user); // Send back to the queue to try again!
                                     } else { 
                                         user.hasData = true; user.syncFailed = true; loaded++; 
@@ -1025,25 +1032,32 @@
                                 }
                             });
                         } else {
+                            hasErrorInChunk = true;
                             chunk.forEach(u => {
                                 u.retries++;
-                                if (u.retries < 3) q.push(u);
+                                if (u.retries < MAX_RETRIES) q.push(u);
                                 else { u.hasData = true; u.syncFailed = true; loaded++; }
                             });
                         }
                     }
                 } catch (e) {
+                    hasErrorInChunk = true;
                     chunk.forEach(u => {
                         u.retries++;
-                        if (u.retries < 3) q.push(u);
+                        if (u.retries < MAX_RETRIES) q.push(u);
                         else { u.hasData = true; u.syncFailed = true; loaded++; }
                     });
-                    await new Promise(r => setTimeout(r, 1000));
                 }
                 
                 statusEl.innerHTML = `<span class="sync-dot"></span>${loaded}/${validUsers.length}`;
                 renderLeaderboard();
-                await new Promise(r => setTimeout(r, 150)); 
+                
+                // Adaptive delay: if we hit rate limits or the queue is running low (cycling failed users), back off to let the API breathe
+                if (hasErrorInChunk || q.length < 15) {
+                    await new Promise(r => setTimeout(r, 1200)); 
+                } else {
+                    await new Promise(r => setTimeout(r, 150)); 
+                }
             }
             statusEl.innerHTML = '<span class="sync-dot"></span>LIVE';
         }
