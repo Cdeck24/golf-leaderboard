@@ -344,6 +344,7 @@
         <h1>Golf Plug Leaderboard</h1>
         <div class="main-nav">
             <button id="tab-live" class="nav-tab active" onclick="switchView('live')">Standings</button>
+            <button id="tab-pro" class="nav-tab" onclick="switchView('pro')">Pro Board</button>
             <button id="tab-rankings" class="nav-tab" onclick="switchView('rankings')">Rankings</button>
             <button id="tab-upcoming" class="nav-tab" onclick="switchView('upcoming')">Schedule</button>
             <button id="tab-past" class="nav-tab" onclick="switchView('past')">Archives</button>
@@ -394,6 +395,22 @@
             <table class="golf-table">
                 <thead><tr><th class="col-pos">Pos</th><th class="col-player">Player</th><th class="col-score">Total</th><th class="col-score">Today</th></tr></thead>
                 <tbody id="leaderboard-tbody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- PRO LEADERBOARD VIEW -->
+    <div id="view-pro" class="content-view">
+        <div class="leaderboard-panel">
+            <div class="leaderboard-header">
+                <span style="font-weight: 900; font-size: 0.8rem; letter-spacing: 0.05em;"><span style="margin-right: 8px;">🏌️‍♂️</span>PRO LEADERBOARD</span>
+                <div class="status-text" id="pro-sync-status"><span class="sync-dot"></span>LIVE</div>
+            </div>
+            <table class="golf-table">
+                <thead><tr><th class="col-pos">Pos</th><th class="col-player">Player</th><th class="col-score">Total</th><th class="col-score">Rating</th><th class="col-stat">Thru</th></tr></thead>
+                <tbody id="pro-leaderboard-tbody">
+                    <tr><td colspan="5" style="text-align:center; padding: 2rem; color: var(--text-muted);">Loading Pro Leaderboard...</td></tr>
+                </tbody>
             </table>
         </div>
     </div>
@@ -546,6 +563,9 @@
         let currentProcessedUsers = [];
         let activeTournamentStartDate = null;
         let globalCutScoreFri = 99;
+        let currentGameId = null; // Used to fetch the pro leaderboard
+        let globalPlayers = {}; // Memory bank for missing golfers
+        let rawProLeaderboardData = null; // Stored to re-render when new players are discovered
 
         function switchView(v) {
             document.querySelectorAll('.content-view').forEach(el => el.classList.remove('active'));
@@ -554,7 +574,7 @@
             document.getElementById(`tab-${v}`).classList.add('active');
             
             const banner = document.getElementById('tournament-banner');
-            if ((v === 'live' || v === 'upcoming') && activeTournamentStartDate) {
+            if ((v === 'live' || v === 'upcoming' || v === 'pro') && activeTournamentStartDate) {
                 banner.style.display = 'block';
             } else {
                 banner.style.display = 'none';
@@ -650,6 +670,102 @@
                     }
                 }
             }
+        }
+
+        // --- PRO LEADERBOARD ---
+        async function fetchProLeaderboard() {
+            if (!currentGameId) return;
+            const tbody = document.getElementById('pro-leaderboard-tbody');
+            const statusEl = document.getElementById('pro-sync-status');
+            
+            console.log(`[ProBoard] Fetching pro leaderboard for gameId: ${currentGameId}`);
+            try {
+                const hasher = new Hashids("realwebapp", 16);
+                const query = new URLSearchParams();
+                query.append('url', `https://web.realsports.io/games/${currentGameId}/sport/golf/stats`);
+                const opts = { headers: { 'real-auth-info': config.REAL_AUTH_TOKEN, 'real-device-name': 'Chrome', 'real-device-type': 'desktop_web', 'real-device-uuid': DEVICE_UUID, 'real-request-token': hasher.encode(Date.now()), 'real-version': config.REAL_VERSION } };
+                
+                const response = await fetch(`${config.workerProxy}?${query.toString()}`, opts);
+                if (!response.ok) throw new Error(`Proxy error: ${response.status}`);
+                
+                const res = await response.json();
+                const r = Array.isArray(res) ? res[0] : res;
+
+                let data;
+                if (r && r.status === 200 && r.body) {
+                    data = JSON.parse(base64ToText(r.body));
+                } else if (r && (r.leaderboard || r.playerBoxScores)) {
+                    data = r;
+                } else {
+                    throw new Error(`Invalid Response Format`);
+                }
+
+                rawProLeaderboardData = data;
+                renderProLeaderboard();
+            } catch (error) {
+                console.warn("[ProBoard] Fetch Error:", error);
+                if (tbody.innerHTML.includes('Loading')) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 2rem; color: var(--danger);">Failed to load pro leaderboard. Ensure game ID is correct.</td></tr>';
+                    statusEl.innerHTML = '<span class="sync-dot" style="background:var(--danger); box-shadow:none;"></span>ERR';
+                }
+            }
+        }
+
+        function renderProLeaderboard() {
+            if (!rawProLeaderboardData) return;
+            const tbody = document.getElementById('pro-leaderboard-tbody');
+            const statusEl = document.getElementById('pro-sync-status');
+            
+            const data = rawProLeaderboardData;
+            const leaderboard = data.leaderboard || [];
+            
+            if (leaderboard.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 2rem; color: var(--text-muted);">Leaderboard not available yet.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = leaderboard.map(l => {
+                const pidStr = String(l.playerId);
+                
+                // Directly pull from the leaderboard array object, fallback to global memory
+                const pObj = l.player || globalPlayers[pidStr] || {};
+                
+                let name = pObj.displayName || pObj.lastName;
+                if (!name && pObj.firstName && pObj.lastName) name = `${pObj.firstName[0]}. ${pObj.lastName}`;
+                if (!name) name = l.playerName || l.name || 'Unknown';
+
+                const avatar = pObj.avatar ? `https://media.realapp.link/assets/players/default/large/${pObj.avatar}.webp` : 'https://placehold.co/48x48/111/fff?text=?';
+                const score = l.score || 'E';
+                const thru = l.thru || '-';
+                const pos = l.position || '-';
+                
+                // The API actually provides 'value' directly in the leaderboard object!
+                const rawRating = l.value || pObj.value || (globalPlayers[pidStr] ? globalPlayers[pidStr].value : null);
+                const rating = (rawRating !== null && rawRating !== undefined && !isNaN(parseFloat(rawRating))) ? parseFloat(rawRating).toFixed(2) : '-';
+                
+                // Extract total pick counts from users and generate badge
+                const picks = globalPlayers[pidStr] ? (globalPlayers[pidStr].pickCount || 0) : 0;
+                const picksBadge = picks > 0 ? `<span style="font-size: 0.65rem; color: var(--border-gold); font-weight: 800; background: rgba(197, 160, 89, 0.1); padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(197, 160, 89, 0.2); flex: 0 0 auto;">👥 ${picks}</span>` : '';
+                
+                return `
+                    <tr class="main-row">
+                        <td class="col-pos">${pos}</td>
+                        <td class="col-player">
+                            <div class="player-flex">
+                                <img src="${avatar}" style="width: 24px; height: 24px; min-width: 24px; border-radius: 50%; border: 1px solid var(--border-gold); object-fit: cover;" onerror="this.src='https://placehold.co/48x48/111/fff?text=?'">
+                                <span class="p-name">${name}</span>
+                                ${picksBadge}
+                            </div>
+                        </td>
+                        <td class="col-score">${formatToPar(score)}</td>
+                        <td class="col-score" style="color: var(--gold-light); font-weight: 800;">${rating}</td>
+                        <td class="col-stat" style="color: var(--text-muted);">${thru}</td>
+                    </tr>
+                `;
+            }).join('');
+            
+            console.log(`[ProBoard] Rendered ${leaderboard.length} players.`);
+            statusEl.innerHTML = '<span class="sync-dot"></span>LIVE';
         }
 
         function renderLeaderboard() {
@@ -965,9 +1081,20 @@
         }
 
         async function loadAllUserScores() {
+            // Explicitly handle users missing a golfId so they don't hang on "Syncing..." forever
+            users.forEach(u => {
+                if (!u.golfId || u.golfId.trim() === '') {
+                    u.hasData = true;
+                    u.syncFailed = false;
+                    u.lineup = []; // Empty lineup translates to WD instantly
+                }
+            });
+
             const validUsers = [...users].filter(u => u.golfId && u.userId);
             validUsers.forEach(u => { u.retries = 0; u.syncFailed = false; });
             
+            console.log(`[Sync] Starting sync for ${validUsers.length} users...`);
+
             let q = [...validUsers];
             const chunkS = 5; 
             let loaded = 0; 
@@ -979,6 +1106,8 @@
                 const chunk = q.splice(0, chunkS);
                 let hasErrorInChunk = false;
                 
+                console.log(`[Sync] Processing chunk of ${chunk.length} users. Remaining in queue: ${q.length}`);
+
                 try {
                     const query = new URLSearchParams(); 
                     chunk.forEach(item => query.append('url', `https://web.realsports.io/games/playerratingcontest/${item.golfId}/view/${item.userId}?contestType=sport&source=home`));
@@ -987,12 +1116,13 @@
                     const response = await fetch(`${config.workerProxy}?${query.toString()}`, opts);
                     
                     if (!response.ok) {
+                        console.warn(`[Sync] Proxy level failure (Status: ${response.status}). Retrying chunk.`);
                         // Proxy level failure (e.g., 500, 429 from worker)
                         hasErrorInChunk = true;
                         chunk.forEach(u => {
                             u.retries++;
                             if (u.retries < MAX_RETRIES) q.push(u);
-                            else { u.hasData = true; u.syncFailed = true; loaded++; }
+                            else { u.hasData = true; u.syncFailed = true; loaded++; console.error(`[Sync] Max retries hit for ${u.username} (${u.userId})`); }
                         });
                     } else {
                         const res = await response.json();
@@ -1003,35 +1133,87 @@
                                     try {
                                         const data = JSON.parse(base64ToText(r.body));
                                         
+                                        // Dynamically extract real gameId for Pro Board using lineup data or a deep JSON search
+                                        if (!currentGameId) { 
+                                            let foundId = null;
+                                            
+                                            // Priority 1: Check lineup directly
+                                            if (data.lineup && data.lineup.length > 0) {
+                                                foundId = data.lineup[0].matchId || data.lineup[0].gameId || data.lineup[0].eventId;
+                                            }
+                                            
+                                            // Priority 2: Deep search for 7-10 digit numbers associated with game keys
+                                            if (!foundId) {
+                                                JSON.stringify(data, (key, value) => {
+                                                    if (!foundId && ['gameId', 'matchId', 'eventId', 'tournamentId'].includes(key)) {
+                                                        if (/^\d{7,10}$/.test(String(value))) {
+                                                            foundId = String(value);
+                                                        }
+                                                    }
+                                                    return value;
+                                                });
+                                            }
+
+                                            if (foundId && /^\d+$/.test(String(foundId))) {
+                                                console.log(`[Sync] Found real gameId: ${foundId}`);
+                                                currentGameId = String(foundId);
+                                                fetchProLeaderboard();
+                                            }
+                                        }
+
                                         const apiUsername = data.owner?.username || data.user?.username || data.author?.username || data.owner?.displayName || data.user?.displayName;
                                         if (apiUsername) user.username = apiUsername;
 
                                         user.actualTotalPoints = parseFloat((data.info?.rankDisplayInfos?.[0]?.scoreDisplay || '0').replace(/[^0-9.]/g, '')) || 0;
                                         user.lineup = data.lineup || [];
+                                        
+                                        // Feed the global memory bank with every golfer a user has picked so the Pro Board stays accurate
+                                        user.lineup.forEach(g => {
+                                            const pObj = g.player || {};
+                                            const pid = String(g.playerId || pObj.id || g.id);
+                                            if (pid && pid !== 'undefined') {
+                                                globalPlayers[pid] = {
+                                                    displayName: pObj.displayName || g.displayName || globalPlayers[pid]?.displayName,
+                                                    lastName: pObj.lastName || g.lastName || globalPlayers[pid]?.lastName,
+                                                    firstName: pObj.firstName || g.firstName || globalPlayers[pid]?.firstName,
+                                                    avatar: pObj.avatar || g.avatar || globalPlayers[pid]?.avatar,
+                                                    id: pid,
+                                                    value: (g.score !== undefined && g.score !== null) ? g.score : globalPlayers[pid]?.value,
+                                                    pickCount: (globalPlayers[pid]?.pickCount || 0) + 1
+                                                };
+                                            }
+                                        });
+
                                         user.actualTodayPoints = user.lineup.reduce((acc, g) => acc + (parseFloat(g.score) || 0), 0);
                                         user.hasData = true;
                                         loaded++;
+                                        console.log(`[Sync] Loaded data for ${user.username}`);
                                     } catch(e) {
+                                        console.error(`[Sync] Parse error for ${user.username}`, e);
                                         hasErrorInChunk = true;
                                         user.retries++;
                                         if (user.retries < MAX_RETRIES) q.push(user);
                                         else { user.hasData = true; user.syncFailed = true; loaded++; }
                                     }
                                 } else if (r.status === 404) {
+                                    console.warn(`[Sync] User ${user.username} (${user.userId}) not found (404). Dropping.`);
                                     // User explicitly not found, no point in retrying endlessly
                                     user.hasData = true; user.syncFailed = true; loaded++;
                                 } else {
+                                    console.warn(`[Sync] User ${user.username} (${user.userId}) failed with status ${r.status}. Retrying (${user.retries + 1}/${MAX_RETRIES})`);
                                     // Rate limit (429) or other failure for this specific user
                                     hasErrorInChunk = true;
                                     user.retries++;
                                     if (user.retries < MAX_RETRIES) {
                                         q.push(user); // Send back to the queue to try again!
                                     } else { 
+                                        console.error(`[Sync] Max retries hit for ${user.username}`);
                                         user.hasData = true; user.syncFailed = true; loaded++; 
                                     }
                                 }
                             });
                         } else {
+                            console.warn(`[Sync] Chunk length mismatch. Expected ${chunk.length}, got ${res?.length}. Retrying.`);
                             hasErrorInChunk = true;
                             chunk.forEach(u => {
                                 u.retries++;
@@ -1041,6 +1223,7 @@
                         }
                     }
                 } catch (e) {
+                    console.error(`[Sync] Chunk fetch threw error:`, e);
                     hasErrorInChunk = true;
                     chunk.forEach(u => {
                         u.retries++;
@@ -1051,15 +1234,27 @@
                 
                 statusEl.innerHTML = `<span class="sync-dot"></span>${loaded}/${validUsers.length}`;
                 renderLeaderboard();
+                renderProLeaderboard(); // Re-render Pro board dynamically as we discover new missing players
                 
                 // Adaptive delay: if we hit rate limits or the queue is running low (cycling failed users), back off to let the API breathe
                 if (hasErrorInChunk || q.length < 15) {
+                    console.log(`[Sync] Rate limited or low queue. Adaptive backoff... (1200ms)`);
                     await new Promise(r => setTimeout(r, 1200)); 
                 } else {
                     await new Promise(r => setTimeout(r, 150)); 
                 }
             }
+            console.log(`[Sync] Finished loading all users.`);
             statusEl.innerHTML = '<span class="sync-dot"></span>LIVE';
+            
+            // Fallback if no numeric game ID was ever extracted from the API responses
+            if (!currentGameId) {
+                console.warn(`[ProBoard] No valid numeric gameId found. Pro Board will fail.`);
+                const proTbody = document.getElementById('pro-leaderboard-tbody');
+                const proStatus = document.getElementById('pro-sync-status');
+                if (proTbody) proTbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 2rem; color: var(--text-muted);">Pro Leaderboard not linked.</td></tr>';
+                if (proStatus) proStatus.innerHTML = '<span class="sync-dot" style="background:var(--text-muted); box-shadow:none;"></span>N/A';
+            }
         }
 
         function parseCSV(t) { return t.split(/\r?\n/).map(l => { const v=[]; let c='', q=false; for(let i=0;i<l.length;i++){ if(l[i]==='"' && l[i-1]!=='\\') q=!q; else if(l[i]===',' && !q){ v.push(c.trim()); c=''; } else c+=l[i]; } v.push(c.trim()); return v; }).filter(r => r.length > 1); }
@@ -1100,7 +1295,7 @@
                     document.getElementById('display-course-name').innerText = d.course;
                     document.getElementById('display-purse').innerText = d.purse ? `Purse: ${d.purse}` : ''; 
                     
-                    if (document.getElementById('view-live').classList.contains('active') || document.getElementById('view-upcoming').classList.contains('active')) {
+                    if (document.getElementById('view-live').classList.contains('active') || document.getElementById('view-upcoming').classList.contains('active') || document.getElementById('view-pro').classList.contains('active')) {
                         document.getElementById('tournament-banner').style.display = 'block'; 
                     }
                 }
