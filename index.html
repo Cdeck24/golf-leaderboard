@@ -748,7 +748,7 @@
                 
                 // Extract total pick counts from users and generate badge
                 const picks = globalPlayers[pidStr] ? (globalPlayers[pidStr].pickCount || 0) : 0;
-                const picksBadge = picks > 0 ? `<span style="font-size: 0.65rem; color: var(--border-gold); font-weight: 800; background: rgba(197, 160, 89, 0.1); padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(197, 160, 89, 0.2); flex: 0 0 auto;">👥 ${picks}</span>` : '';
+                const picksBadge = picks > 0 ? `<span style="font-size: 0.65rem; color: var(--border-gold); font-weight: 800; background: rgba(197, 160, 89, 0.1); padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(197, 160, 89, 0.2); flex: 0 0 auto; margin-left: 6px;">👥 ${picks}</span>` : '';
                 
                 rowsHtml.push(`
                     <tr class="main-row">
@@ -806,10 +806,35 @@
                 const normId = u.userId.trim().toLowerCase();
                 const hist = historicalDailyDataByDate[normId] || {};
                 const pts = [0, 0, 0, 0];
+                
                 tDates.forEach((d, i) => {
                     if (hist[d]) pts[i] = hist[d].raw;
                     else if (d === todayStr && u.hasData) pts[i] = u.actualTodayPoints;
                 });
+
+                // Auto-fill missing days (e.g., suspended rounds or missed exports)
+                // by evenly distributing the points up to the next known day.
+                for (let i = 0; i < 4; i++) {
+                    if (pts[i] === 0) {
+                        let nextIdx = -1;
+                        for (let j = i + 1; j < 4; j++) {
+                            if (pts[j] !== 0) { nextIdx = j; break; }
+                        }
+                        
+                        if (nextIdx !== -1) {
+                            const prevVal = i > 0 ? pts[i - 1] : 0;
+                            const nextVal = pts[nextIdx];
+                            const steps = nextIdx - i + 1;
+                            const stepSize = (nextVal - prevVal) / steps;
+                            
+                            for (let k = i; k < nextIdx; k++) {
+                                pts[k] = prevVal + stepSize * (k - i + 1);
+                            }
+                            i = nextIdx - 1; // Skip over the filled days
+                        }
+                    }
+                }
+                
                 const isWD = u.hasData && !u.syncFailed && (!u.lineup || u.lineup.length === 0);
                 const sig = getLineupSignature(u.lineup);
                 const isRef = REFERENCE_IDS.includes(normId);
@@ -998,11 +1023,21 @@
         }
 
         function exportDay(dayName) {
+            const dayIndex = {thursday:0, friday:1, saturday:2, sunday:3}[dayName]||0;
             const d = new Date(activeTournamentStartDate);
-            d.setDate(d.getDate() + ({thursday:0, friday:1, saturday:2, sunday:3}[dayName]||0));
+            d.setDate(d.getDate() + dayIndex);
             const dateStr = (d.getMonth()+1)+'/'+d.getDate()+'/'+d.getFullYear();
             const rows = [["username", "user id", "raw points", "golf score", "date"]];
-            currentProcessedUsers.forEach(u => rows.push([u.username, u.userId, u.actualTotalPoints.toFixed(2), u.rounds[dayName.substring(0,3)], dateStr]));
+            
+            currentProcessedUsers.forEach(u => {
+                if (u.hasData) {
+                    // Extract the specific day's interpolated raw points and calculated golf score
+                    const dayRawPoints = u.pts[dayIndex] || 0;
+                    const dayGolfScore = u.rounds[dayName.substring(0,3)] || 0;
+                    rows.push([u.username, u.userId, dayRawPoints.toFixed(2), dayGolfScore, dateStr]);
+                }
+            });
+            
             generateCSV(rows, `golf_plug_${dayName}_${dateStr.replace(/\//g, '-')}.csv`);
             document.getElementById('export-menu').style.display = 'none';
         }
