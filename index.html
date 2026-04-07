@@ -303,6 +303,17 @@
 
       #loading-indicator { text-align: center; padding: 4rem; color: var(--gold-light); font-weight: 900; animation: pulse 1.5s infinite; letter-spacing: 0.3em; text-transform: uppercase; font-size: 0.9rem; }
 
+      .season-rank-badge {
+          font-size: 0.55rem;
+          color: var(--border-gold);
+          background: rgba(197, 160, 89, 0.1);
+          padding: 2px 4px;
+          border-radius: 4px;
+          font-weight: 900;
+          border: 1px solid rgba(197, 160, 89, 0.2);
+          flex: 0 0 auto;
+      }
+
       @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
       @keyframes pulse { 0% { opacity: 0.4; } 50% { opacity: 1; } 100% { opacity: 0.4; } }
        
@@ -555,7 +566,7 @@
         };
 
         const DEVICE_UUID = crypto.randomUUID();
-        const REFERENCE_IDS = ['jvbb41pv', 'R37kAWO3', 'gv8D5Q0v', '9JmXRKDn', 'PJPlXgwJ'].map(id => id.toLowerCase().trim());
+        const REFERENCE_IDS = ['jvbb41pv', 'R37kAWO3', 'gv8D5Q0v', '9JmXRKDn'].map(id => id.toLowerCase().trim());
         
         let users = [];
         let historicalDailyDataByDate = {}; 
@@ -566,6 +577,7 @@
         let currentGameId = null; // Used to fetch the pro leaderboard
         let globalPlayers = {}; // Memory bank for missing golfers
         let rawProLeaderboardData = null; // Stored to re-render when new players are discovered
+        let globalSeasonRanks = {}; // Memory bank for season rankings
 
         function switchView(v) {
             document.querySelectorAll('.content-view').forEach(el => el.classList.remove('active'));
@@ -811,29 +823,6 @@
                     if (hist[d]) pts[i] = hist[d].raw;
                     else if (d === todayStr && u.hasData) pts[i] = u.actualTodayPoints;
                 });
-
-                // Auto-fill missing days (e.g., suspended rounds or missed exports)
-                // by evenly distributing the points up to the next known day.
-                for (let i = 0; i < 4; i++) {
-                    if (pts[i] === 0) {
-                        let nextIdx = -1;
-                        for (let j = i + 1; j < 4; j++) {
-                            if (pts[j] !== 0) { nextIdx = j; break; }
-                        }
-                        
-                        if (nextIdx !== -1) {
-                            const prevVal = i > 0 ? pts[i - 1] : 0;
-                            const nextVal = pts[nextIdx];
-                            const steps = nextIdx - i + 1;
-                            const stepSize = (nextVal - prevVal) / steps;
-                            
-                            for (let k = i; k < nextIdx; k++) {
-                                pts[k] = prevVal + stepSize * (k - i + 1);
-                            }
-                            i = nextIdx - 1; // Skip over the filled days
-                        }
-                    }
-                }
                 
                 const isWD = u.hasData && !u.syncFailed && (!u.lineup || u.lineup.length === 0);
                 const sig = getLineupSignature(u.lineup);
@@ -908,7 +897,11 @@
                 const row = document.createElement('tr'); row.className = 'main-row';
                 const tag = u.isDuplicate ? '(DUP)' : (u.syncFailed ? '(ERR)' : (activeIdx >= 2 && !u.madeCut ? '(MC)' : ''));
                 const pos = (u.isWD) ? 'WD' : (u.isDuplicate) ? 'DUP' : (u.syncFailed ? 'ERR' : (u.hasData ? currentProcessedUsers.filter(x => !x.isWD && !x.isDuplicate && !x.syncFailed).indexOf(u)+1 : '-'));
-                const playerContent = `<div class="player-flex"><span class="p-name">${formatHandle(u.username)}</span>${tag ? `<span class="p-tag">${tag}</span>` : ''}<span class="toggle-icon">▼</span></div>`;
+                
+                const userRank = globalSeasonRanks[u.userId.toLowerCase()] || globalSeasonRanks[u.username.toLowerCase()];
+                const rankBadge = userRank ? `<span class="season-rank-badge" title="Season Rank">#${userRank}</span>` : '';
+                
+                const playerContent = `<div class="player-flex">${rankBadge}<span class="p-name">${formatHandle(u.username)}</span>${tag ? `<span class="p-tag">${tag}</span>` : ''}<span class="toggle-icon">▼</span></div>`;
                 row.innerHTML = `<td class="col-pos">${pos}</td><td class="col-player">${playerContent}</td><td class="col-score">${(u.isWD||u.isDuplicate||u.syncFailed)?'-':formatToPar(u.total)}</td><td class="col-score">${(u.isWD||u.isDuplicate||u.syncFailed)?'-':formatToPar(u.today)}</td>`;
                 
                 const dr = document.createElement('tr'); dr.className = 'draft-row';
@@ -969,6 +962,39 @@
             return 0;
         }
 
+        function calculateGlobalRanks() {
+            if (!masterArchiveData || masterArchiveData.length < 2) return;
+            const stats = {};
+            const h = masterArchiveData[0].map(v => v.toLowerCase().trim());
+            const uIdx = findIdx(h, ['username']);
+            const uidIdx = findIdx(h, ['user id', 'userid']);
+            const sIdx = findIdx(h, ['status']);
+            const rIdx = findIdx(h, ['position', 'pos']);
+
+            masterArchiveData.slice(1).forEach(row => {
+                const uname = row[uIdx]?.trim().toLowerCase();
+                const uid = uidIdx !== -1 ? row[uidIdx]?.trim().toLowerCase() : null;
+                if (!uname) return;
+
+                if (!stats[uname]) stats[uname] = { points: 0, wins: 0, uid: uid };
+                
+                const status = row[sIdx]?.toUpperCase();
+                const pos = row[rIdx];
+                if (status !== "WD" && status !== "DUP") {
+                    stats[uname].points += getSeasonPoints(pos, status);
+                    if (pos == '1' && status === "MADE CUT") stats[uname].wins += 1;
+                }
+            });
+
+            const sorted = Object.keys(stats).map(name => ({ name, ...stats[name] }))
+                .sort((a,b) => b.points - a.points || b.wins - a.wins);
+
+            sorted.forEach((p, i) => {
+                globalSeasonRanks[p.name.toLowerCase()] = i + 1;
+                if (p.uid) globalSeasonRanks[p.uid.toLowerCase()] = i + 1;
+            });
+        }
+
         function renderRankings() {
             const tbody = document.getElementById('rankings-tbody');
             if (!tbody || masterArchiveData.length < 2) return;
@@ -1023,21 +1049,11 @@
         }
 
         function exportDay(dayName) {
-            const dayIndex = {thursday:0, friday:1, saturday:2, sunday:3}[dayName]||0;
             const d = new Date(activeTournamentStartDate);
-            d.setDate(d.getDate() + dayIndex);
+            d.setDate(d.getDate() + ({thursday:0, friday:1, saturday:2, sunday:3}[dayName]||0));
             const dateStr = (d.getMonth()+1)+'/'+d.getDate()+'/'+d.getFullYear();
             const rows = [["username", "user id", "raw points", "golf score", "date"]];
-            
-            currentProcessedUsers.forEach(u => {
-                if (u.hasData) {
-                    // Extract the specific day's interpolated raw points and calculated golf score
-                    const dayRawPoints = u.pts[dayIndex] || 0;
-                    const dayGolfScore = u.rounds[dayName.substring(0,3)] || 0;
-                    rows.push([u.username, u.userId, dayRawPoints.toFixed(2), dayGolfScore, dateStr]);
-                }
-            });
-            
+            currentProcessedUsers.forEach(u => rows.push([u.username, u.userId, u.actualTotalPoints.toFixed(2), u.rounds[dayName.substring(0,3)], dateStr]));
             generateCSV(rows, `golf_plug_${dayName}_${dateStr.replace(/\//g, '-')}.csv`);
             document.getElementById('export-menu').style.display = 'none';
         }
@@ -1087,7 +1103,11 @@
                 }
                 const mainRow = document.createElement('tr'); mainRow.className = 'main-row';
                 const tag = (item.status === "DUP") ? '(DUP)' : (item.status === "WD") ? '(WD)' : (!item.madeCut ? '(MC)' : '');
-                const playerContent = `<div class="player-flex"><span class="p-name">${formatHandle(item.r[1])}</span>${tag ? `<span class="p-tag">${tag}</span>` : ''}<span class="toggle-icon">▼</span></div>`;
+                
+                const userRank = globalSeasonRanks[item.r[1].toLowerCase()] || globalSeasonRanks[item.r[2]?.toLowerCase()];
+                const rankBadge = userRank ? `<span class="season-rank-badge" title="Season Rank">#${userRank}</span>` : '';
+                
+                const playerContent = `<div class="player-flex">${rankBadge}<span class="p-name">${formatHandle(item.r[1])}</span>${tag ? `<span class="p-tag">${tag}</span>` : ''}<span class="toggle-icon">▼</span></div>`;
                 mainRow.innerHTML = `<td class="col-pos">${isInv ? item.status : item.r[0]}</td><td class="col-player">${playerContent}</td><td class="col-score">${isInv?'-':formatToPar(item.totalGolf)}</td><td class="col-score">${item.totalRaw.toFixed(2)}</td>`;
                 const detailRow = document.createElement('tr'); detailRow.className = 'draft-row';
                 const satDisp = item.madeCut ? formatToPar(item.rounds.sat) : (isInv ? '-' : '<div class="score-box mc">MC</div>');
@@ -1362,7 +1382,10 @@
 
         async function initApp() {
             await fetchTournamentSchedule(); 
-            try { masterArchiveData = parseCSV(await (await fetch(config.archiveDataUrl)).text()); } catch (e) {}
+            try { 
+                masterArchiveData = parseCSV(await (await fetch(config.archiveDataUrl)).text()); 
+                calculateGlobalRanks(); // Pre-calculate rankings from archive data
+            } catch (e) {}
             await fetchDailyHistoricalData();
             users = await fetchUsers();
             document.getElementById('loading-indicator').style.display = 'none';
