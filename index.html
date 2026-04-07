@@ -578,6 +578,8 @@
         let globalPlayers = {}; // Memory bank for missing golfers
         let rawProLeaderboardData = null; // Stored to re-render when new players are discovered
         let globalSeasonRanks = {}; // Memory bank for season rankings
+        let globalSeasonStatsArray = []; // Ordered array for the rankings table
+        let processedTournamentsCache = null; // Cache for the tournament engine
 
         function switchView(v) {
             document.querySelectorAll('.content-view').forEach(el => el.classList.remove('active'));
@@ -887,6 +889,37 @@
                 return b.actualTotalPoints - a.actualTotalPoints;
             });
 
+            // PRE-CALCULATE POSITIONS FOR TIES
+            const validField = currentProcessedUsers.filter(x => !x.isWD && !x.isDuplicate && !x.syncFailed);
+            const isFinalDay = activeIdx === 3 || activeIdx === -1; // 3 = Sunday, -1 = Post-Tournament
+
+            let vfIdx = 0;
+            while (vfIdx < validField.length) {
+                let j = vfIdx;
+                // Group users that have the exact same golf score and cut status
+                while (j < validField.length && validField[j].total === validField[vfIdx].total && validField[j].madeCut === validField[vfIdx].madeCut) {
+                    j++;
+                }
+                
+                const groupSize = j - vfIdx;
+
+                if (vfIdx === 0 && isFinalDay) {
+                    // First place group on the FINAL day: The absolute best raw score gets "1".
+                    validField[0].displayPos = "1";
+                    // If there are others with the same top golf score, they tie for 2nd place
+                    for (let k = 1; k < j; k++) {
+                        validField[k].displayPos = "T2"; 
+                    }
+                } else {
+                    // Any other group, or 1st place before the final day, they just tie at their starting index + 1
+                    for (let k = vfIdx; k < j; k++) {
+                        validField[k].displayPos = groupSize > 1 ? 'T' + (vfIdx + 1) : (vfIdx + 1).toString();
+                    }
+                }
+                
+                vfIdx = j;
+            }
+
             let cutLineInserted = false;
             currentProcessedUsers.forEach((u, i) => {
                 if (!cutLineInserted && !u.madeCut && !u.isWD && !u.isDuplicate && !u.syncFailed) {
@@ -896,7 +929,9 @@
                 }
                 const row = document.createElement('tr'); row.className = 'main-row';
                 const tag = u.isDuplicate ? '(DUP)' : (u.syncFailed ? '(ERR)' : (activeIdx >= 2 && !u.madeCut ? '(MC)' : ''));
-                const pos = (u.isWD) ? 'WD' : (u.isDuplicate) ? 'DUP' : (u.syncFailed ? 'ERR' : (u.hasData ? currentProcessedUsers.filter(x => !x.isWD && !x.isDuplicate && !x.syncFailed).indexOf(u)+1 : '-'));
+                
+                // Fetch precalculated display pos instead of index matching
+                const pos = (u.isWD) ? 'WD' : (u.isDuplicate) ? 'DUP' : (u.syncFailed ? 'ERR' : (u.hasData ? u.displayPos : '-'));
                 
                 const userRank = globalSeasonRanks[u.userId.toLowerCase()] || globalSeasonRanks[u.username.toLowerCase()];
                 const rankBadge = userRank ? `<span class="season-rank-badge" title="Season Rank">#${userRank}</span>` : '';
@@ -931,8 +966,11 @@
         // --- RANKINGS LOGIC ---
         function getSeasonPoints(pos, status) {
             if (status === "WD" || status === "DUP") return 0;
+            if (!pos) return 0;
             
-            const p = parseInt(pos); 
+            // Strip out any "T" from the tie placements (e.g., T2 -> 2)
+            const cleanPos = String(pos).replace(/\D/g, '');
+            const p = parseInt(cleanPos); 
             if (isNaN(p)) return 0;
 
             // Top 5
@@ -962,63 +1000,118 @@
             return 0;
         }
 
-        function calculateGlobalRanks() {
-            if (!masterArchiveData || masterArchiveData.length < 2) return;
-            const stats = {};
+        function getProcessedTournaments() {
+            if (processedTournamentsCache) return processedTournamentsCache;
+            if (!masterArchiveData || masterArchiveData.length < 2) return {};
+
             const h = masterArchiveData[0].map(v => v.toLowerCase().trim());
+            const tIdx = findIdx(h, ['tournament', 'tourn']);
             const uIdx = findIdx(h, ['username']);
             const uidIdx = findIdx(h, ['user id', 'userid']);
             const sIdx = findIdx(h, ['status']);
-            const rIdx = findIdx(h, ['position', 'pos']);
 
-            masterArchiveData.slice(1).forEach(row => {
-                const uname = row[uIdx]?.trim().toLowerCase();
-                const uid = uidIdx !== -1 ? row[uidIdx]?.trim().toLowerCase() : null;
-                if (!uname) return;
+            const tournaments = {};
 
-                if (!stats[uname]) stats[uname] = { points: 0, wins: 0, uid: uid };
+            // Parse all the tournament data rows into their respective events
+            masterArchiveData.slice(1).forEach(r => {
+                const tName = r[tIdx];
+                if (!tName) return;
+                if (!tournaments[tName]) tournaments[tName] = [];
                 
-                const status = row[sIdx]?.toUpperCase();
-                const pos = row[rIdx];
-                if (status !== "WD" && status !== "DUP") {
-                    stats[uname].points += getSeasonPoints(pos, status);
-                    if (pos == '1' && status === "MADE CUT") stats[uname].wins += 1;
+                tournaments[tName].push({
+                    r,
+                    username: r[uIdx]?.trim(),
+                    userId: uidIdx !== -1 ? r[uidIdx]?.trim() : null,
+                    totalGolf: parseInt(r[4]) || 0,
+                    totalRaw: parseFloat(r[9]) || 0,
+                    madeCut: r[sIdx]?.toUpperCase() === "MADE CUT",
+                    status: r[sIdx]?.toUpperCase(),
+                    rounds: { thu: r[5], fri: r[6], sat: r[7], sun: r[8] },
+                    pieces: { thu: parseFloat(r[10])||0, fri: (parseFloat(r[11])||0) - (parseFloat(r[10])||0), sat: (parseFloat(r[12])||0) - (parseFloat(r[11])||0), sun: (parseFloat(r[13])||0) - (parseFloat(r[12])||0) }
+                });
+            });
+
+            // Calculate the pure placements for each tournament to award points accurately
+            Object.keys(tournaments).forEach(tName => {
+                const field = tournaments[tName];
+                
+                field.sort((a,b) => {
+                    const aInv = a.status === "WD" || a.status === "DUP";
+                    const bInv = b.status === "WD" || b.status === "DUP";
+                    if (aInv !== bInv) return aInv ? 1 : -1;
+                    if (a.madeCut !== b.madeCut) return a.madeCut ? -1 : 1;
+                    if (a.totalGolf !== b.totalGolf) return a.totalGolf - b.totalGolf;
+                    return b.totalRaw - a.totalRaw;
+                });
+
+                const validArchive = field.filter(x => x.status !== "WD" && x.status !== "DUP");
+                let vfIdx = 0;
+                while (vfIdx < validArchive.length) {
+                    let j = vfIdx;
+                    while (j < validArchive.length && validArchive[j].totalGolf === validArchive[vfIdx].totalGolf && validArchive[j].madeCut === validArchive[vfIdx].madeCut) {
+                        j++;
+                    }
+                    const groupSize = j - vfIdx;
+
+                    if (vfIdx === 0) {
+                        // 1st place group: Absolute best raw score gets 1, the rest T2
+                        validArchive[0].displayPos = "1";
+                        for (let k = 1; k < j; k++) {
+                            validArchive[k].displayPos = "T2"; 
+                        }
+                    } else {
+                        for (let k = vfIdx; k < j; k++) {
+                            validArchive[k].displayPos = groupSize > 1 ? 'T' + (vfIdx + 1) : (vfIdx + 1).toString();
+                        }
+                    }
+                    vfIdx = j;
                 }
             });
 
-            const sorted = Object.keys(stats).map(name => ({ name, ...stats[name] }))
-                .sort((a,b) => b.points - a.points || b.wins - a.wins);
+            processedTournamentsCache = tournaments;
+            return tournaments;
+        }
 
-            sorted.forEach((p, i) => {
-                globalSeasonRanks[p.name.toLowerCase()] = i + 1;
+        function calculateGlobalRanks() {
+            const tournaments = getProcessedTournaments();
+            const stats = {};
+
+            Object.values(tournaments).forEach(field => {
+                field.forEach(p => {
+                    if (!p.username) return;
+                    const uname = p.username.toLowerCase();
+                    if (!stats[uname]) stats[uname] = { points: 0, wins: 0, starts: 0, uid: p.userId, username: p.username };
+                    
+                    if (p.status !== "WD" && p.status !== "DUP") {
+                        stats[uname].starts += 1;
+                        stats[uname].points += getSeasonPoints(p.displayPos, p.status);
+                        if (p.displayPos === "1" && p.status === "MADE CUT") stats[uname].wins += 1;
+                    }
+                });
+            });
+
+            // Sort without any ties using secondary metrics to ensure a strict 1, 2, 3 sequence
+            globalSeasonStatsArray = Object.values(stats).sort((a,b) => {
+                if (b.points !== a.points) return b.points - a.points;
+                if (b.wins !== a.wins) return b.wins - a.wins;
+                return b.starts - a.starts;
+            });
+
+            globalSeasonStatsArray.forEach((p, i) => {
+                globalSeasonRanks[p.username.toLowerCase()] = i + 1;
                 if (p.uid) globalSeasonRanks[p.uid.toLowerCase()] = i + 1;
             });
         }
 
         function renderRankings() {
             const tbody = document.getElementById('rankings-tbody');
-            if (!tbody || masterArchiveData.length < 2) return;
+            if (!tbody || globalSeasonStatsArray.length === 0) return;
             tbody.innerHTML = '';
-            const stats = {};
-            const h = masterArchiveData[0].map(v => v.toLowerCase().trim());
-            const uIdx = findIdx(h, ['username']), sIdx = findIdx(h, ['status']), rIdx = findIdx(h, ['position', 'pos']);
-
-            masterArchiveData.slice(1).forEach(row => {
-                const user = row[uIdx]?.trim(); if (!user) return;
-                if (!stats[user]) stats[user] = { points: 0, wins: 0, starts: 0 };
-                const status = row[sIdx]?.toUpperCase(); const pos = row[rIdx];
-                // WD and DUP are not starts
-                if (status !== "WD" && status !== "DUP") {
-                    stats[user].starts += 1;
-                    stats[user].points += getSeasonPoints(pos, status);
-                    if (pos == '1' && status === "MADE CUT") stats[user].wins += 1;
-                }
-            });
-            const sorted = Object.keys(stats).map(name => ({ name, ...stats[name] }))
-                .sort((a,b) => b.points - a.points || b.wins - a.wins);
-            sorted.forEach((p, i) => {
+            
+            globalSeasonStatsArray.forEach((p, i) => {
                 const row = document.createElement('tr');
-                row.innerHTML = `<td class="col-pos">${i+1}</td><td class="col-player"><div class="player-flex"><span class="p-name">${formatHandle(p.name)}</span></div></td><td class="col-stat">${p.points}</td><td class="col-stat">${p.wins}</td><td class="col-stat">${p.starts}</td>`;
+                // The season rank never has "T", always strictly sequential (i + 1)
+                row.innerHTML = `<td class="col-pos">${i+1}</td><td class="col-player"><div class="player-flex"><span class="p-name">${formatHandle(p.username)}</span></div></td><td class="col-stat">${p.points}</td><td class="col-stat">${p.wins}</td><td class="col-stat">${p.starts}</td>`;
                 tbody.appendChild(row);
             });
         }
@@ -1041,7 +1134,10 @@
                 if(u.hasData) {
                     let status = u.madeCut ? "MADE CUT" : "MISSED CUT";
                     if (u.isWD) status = "WD"; else if (u.isDuplicate) status = "DUP";
-                    rows.push([ u.isWD?'WD':(u.isDuplicate?'DUP':i+1), u.username, u.userId, status, u.total, u.rounds.thu, u.rounds.fri, u.rounds.sat, u.rounds.sun, u.actualTotalPoints.toFixed(2), u.pts[0].toFixed(2), u.pts[1].toFixed(2), u.pts[2].toFixed(2), u.pts[3].toFixed(2) ]); 
+                    
+                    const exportPos = u.isWD ? 'WD' : (u.isDuplicate ? 'DUP' : (u.syncFailed ? 'ERR' : u.displayPos));
+                    
+                    rows.push([ exportPos, u.username, u.userId, status, u.total, u.rounds.thu, u.rounds.fri, u.rounds.sat, u.rounds.sun, u.actualTotalPoints.toFixed(2), u.pts[0].toFixed(2), u.pts[1].toFixed(2), u.pts[2].toFixed(2), u.pts[3].toFixed(2) ]); 
                 }
             });
             generateCSV(rows, `golf_plug_full_records.csv`);
@@ -1059,38 +1155,24 @@
         }
 
         function viewArchive(name) {
-            const h = masterArchiveData[0].map(v => v.toLowerCase().trim());
-            const tIdx = findIdx(h, ['tournament', 'tourn']);
-            const filtered = masterArchiveData.slice(1).filter(r => r[tIdx] === name);
+            const tournaments = getProcessedTournaments();
+            const processedArchive = tournaments[name];
+            if (!processedArchive) return;
+
             const tbody = document.getElementById('archive-tbody');
             const champDiv = document.getElementById('archive-champ-display');
             
             // UPDATE ARCHIVE HEADER
             document.getElementById('archive-header-title').innerHTML = `<span style="font-weight: 900; font-size: 0.8rem; letter-spacing: 0.05em;">🏆 ${name.toUpperCase()} <span style="color:var(--text-muted); font-weight:700; font-size:0.65rem; margin-left:8px;">FINAL RESULTS</span></span>`;
 
-            const valid = filtered.filter(r => r[3] !== '-' && r[3] !== 'WD' && r[3] !== 'DUP');
-            const sortedVal = [...valid].sort((a,b) => parseInt(a[4]) - parseInt(b[4]));
+            const validArchive = processedArchive.filter(x => x.status !== "WD" && x.status !== "DUP");
 
-            if (sortedVal.length > 0) {
-                const winner = sortedVal[0];
-                const scoreInt = parseInt(winner[4]);
-                champDiv.innerHTML = `<div class="champion-spotlight"><div class="champ-label">Tournament Champion</div><div class="champ-name">🏆 ${formatHandle(winner[1])}</div><div class="champ-score">Final Score: ${scoreInt > 0 ? '+' : ''}${scoreInt} (${parseFloat(winner[9]).toFixed(2)} PTS)</div></div>`;
+            // Guarantee the champion spotlight honors the raw score tie breaker
+            if (validArchive.length > 0) {
+                const winner = validArchive[0];
+                const displayScore = winner.totalGolf === 0 ? 'E' : (winner.totalGolf > 0 ? '+' + winner.totalGolf : winner.totalGolf);
+                champDiv.innerHTML = `<div class="champion-spotlight"><div class="champ-label">Tournament Champion</div><div class="champ-name">🏆 ${formatHandle(winner.username)}</div><div class="champ-score">Final Score: ${displayScore} (${winner.totalRaw.toFixed(2)} PTS)</div></div>`;
             } else { champDiv.innerHTML = ''; }
-
-            const processedArchive = filtered.map(r => ({
-                r, totalGolf: parseInt(r[4]), totalRaw: parseFloat(r[9]), madeCut: r[3] === "MADE CUT", status: r[3],
-                rounds: { thu: r[5], fri: r[6], sat: r[7], sun: r[8] },
-                pieces: { thu: parseFloat(r[10]), fri: parseFloat(r[11]) - parseFloat(r[10]), sat: parseFloat(r[12]) - parseFloat(r[11]), sun: parseFloat(r[13]) - parseFloat(r[12]) }
-            }));
-
-            processedArchive.sort((a,b) => {
-                const aInv = a.status === "WD" || a.status === "DUP";
-                const bInv = b.status === "WD" || b.status === "DUP";
-                if (aInv !== bInv) return aInv ? 1 : -1;
-                if (a.madeCut !== b.madeCut) return a.madeCut ? -1 : 1;
-                if (a.totalGolf !== b.totalGolf) return a.totalGolf - b.totalGolf;
-                return b.totalRaw - a.totalRaw;
-            });
 
             let cutInserted = false;
             tbody.innerHTML = '';
@@ -1104,11 +1186,15 @@
                 const mainRow = document.createElement('tr'); mainRow.className = 'main-row';
                 const tag = (item.status === "DUP") ? '(DUP)' : (item.status === "WD") ? '(WD)' : (!item.madeCut ? '(MC)' : '');
                 
-                const userRank = globalSeasonRanks[item.r[1].toLowerCase()] || globalSeasonRanks[item.r[2]?.toLowerCase()];
+                const userRank = globalSeasonRanks[item.username.toLowerCase()] || (item.userId ? globalSeasonRanks[item.userId.toLowerCase()] : null);
                 const rankBadge = userRank ? `<span class="season-rank-badge" title="Season Rank">#${userRank}</span>` : '';
                 
-                const playerContent = `<div class="player-flex">${rankBadge}<span class="p-name">${formatHandle(item.r[1])}</span>${tag ? `<span class="p-tag">${tag}</span>` : ''}<span class="toggle-icon">▼</span></div>`;
-                mainRow.innerHTML = `<td class="col-pos">${isInv ? item.status : item.r[0]}</td><td class="col-player">${playerContent}</td><td class="col-score">${isInv?'-':formatToPar(item.totalGolf)}</td><td class="col-score">${item.totalRaw.toFixed(2)}</td>`;
+                const playerContent = `<div class="player-flex">${rankBadge}<span class="p-name">${formatHandle(item.username)}</span>${tag ? `<span class="p-tag">${tag}</span>` : ''}<span class="toggle-icon">▼</span></div>`;
+                
+                // Fetch dynamically calculated display position
+                const displayPosition = isInv ? item.status : item.displayPos;
+                
+                mainRow.innerHTML = `<td class="col-pos">${displayPosition}</td><td class="col-player">${playerContent}</td><td class="col-score">${isInv?'-':formatToPar(item.totalGolf)}</td><td class="col-score">${item.totalRaw.toFixed(2)}</td>`;
                 const detailRow = document.createElement('tr'); detailRow.className = 'draft-row';
                 const satDisp = item.madeCut ? formatToPar(item.rounds.sat) : (isInv ? '-' : '<div class="score-box mc">MC</div>');
                 const sunDisp = item.madeCut ? formatToPar(item.rounds.sun) : (isInv ? '-' : '<div class="score-box mc">MC</div>');
