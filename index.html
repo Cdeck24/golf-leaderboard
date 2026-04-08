@@ -692,6 +692,7 @@
             const tbody = document.getElementById('pro-leaderboard-tbody');
             const statusEl = document.getElementById('pro-sync-status');
             
+            console.log(`[ProBoard] Fetching pro leaderboard for gameId: ${currentGameId}`);
             try {
                 const hasher = new Hashids("realwebapp", 16);
                 const query = new URLSearchParams();
@@ -716,6 +717,7 @@
                 rawProLeaderboardData = data;
                 renderProLeaderboard();
             } catch (error) {
+                console.warn("[ProBoard] Fetch Error:", error);
                 if (tbody.innerHTML.includes('Loading')) {
                     tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 2rem; color: var(--danger);">Failed to load pro leaderboard. Ensure game ID is correct.</td></tr>';
                     statusEl.innerHTML = '<span class="sync-dot" style="background:var(--danger); box-shadow:none;"></span>ERR';
@@ -789,6 +791,8 @@
             });
 
             tbody.innerHTML = rowsHtml.join('');
+            
+            console.log(`[ProBoard] Rendered ${leaderboard.length} players.`);
             statusEl.innerHTML = '<span class="sync-dot"></span>LIVE';
         }
 
@@ -1244,20 +1248,23 @@
             const validUsers = [...users].filter(u => u.golfId && u.userId);
             validUsers.forEach(u => { u.retries = 0; u.syncFailed = false; });
             
-            // Console log removed for cleaner running
+            console.log(`[Sync] Starting sync for ${validUsers.length} users...`);
+
             let q = [...validUsers];
-            let chunkS = 8; // Dynamic batch size
+            const chunkS = 5; // Smooth sustained batch size
             let loaded = 0; 
             let chunksProcessed = 0;
             const statusEl = document.getElementById('sync-status');
             const hasher = new Hashids("realwebapp", 16);
             const MAX_RETRIES = 10; 
             
-            let currentDelay = 300; // Starting speed
+            let currentDelay = 500; // Safe starting speed to prevent 429 spikes
             
             while (q.length > 0) {
                 const chunk = q.splice(0, chunkS);
                 let hitRateLimit = false;
+                
+                console.log(`[Sync] Processing chunk of ${chunk.length} users. Remaining in queue: ${q.length}`);
 
                 try {
                     const query = new URLSearchParams(); 
@@ -1267,6 +1274,7 @@
                     const response = await fetch(`${config.workerProxy}?${query.toString()}`, opts);
                     
                     if (!response.ok) {
+                        console.warn(`[Sync] Proxy level failure (Status: ${response.status}). Retrying chunk.`);
                         hitRateLimit = true;
                         chunk.forEach(u => {
                             u.retries++;
@@ -1308,6 +1316,7 @@
                                             }
 
                                             if (foundId && /^\d+$/.test(String(foundId))) {
+                                                console.log(`[Sync] Found real gameId: ${foundId}`);
                                                 currentGameId = String(foundId);
                                                 fetchProLeaderboard();
                                             }
@@ -1339,6 +1348,7 @@
                                         user.hasData = true;
                                         loaded++;
                                     } catch(e) {
+                                        console.error(`[Sync] Parse error for ${user.username}`, e);
                                         hitRateLimit = true;
                                         user.retries++;
                                         if (user.retries < MAX_RETRIES) q.push(user);
@@ -1347,6 +1357,7 @@
                                 } else if (r.status === 404) {
                                     user.hasData = true; user.syncFailed = true; loaded++;
                                 } else {
+                                    if (r.status !== 429) console.warn(`[Sync] User ${user.username} failed: ${r.status}`);
                                     hitRateLimit = true;
                                     user.retries++;
                                     if (user.retries < MAX_RETRIES) {
@@ -1357,6 +1368,7 @@
                                 }
                             });
                         } else {
+                            console.warn(`[Sync] Chunk length mismatch. Expected ${chunk.length}, got ${res?.length}. Retrying.`);
                             hitRateLimit = true;
                             chunk.forEach(u => {
                                 u.retries++;
@@ -1366,6 +1378,7 @@
                         }
                     }
                 } catch (e) {
+                    console.error(`[Sync] Chunk fetch threw error:`, e);
                     hitRateLimit = true;
                     chunk.forEach(u => {
                         u.retries++;
@@ -1378,19 +1391,18 @@
                 
                 chunksProcessed++;
                 // Throttle DOM renders to prevent browser UI freezing
-                if (chunksProcessed % 2 === 0) {
+                if (chunksProcessed % 3 === 0) {
                     renderLeaderboard();
                     renderProLeaderboard(); 
                 }
                 
-                // Dynamic Auto-Throttle: Adjusts BOTH speed and batch size based on API tolerance
+                // Dynamic Auto-Throttle: Keeps a steady pace without hitting rate limits
                 if (hitRateLimit) {
-                    currentDelay = Math.min(currentDelay + 500, 2000); 
-                    chunkS = Math.max(3, Math.floor(chunkS / 2)); // Halve the batch size
+                    currentDelay = Math.min(currentDelay + 250, 2000); 
+                    console.warn(`[Sync] Auto-throttle engaged to prevent rate limits. Delay: ${currentDelay}ms`);
                     await new Promise(r => setTimeout(r, currentDelay)); 
                 } else {
-                    currentDelay = Math.max(currentDelay - 25, 200); // Solid floor of 200ms
-                    if (chunksProcessed % 2 === 0) chunkS = Math.min(15, chunkS + 1); // Slowly increase batch size
+                    currentDelay = Math.max(currentDelay - 25, 450); // Solid floor of 450ms (approx 10-11 requests/sec)
                     await new Promise(r => setTimeout(r, currentDelay)); 
                 }
             }
@@ -1399,10 +1411,12 @@
             renderLeaderboard();
             renderProLeaderboard();
             
+            console.log(`[Sync] Finished loading all users.`);
             statusEl.innerHTML = '<span class="sync-dot"></span>LIVE';
             
             // Fallback if no numeric game ID was ever extracted from the API responses
             if (!currentGameId) {
+                console.warn(`[ProBoard] No valid numeric gameId found. Pro Board will fail.`);
                 const proTbody = document.getElementById('pro-leaderboard-tbody');
                 const proStatus = document.getElementById('pro-sync-status');
                 if (proTbody) proTbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 2rem; color: var(--text-muted);">Pro Leaderboard not linked.</td></tr>';
