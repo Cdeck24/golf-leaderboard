@@ -1251,8 +1251,9 @@
             console.log(`[Sync] Starting sync for ${validUsers.length} users...`);
 
             let q = [...validUsers];
-            const chunkS = 5; 
+            const chunkS = 8; // Increased chunk size for higher throughput
             let loaded = 0; 
+            let chunksProcessed = 0;
             const statusEl = document.getElementById('sync-status');
             const hasher = new Hashids("realwebapp", 16);
             const MAX_RETRIES = 25; // Drastically increased to ensure rate-limited users finish
@@ -1394,17 +1395,28 @@
                 }
                 
                 statusEl.innerHTML = `<span class="sync-dot"></span>${loaded}/${validUsers.length}`;
-                renderLeaderboard();
-                renderProLeaderboard(); // Re-render Pro board dynamically as we discover new missing players
                 
-                // Adaptive delay: if we hit rate limits or the queue is running low (cycling failed users), back off to let the API breathe
-                if (hasErrorInChunk || q.length < 15) {
-                    console.log(`[Sync] Rate limited or low queue. Adaptive backoff... (1200ms)`);
-                    await new Promise(r => setTimeout(r, 1200)); 
+                chunksProcessed++;
+                // Throttle DOM renders to prevent browser UI freezing (render every 3 chunks)
+                if (chunksProcessed % 3 === 0) {
+                    renderLeaderboard();
+                    renderProLeaderboard(); 
+                }
+                
+                // Adaptive delay: Back off if we hit errors OR if we've finished the main list and are aggressively cycling through retries
+                const isRecycling = q.length > 0 && q[0].retries > 0;
+                if (hasErrorInChunk || isRecycling) {
+                    console.log(`[Sync] Rate limited or recycling queue. Adaptive backoff... (1500ms)`);
+                    await new Promise(r => setTimeout(r, 1500)); 
                 } else {
-                    await new Promise(r => setTimeout(r, 150)); 
+                    await new Promise(r => setTimeout(r, 200)); 
                 }
             }
+            
+            // Final render to guarantee all data is displayed once the queue finishes
+            renderLeaderboard();
+            renderProLeaderboard();
+            
             console.log(`[Sync] Finished loading all users.`);
             statusEl.innerHTML = '<span class="sync-dot"></span>LIVE';
             
