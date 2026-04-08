@@ -1251,16 +1251,18 @@
             console.log(`[Sync] Starting sync for ${validUsers.length} users...`);
 
             let q = [...validUsers];
-            const chunkS = 8; // Increased chunk size for higher throughput
+            const chunkS = 6; // Sweet spot to avoid triggering immediate rate limits
             let loaded = 0; 
             let chunksProcessed = 0;
             const statusEl = document.getElementById('sync-status');
             const hasher = new Hashids("realwebapp", 16);
-            const MAX_RETRIES = 25; // Drastically increased to ensure rate-limited users finish
+            const MAX_RETRIES = 25; 
+            
+            let currentDelay = 100; // Start at max speed
             
             while (q.length > 0) {
                 const chunk = q.splice(0, chunkS);
-                let hasErrorInChunk = false;
+                let hitRateLimit = false;
                 
                 console.log(`[Sync] Processing chunk of ${chunk.length} users. Remaining in queue: ${q.length}`);
 
@@ -1273,8 +1275,7 @@
                     
                     if (!response.ok) {
                         console.warn(`[Sync] Proxy level failure (Status: ${response.status}). Retrying chunk.`);
-                        // Proxy level failure (e.g., 500, 429 from worker)
-                        hasErrorInChunk = true;
+                        hitRateLimit = true;
                         chunk.forEach(u => {
                             u.retries++;
                             if (u.retries < MAX_RETRIES) q.push(u);
@@ -1299,12 +1300,10 @@
                                         if (!currentGameId) { 
                                             let foundId = null;
                                             
-                                            // Priority 1: Check lineup directly
                                             if (data.lineup && data.lineup.length > 0) {
                                                 foundId = data.lineup[0].matchId || data.lineup[0].gameId || data.lineup[0].eventId;
                                             }
                                             
-                                            // Priority 2: Deep search for 7-10 digit numbers associated with game keys
                                             if (!foundId) {
                                                 JSON.stringify(data, (key, value) => {
                                                     if (!foundId && ['gameId', 'matchId', 'eventId', 'tournamentId'].includes(key)) {
@@ -1329,7 +1328,6 @@
                                         user.actualTotalPoints = parseFloat((data.info?.rankDisplayInfos?.[0]?.scoreDisplay || '0').replace(/[^0-9.]/g, '')) || 0;
                                         user.lineup = data.lineup || [];
                                         
-                                        // Feed the global memory bank with every golfer a user has picked so the Pro Board stays accurate
                                         user.lineup.forEach(g => {
                                             const pObj = g.player || {};
                                             const pid = String(g.playerId || pObj.id || g.id);
@@ -1349,25 +1347,22 @@
                                         user.actualTodayPoints = user.lineup.reduce((acc, g) => acc + (parseFloat(g.score) || 0), 0);
                                         user.hasData = true;
                                         loaded++;
-                                        console.log(`[Sync] Loaded data for ${user.username}`);
                                     } catch(e) {
                                         console.error(`[Sync] Parse error for ${user.username}`, e);
-                                        hasErrorInChunk = true;
+                                        hitRateLimit = true;
                                         user.retries++;
                                         if (user.retries < MAX_RETRIES) q.push(user);
                                         else { user.hasData = true; user.syncFailed = true; loaded++; }
                                     }
                                 } else if (r.status === 404) {
                                     console.warn(`[Sync] User ${user.username} (${user.userId}) not found (404). Dropping.`);
-                                    // User explicitly not found, no point in retrying endlessly
                                     user.hasData = true; user.syncFailed = true; loaded++;
                                 } else {
                                     console.warn(`[Sync] User ${user.username} (${user.userId}) failed with status ${r.status}. Retrying (${user.retries + 1}/${MAX_RETRIES})`);
-                                    // Rate limit (429) or other failure for this specific user
-                                    hasErrorInChunk = true;
+                                    hitRateLimit = true;
                                     user.retries++;
                                     if (user.retries < MAX_RETRIES) {
-                                        q.push(user); // Send back to the queue to try again!
+                                        q.push(user);
                                     } else { 
                                         console.error(`[Sync] Max retries hit for ${user.username}`);
                                         user.hasData = true; user.syncFailed = true; loaded++; 
@@ -1376,7 +1371,7 @@
                             });
                         } else {
                             console.warn(`[Sync] Chunk length mismatch. Expected ${chunk.length}, got ${res?.length}. Retrying.`);
-                            hasErrorInChunk = true;
+                            hitRateLimit = true;
                             chunk.forEach(u => {
                                 u.retries++;
                                 if (u.retries < MAX_RETRIES) q.push(u);
@@ -1386,7 +1381,7 @@
                     }
                 } catch (e) {
                     console.error(`[Sync] Chunk fetch threw error:`, e);
-                    hasErrorInChunk = true;
+                    hitRateLimit = true;
                     chunk.forEach(u => {
                         u.retries++;
                         if (u.retries < MAX_RETRIES) q.push(u);
@@ -1397,19 +1392,20 @@
                 statusEl.innerHTML = `<span class="sync-dot"></span>${loaded}/${validUsers.length}`;
                 
                 chunksProcessed++;
-                // Throttle DOM renders to prevent browser UI freezing (render every 3 chunks)
+                // Throttle DOM renders to prevent browser UI freezing
                 if (chunksProcessed % 3 === 0) {
                     renderLeaderboard();
                     renderProLeaderboard(); 
                 }
                 
-                // Adaptive delay: Back off if we hit errors OR if we've finished the main list and are aggressively cycling through retries
-                const isRecycling = q.length > 0 && q[0].retries > 0;
-                if (hasErrorInChunk || isRecycling) {
-                    console.log(`[Sync] Rate limited or recycling queue. Adaptive backoff... (1500ms)`);
-                    await new Promise(r => setTimeout(r, 1500)); 
+                // Dynamic Auto-Throttle: Adjusts speed constantly based on API tolerance
+                if (hitRateLimit) {
+                    currentDelay = Math.min(currentDelay + 300, 2000); // Brake hard
+                    console.log(`[Sync] API Limit hit. Braking... new delay: ${currentDelay}ms`);
+                    await new Promise(r => setTimeout(r, currentDelay * 1.5)); // Take a deep breath to flush the API queue
                 } else {
-                    await new Promise(r => setTimeout(r, 200)); 
+                    currentDelay = Math.max(currentDelay - 25, 100); // Accelerate gradually
+                    await new Promise(r => setTimeout(r, currentDelay)); 
                 }
             }
             
