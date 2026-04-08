@@ -1280,7 +1280,13 @@
                             else { u.hasData = true; u.syncFailed = true; loaded++; console.error(`[Sync] Max retries hit for ${u.username} (${u.userId})`); }
                         });
                     } else {
-                        const res = await response.json();
+                        let res = await response.json();
+                        
+                        // Normalize: If the proxy returns a single object instead of an array for a 1-item chunk, wrap it
+                        if (!Array.isArray(res) && chunk.length === 1) {
+                            res = [res];
+                        }
+
                         if (Array.isArray(res) && res.length === chunk.length) {
                             res.forEach((r, idx) => {
                                 const user = chunk[idx];
