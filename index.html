@@ -1251,14 +1251,14 @@
             console.log(`[Sync] Starting sync for ${validUsers.length} users...`);
 
             let q = [...validUsers];
-            const chunkS = 6; // Sweet spot to avoid triggering immediate rate limits
+            const chunkS = 5; // Smooth sustained batch size
             let loaded = 0; 
             let chunksProcessed = 0;
             const statusEl = document.getElementById('sync-status');
             const hasher = new Hashids("realwebapp", 16);
-            const MAX_RETRIES = 25; 
+            const MAX_RETRIES = 10; 
             
-            let currentDelay = 100; // Start at max speed
+            let currentDelay = 500; // Safe starting speed to prevent 429 spikes
             
             while (q.length > 0) {
                 const chunk = q.splice(0, chunkS);
@@ -1279,7 +1279,7 @@
                         chunk.forEach(u => {
                             u.retries++;
                             if (u.retries < MAX_RETRIES) q.push(u);
-                            else { u.hasData = true; u.syncFailed = true; loaded++; console.error(`[Sync] Max retries hit for ${u.username} (${u.userId})`); }
+                            else { u.hasData = true; u.syncFailed = true; loaded++; }
                         });
                     } else {
                         let res = await response.json();
@@ -1355,16 +1355,14 @@
                                         else { user.hasData = true; user.syncFailed = true; loaded++; }
                                     }
                                 } else if (r.status === 404) {
-                                    console.warn(`[Sync] User ${user.username} (${user.userId}) not found (404). Dropping.`);
                                     user.hasData = true; user.syncFailed = true; loaded++;
                                 } else {
-                                    console.warn(`[Sync] User ${user.username} (${user.userId}) failed with status ${r.status}. Retrying (${user.retries + 1}/${MAX_RETRIES})`);
+                                    if (r.status !== 429) console.warn(`[Sync] User ${user.username} failed: ${r.status}`);
                                     hitRateLimit = true;
                                     user.retries++;
                                     if (user.retries < MAX_RETRIES) {
                                         q.push(user);
                                     } else { 
-                                        console.error(`[Sync] Max retries hit for ${user.username}`);
                                         user.hasData = true; user.syncFailed = true; loaded++; 
                                     }
                                 }
@@ -1398,13 +1396,13 @@
                     renderProLeaderboard(); 
                 }
                 
-                // Dynamic Auto-Throttle: Adjusts speed constantly based on API tolerance
+                // Dynamic Auto-Throttle: Keeps a steady pace without hitting rate limits
                 if (hitRateLimit) {
-                    currentDelay = Math.min(currentDelay + 300, 2000); // Brake hard
-                    console.log(`[Sync] API Limit hit. Braking... new delay: ${currentDelay}ms`);
-                    await new Promise(r => setTimeout(r, currentDelay * 1.5)); // Take a deep breath to flush the API queue
+                    currentDelay = Math.min(currentDelay + 250, 2000); 
+                    console.warn(`[Sync] Auto-throttle engaged to prevent rate limits. Delay: ${currentDelay}ms`);
+                    await new Promise(r => setTimeout(r, currentDelay)); 
                 } else {
-                    currentDelay = Math.max(currentDelay - 25, 100); // Accelerate gradually
+                    currentDelay = Math.max(currentDelay - 25, 450); // Solid floor of 450ms (approx 10-11 requests/sec)
                     await new Promise(r => setTimeout(r, currentDelay)); 
                 }
             }
