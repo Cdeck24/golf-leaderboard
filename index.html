@@ -1431,7 +1431,21 @@
                 const h = rows[0].map(v => v.toLowerCase().trim());
                 
                 const dIdx = findIdx(h, ['date']), nIdx = findIdx(h, ['tourn', 'tournament']), cIdx = findIdx(h, ['course']);
-                const p1Idx = findIdx(h, ['purse 1']), p2Idx = findIdx(h, ['purse 2']), p3Idx = findIdx(h, ['purse 3']);
+                
+                const purseCols = [];
+                h.forEach((colName, idx) => {
+                    const match = colName.match(/^purse\s+(\d+)$/);
+                    if (match) {
+                        purseCols.push({ index: idx, pos: parseInt(match[1], 10) });
+                    }
+                });
+                purseCols.sort((a, b) => a.pos - b.pos);
+                
+                const getOrdinal = (n) => {
+                    const s = ["TH", "ST", "ND", "RD"];
+                    const v = n % 100;
+                    return n + (s[(v - 20) % 10] || s[v] || s[0]);
+                };
                 
                 const parseCurrency = (str) => {
                     let clean = String(str).toLowerCase().trim();
@@ -1452,19 +1466,27 @@
                     const rangeStr = `${start.getMonth()+1}/${start.getDate()} - ${end.getMonth()+1}/${end.getDate()}`;
                     
                     let purseObj = null;
-                    if (p1Idx !== -1 || p2Idx !== -1 || p3Idx !== -1) {
-                        const p1 = p1Idx !== -1 && r[p1Idx] ? r[p1Idx].trim() : '';
-                        const p2 = p2Idx !== -1 && r[p2Idx] ? r[p2Idx].trim() : '';
-                        const p3 = p3Idx !== -1 && r[p3Idx] ? r[p3Idx].trim() : '';
+                    if (purseCols.length > 0) {
+                        let totalNum = 0;
+                        let splits = [];
                         
-                        const num1 = parseCurrency(p1);
-                        const num2 = parseCurrency(p2);
-                        const num3 = parseCurrency(p3);
-                        const totNum = num1 + num2 + num3;
+                        purseCols.forEach(pc => {
+                            const valStr = r[pc.index] ? r[pc.index].trim() : '';
+                            const num = parseCurrency(valStr);
+                            if (valStr !== '') {
+                                totalNum += num;
+                                splits.push({ pos: pc.pos, valStr, num });
+                            }
+                        });
                         
-                        if (totNum > 0) {
-                            const isWinnerTakeAll = num2 === 0 || num3 === 0;
-                            purseObj = { total: formatCurrency(totNum), p1, p2, p3, isWinnerTakeAll };
+                        if (splits.length > 0) {
+                            const totalStr = formatCurrency(totalNum);
+                            const isWinnerTakeAll = splits.length === 1 && splits[0].pos === 1;
+                            
+                            const splitText = isWinnerTakeAll ? `WINNER TAKE ALL: ${splits[0].valStr}` : splits.map(s => `${getOrdinal(s.pos)}: ${s.valStr}`).join(' • ');
+                            const splitHtml = isWinnerTakeAll ? `WINNER TAKE ALL: ${splits[0].valStr}` : splits.map(s => `${getOrdinal(s.pos)}: ${s.valStr}`).join(' &nbsp;•&nbsp; ');
+                            
+                            purseObj = { total: totalStr, splitText, splitHtml };
                         }
                     }
                     
@@ -1472,8 +1494,8 @@
                     if (start <= today) { curr = obj; past.unshift(obj); } else { if (!next) next = obj; upcoming.push(obj); }
                 }
                 
-                document.getElementById('upcoming-list').innerHTML = upcoming.map(t => `<div class="schedule-card"><div class="card-date">${t.date}</div><div class="card-name">${t.name}</div><div class="card-course">${t.course}</div>${t.purseObj ? `<div class="card-purse"><div class="card-purse-total">TOTAL: ${t.purseObj.total}</div><div class="card-purse-split">${t.purseObj.isWinnerTakeAll ? `WINNER TAKE ALL: ${t.purseObj.p1}` : `1ST: ${t.purseObj.p1} • 2ND: ${t.purseObj.p2} • 3RD: ${t.purseObj.p3}`}</div></div>` : ''}</div>`).join('');
-                document.getElementById('past-tournament-grid').innerHTML = past.map(t => `<div class="schedule-card clickable" onclick="viewArchive('${t.name.replace(/'/g, "\\'")}')"><div class="card-date">${t.date}</div><div class="card-name">${t.name}</div><div class="card-course">${t.course}</div>${t.purseObj ? `<div class="card-purse"><div class="card-purse-total">TOTAL: ${t.purseObj.total}</div><div class="card-purse-split">${t.purseObj.isWinnerTakeAll ? `WINNER TAKE ALL: ${t.purseObj.p1}` : `1ST: ${t.purseObj.p1} • 2ND: ${t.purseObj.p2} • 3RD: ${t.purseObj.p3}`}</div></div>` : ''}</div>`).join('');
+                document.getElementById('upcoming-list').innerHTML = upcoming.map(t => `<div class="schedule-card"><div class="card-date">${t.date}</div><div class="card-name">${t.name}</div><div class="card-course">${t.course}</div>${t.purseObj ? `<div class="card-purse"><div class="card-purse-total">TOTAL: ${t.purseObj.total}</div><div class="card-purse-split">${t.purseObj.splitText}</div></div>` : ''}</div>`).join('');
+                document.getElementById('past-tournament-grid').innerHTML = past.map(t => `<div class="schedule-card clickable" onclick="viewArchive('${t.name.replace(/'/g, "\\'")}')"><div class="card-date">${t.date}</div><div class="card-name">${t.name}</div><div class="card-course">${t.course}</div>${t.purseObj ? `<div class="card-purse"><div class="card-purse-total">TOTAL: ${t.purseObj.total}</div><div class="card-purse-split">${t.purseObj.splitText}</div></div>` : ''}</div>`).join('');
                 
                 const currentDay = now.getDay();
                 let d = null;
@@ -1493,7 +1515,7 @@
                     
                     const purseEl = document.getElementById('display-purse');
                     if (d.purseObj) {
-                        purseEl.innerHTML = `<div class="banner-purse-total">TOTAL PURSE: ${d.purseObj.total}</div><div class="banner-purse-split">${d.purseObj.isWinnerTakeAll ? `WINNER TAKE ALL: ${d.purseObj.p1}` : `1ST: ${d.purseObj.p1} &nbsp;•&nbsp; 2ND: ${d.purseObj.p2} &nbsp;•&nbsp; 3RD: ${d.purseObj.p3}`}</div>`;
+                        purseEl.innerHTML = `<div class="banner-purse-total">TOTAL PURSE: ${d.purseObj.total}</div><div class="banner-purse-split">${d.purseObj.splitHtml}</div>`;
                         purseEl.style.display = 'inline-block';
                     } else {
                         purseEl.style.display = 'none';
