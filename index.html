@@ -116,7 +116,15 @@
       .banner-date { font-size: 0.75rem; color: var(--text-muted); font-weight: 700; margin-bottom: 0.4rem; letter-spacing: 0.05em; }
       .banner-name { font-size: 1.5rem; font-weight: 900; color: #fff; margin-bottom: 0.4rem; line-height: 1.1; letter-spacing: -0.01em; }
       .banner-course { font-size: 0.95rem; color: var(--text-muted); font-weight: 500; margin-bottom: 0.5rem; }
-      .banner-purse { font-size: 0.75rem; color: var(--gold-light); font-weight: 900; text-transform: uppercase; background: rgba(197, 160, 89, 0.1); padding: 4px 12px; border-radius: 6px; display: inline-block; }
+      
+      .banner-purse { 
+          font-size: 0.75rem; color: var(--gold-light); font-weight: 900; 
+          text-transform: uppercase; background: rgba(197, 160, 89, 0.1); 
+          padding: 10px 16px; border-radius: 8px; display: inline-block; 
+          border: 1px solid rgba(197, 160, 89, 0.2); line-height: 1.4; 
+      }
+      .banner-purse-total { font-size: 1.05rem; margin-bottom: 2px; }
+      .banner-purse-split { font-size: 0.65rem; opacity: 0.9; color: var(--text-main); font-weight: 700; letter-spacing: 0.05em; }
 
       /* Champion Spotlight */
       .champion-spotlight {
@@ -288,7 +296,10 @@
       .card-date { font-size: 0.75rem; color: var(--gold-light); font-weight: 900; text-transform: uppercase; margin-bottom: 0.5rem; letter-spacing: 0.05em; }
       .card-name { font-size: 1.3rem; font-weight: 900; color: #fff; margin-bottom: 0.3rem; line-height: 1.1; }
       .card-course { font-size: 0.9rem; color: var(--text-muted); font-weight: 500; }
-      .card-purse { font-size: 0.7rem; color: var(--gold-light); font-weight: 800; text-transform: uppercase; margin-top: 8px; opacity: 0.9; }
+      
+      .card-purse { margin-top: 12px; background: rgba(197, 160, 89, 0.05); padding: 10px; border-radius: 8px; border: 1px solid rgba(197, 160, 89, 0.15); text-align: center; line-height: 1.3; }
+      .card-purse-total { font-size: 0.85rem; color: var(--gold-light); font-weight: 900; margin-bottom: 4px; text-transform: uppercase; }
+      .card-purse-split { font-size: 0.65rem; color: var(--text-muted); font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
 
       /* Draft/Lineup Fixes */
       .draft-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
@@ -692,7 +703,6 @@
             const tbody = document.getElementById('pro-leaderboard-tbody');
             const statusEl = document.getElementById('pro-sync-status');
             
-            console.log(`[ProBoard] Fetching pro leaderboard for gameId: ${currentGameId}`);
             try {
                 const hasher = new Hashids("realwebapp", 16);
                 const query = new URLSearchParams();
@@ -717,7 +727,6 @@
                 rawProLeaderboardData = data;
                 renderProLeaderboard();
             } catch (error) {
-                console.warn("[ProBoard] Fetch Error:", error);
                 if (tbody.innerHTML.includes('Loading')) {
                     tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 2rem; color: var(--danger);">Failed to load pro leaderboard. Ensure game ID is correct.</td></tr>';
                     statusEl.innerHTML = '<span class="sync-dot" style="background:var(--danger); box-shadow:none;"></span>ERR';
@@ -791,8 +800,6 @@
             });
 
             tbody.innerHTML = rowsHtml.join('');
-            
-            console.log(`[ProBoard] Rendered ${leaderboard.length} players.`);
             statusEl.innerHTML = '<span class="sync-dot"></span>LIVE';
         }
 
@@ -1248,23 +1255,20 @@
             const validUsers = [...users].filter(u => u.golfId && u.userId);
             validUsers.forEach(u => { u.retries = 0; u.syncFailed = false; });
             
-            console.log(`[Sync] Starting sync for ${validUsers.length} users...`);
-
+            // Console log removed for cleaner running
             let q = [...validUsers];
-            const chunkS = 5; // Smooth sustained batch size
+            let chunkS = 8; // Dynamic batch size
             let loaded = 0; 
             let chunksProcessed = 0;
             const statusEl = document.getElementById('sync-status');
             const hasher = new Hashids("realwebapp", 16);
             const MAX_RETRIES = 10; 
             
-            let currentDelay = 500; // Safe starting speed to prevent 429 spikes
+            let currentDelay = 300; // Starting speed
             
             while (q.length > 0) {
                 const chunk = q.splice(0, chunkS);
                 let hitRateLimit = false;
-                
-                console.log(`[Sync] Processing chunk of ${chunk.length} users. Remaining in queue: ${q.length}`);
 
                 try {
                     const query = new URLSearchParams(); 
@@ -1274,7 +1278,6 @@
                     const response = await fetch(`${config.workerProxy}?${query.toString()}`, opts);
                     
                     if (!response.ok) {
-                        console.warn(`[Sync] Proxy level failure (Status: ${response.status}). Retrying chunk.`);
                         hitRateLimit = true;
                         chunk.forEach(u => {
                             u.retries++;
@@ -1316,7 +1319,6 @@
                                             }
 
                                             if (foundId && /^\d+$/.test(String(foundId))) {
-                                                console.log(`[Sync] Found real gameId: ${foundId}`);
                                                 currentGameId = String(foundId);
                                                 fetchProLeaderboard();
                                             }
@@ -1348,7 +1350,6 @@
                                         user.hasData = true;
                                         loaded++;
                                     } catch(e) {
-                                        console.error(`[Sync] Parse error for ${user.username}`, e);
                                         hitRateLimit = true;
                                         user.retries++;
                                         if (user.retries < MAX_RETRIES) q.push(user);
@@ -1357,7 +1358,6 @@
                                 } else if (r.status === 404) {
                                     user.hasData = true; user.syncFailed = true; loaded++;
                                 } else {
-                                    if (r.status !== 429) console.warn(`[Sync] User ${user.username} failed: ${r.status}`);
                                     hitRateLimit = true;
                                     user.retries++;
                                     if (user.retries < MAX_RETRIES) {
@@ -1368,7 +1368,6 @@
                                 }
                             });
                         } else {
-                            console.warn(`[Sync] Chunk length mismatch. Expected ${chunk.length}, got ${res?.length}. Retrying.`);
                             hitRateLimit = true;
                             chunk.forEach(u => {
                                 u.retries++;
@@ -1378,7 +1377,6 @@
                         }
                     }
                 } catch (e) {
-                    console.error(`[Sync] Chunk fetch threw error:`, e);
                     hitRateLimit = true;
                     chunk.forEach(u => {
                         u.retries++;
@@ -1391,18 +1389,19 @@
                 
                 chunksProcessed++;
                 // Throttle DOM renders to prevent browser UI freezing
-                if (chunksProcessed % 3 === 0) {
+                if (chunksProcessed % 2 === 0) {
                     renderLeaderboard();
                     renderProLeaderboard(); 
                 }
                 
-                // Dynamic Auto-Throttle: Keeps a steady pace without hitting rate limits
+                // Dynamic Auto-Throttle: Adjusts BOTH speed and batch size based on API tolerance
                 if (hitRateLimit) {
-                    currentDelay = Math.min(currentDelay + 250, 2000); 
-                    console.warn(`[Sync] Auto-throttle engaged to prevent rate limits. Delay: ${currentDelay}ms`);
+                    currentDelay = Math.min(currentDelay + 500, 2000); 
+                    chunkS = Math.max(3, Math.floor(chunkS / 2)); // Halve the batch size
                     await new Promise(r => setTimeout(r, currentDelay)); 
                 } else {
-                    currentDelay = Math.max(currentDelay - 25, 450); // Solid floor of 450ms (approx 10-11 requests/sec)
+                    currentDelay = Math.max(currentDelay - 25, 200); // Solid floor of 200ms
+                    if (chunksProcessed % 2 === 0) chunkS = Math.min(15, chunkS + 1); // Slowly increase batch size
                     await new Promise(r => setTimeout(r, currentDelay)); 
                 }
             }
@@ -1411,12 +1410,10 @@
             renderLeaderboard();
             renderProLeaderboard();
             
-            console.log(`[Sync] Finished loading all users.`);
             statusEl.innerHTML = '<span class="sync-dot"></span>LIVE';
             
             // Fallback if no numeric game ID was ever extracted from the API responses
             if (!currentGameId) {
-                console.warn(`[ProBoard] No valid numeric gameId found. Pro Board will fail.`);
                 const proTbody = document.getElementById('pro-leaderboard-tbody');
                 const proStatus = document.getElementById('pro-sync-status');
                 if (proTbody) proTbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 2rem; color: var(--text-muted);">Pro Leaderboard not linked.</td></tr>';
@@ -1432,18 +1429,51 @@
                 const rows = parseCSV(await res.text());
                 const now = new Date(); const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
                 const h = rows[0].map(v => v.toLowerCase().trim());
-                const dIdx = findIdx(h, ['date']), nIdx = findIdx(h, ['tourn', 'tournament']), cIdx = findIdx(h, ['course']), pIdx = findIdx(h, ['purse']);
+                
+                const dIdx = findIdx(h, ['date']), nIdx = findIdx(h, ['tourn', 'tournament']), cIdx = findIdx(h, ['course']);
+                const p1Idx = findIdx(h, ['purse 1']), p2Idx = findIdx(h, ['purse 2']), p3Idx = findIdx(h, ['purse 3']);
+                
+                const parseCurrency = (str) => {
+                    let clean = String(str).toLowerCase().trim();
+                    let mult = 1;
+                    if (clean.includes('k')) mult = 1000;
+                    if (clean.includes('m')) mult = 1000000;
+                    // Extract numbers, ignore words like "RAX"
+                    let num = parseFloat(clean.replace(/[^0-9.-]+/g, "")) || 0;
+                    return num * mult;
+                };
+                const formatCurrency = (num) => num.toLocaleString('en-US', {maximumFractionDigits: 0}) + ' RAX';
+
                 const upcoming = [], past = []; let curr = null, next = null;
                 for (let i = 1; i < rows.length; i++) {
                     const r = rows[i]; const p = (r[dIdx] || '').split('/'); if (p.length < 2) continue;
                     const start = new Date(today.getFullYear(), parseInt(p[0]) - 1, parseInt(p[1]));
                     const end = new Date(start); end.setDate(end.getDate() + 3);
                     const rangeStr = `${start.getMonth()+1}/${start.getDate()} - ${end.getMonth()+1}/${end.getDate()}`;
-                    const obj = { name: r[nIdx], course: r[cIdx] || '-', date: rangeStr, purse: r[pIdx] || '', start };
+                    
+                    let purseObj = null;
+                    if (p1Idx !== -1 || p2Idx !== -1 || p3Idx !== -1) {
+                        const p1 = p1Idx !== -1 && r[p1Idx] ? r[p1Idx].trim() : '';
+                        const p2 = p2Idx !== -1 && r[p2Idx] ? r[p2Idx].trim() : '';
+                        const p3 = p3Idx !== -1 && r[p3Idx] ? r[p3Idx].trim() : '';
+                        
+                        const num1 = parseCurrency(p1);
+                        const num2 = parseCurrency(p2);
+                        const num3 = parseCurrency(p3);
+                        const totNum = num1 + num2 + num3;
+                        
+                        if (totNum > 0) {
+                            const isWinnerTakeAll = num2 === 0 || num3 === 0;
+                            purseObj = { total: formatCurrency(totNum), p1, p2, p3, isWinnerTakeAll };
+                        }
+                    }
+                    
+                    const obj = { name: r[nIdx], course: r[cIdx] || '-', date: rangeStr, purseObj, start };
                     if (start <= today) { curr = obj; past.unshift(obj); } else { if (!next) next = obj; upcoming.push(obj); }
                 }
-                document.getElementById('upcoming-list').innerHTML = upcoming.map(t => `<div class="schedule-card"><div class="card-date">${t.date}</div><div class="card-name">${t.name}</div><div class="card-course">${t.course}</div>${t.purse ? `<div class="card-purse">Purse: ${t.purse}</div>` : ''}</div>`).join('');
-                document.getElementById('past-tournament-grid').innerHTML = past.map(t => `<div class="schedule-card clickable" onclick="viewArchive('${t.name.replace(/'/g, "\\'")}')"><div class="card-date">${t.date}</div><div class="card-name">${t.name}</div><div class="card-course">${t.course}</div>${t.purse ? `<div class="card-purse">Purse: ${t.purse}</div>` : ''}</div>`).join('');
+                
+                document.getElementById('upcoming-list').innerHTML = upcoming.map(t => `<div class="schedule-card"><div class="card-date">${t.date}</div><div class="card-name">${t.name}</div><div class="card-course">${t.course}</div>${t.purseObj ? `<div class="card-purse"><div class="card-purse-total">TOTAL: ${t.purseObj.total}</div><div class="card-purse-split">${t.purseObj.isWinnerTakeAll ? `WINNER TAKE ALL: ${t.purseObj.p1}` : `1ST: ${t.purseObj.p1} • 2ND: ${t.purseObj.p2} • 3RD: ${t.purseObj.p3}`}</div></div>` : ''}</div>`).join('');
+                document.getElementById('past-tournament-grid').innerHTML = past.map(t => `<div class="schedule-card clickable" onclick="viewArchive('${t.name.replace(/'/g, "\\'")}')"><div class="card-date">${t.date}</div><div class="card-name">${t.name}</div><div class="card-course">${t.course}</div>${t.purseObj ? `<div class="card-purse"><div class="card-purse-total">TOTAL: ${t.purseObj.total}</div><div class="card-purse-split">${t.purseObj.isWinnerTakeAll ? `WINNER TAKE ALL: ${t.purseObj.p1}` : `1ST: ${t.purseObj.p1} • 2ND: ${t.purseObj.p2} • 3RD: ${t.purseObj.p3}`}</div></div>` : ''}</div>`).join('');
                 
                 const currentDay = now.getDay();
                 let d = null;
@@ -1460,13 +1490,22 @@
                     document.getElementById('display-banner-label').innerText = d.label; 
                     document.getElementById('display-banner-date').innerText = d.date;
                     document.getElementById('display-course-name').innerText = d.course;
-                    document.getElementById('display-purse').innerText = d.purse ? `Purse: ${d.purse}` : ''; 
+                    
+                    const purseEl = document.getElementById('display-purse');
+                    if (d.purseObj) {
+                        purseEl.innerHTML = `<div class="banner-purse-total">TOTAL PURSE: ${d.purseObj.total}</div><div class="banner-purse-split">${d.purseObj.isWinnerTakeAll ? `WINNER TAKE ALL: ${d.purseObj.p1}` : `1ST: ${d.purseObj.p1} &nbsp;•&nbsp; 2ND: ${d.purseObj.p2} &nbsp;•&nbsp; 3RD: ${d.purseObj.p3}`}</div>`;
+                        purseEl.style.display = 'inline-block';
+                    } else {
+                        purseEl.style.display = 'none';
+                    }
                     
                     if (document.getElementById('view-live').classList.contains('active') || document.getElementById('view-upcoming').classList.contains('active') || document.getElementById('view-pro').classList.contains('active')) {
                         document.getElementById('tournament-banner').style.display = 'block'; 
                     }
                 }
-            } catch (e) {}
+            } catch (e) {
+                console.error("Error fetching schedule:", e);
+            }
         }
 
         async function fetchUsers() {
