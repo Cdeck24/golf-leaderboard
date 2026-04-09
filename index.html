@@ -149,18 +149,26 @@
       .leaderboard-panel { background: rgba(15, 23, 42, 0.4); border: 1px solid var(--glass-border); border-radius: 16px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.4); }
       .leaderboard-header { background: rgba(13, 51, 38, 0.6); padding: 1.25rem; display: flex; justify-content: space-between; align-items: center; position: relative; }
 
-      .export-container { position: relative; }
-      .export-btn { background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-gold); color: var(--gold-light); font-size: 0.65rem; padding: 8px 16px; border-radius: 8px; font-weight: 800; text-transform: uppercase; cursor: pointer; }
+      /* Admin Corner Button */
+      .admin-wrapper { position: fixed; bottom: 20px; right: 20px; z-index: 3000; }
+      .admin-btn { 
+          background: rgba(6, 26, 19, 0.95); border: 1px solid var(--border-gold); color: var(--border-gold); 
+          font-size: 0.65rem; padding: 12px 20px; border-radius: 50px; font-weight: 900; text-transform: uppercase; 
+          cursor: pointer; box-shadow: 0 10px 25px rgba(0,0,0,0.8); backdrop-filter: blur(8px); transition: all 0.3s; 
+          letter-spacing: 0.05em; display: flex; align-items: center; gap: 8px;
+      }
+      .admin-btn:hover { background: var(--border-gold); color: #000; transform: translateY(-2px); }
+      
       .export-menu { 
-          display: none; position: absolute; right: 0; top: 115%; background: #0a1f18; border: 1px solid var(--border-gold); 
-          border-radius: 10px; z-index: 2000; min-width: 175px; box-shadow: 0 20px 50px rgba(0,0,0,0.9); overflow: hidden;
+          display: none; position: absolute; right: 0; bottom: 120%; background: #0a1f18; border: 1px solid var(--border-gold); 
+          border-radius: 12px; z-index: 2000; min-width: 180px; box-shadow: 0 20px 50px rgba(0,0,0,0.9); overflow: hidden;
       }
       .export-menu button { 
           width: 100%; padding: 14px 16px; background: transparent; border: none; border-bottom: 1px solid rgba(255,255,255,0.05);
-          color: #fff; font-size: 0.7rem; font-weight: 700; text-align: left; cursor: pointer; text-transform: uppercase;
+          color: #fff; font-size: 0.7rem; font-weight: 700; text-align: left; cursor: pointer; text-transform: uppercase; transition: background 0.2s;
       }
       .export-menu button:last-child { border-bottom: none; }
-      .export-menu button:hover { background: var(--golf-green-mid); }
+      .export-menu button:hover { background: var(--golf-green-mid); padding-left: 20px; }
 
       .status-text { text-align: right; font-size: 0.65rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
       .sync-dot { display: inline-block; width: 8px; height: 8px; background: var(--golf-green-bright); border-radius: 50%; margin-right: 6px; box-shadow: 0 0 10px var(--golf-green-bright); }
@@ -391,21 +399,9 @@
         <div class="leaderboard-panel">
             <div class="leaderboard-header">
                 <span style="font-weight: 900; font-size: 0.8rem; letter-spacing: 0.05em;"><span style="margin-right: 8px;">⛳</span>USER STANDINGS</span>
-                <div style="display:flex; align-items:center; gap:12px;">
-                    <div class="export-container">
-                        <button class="export-btn" id="export-main-btn" onclick="toggleExportMenu()">Export</button>
-                        <div id="export-menu" class="export-menu">
-                            <button onclick="exportDay('thursday')">Export Thu</button>
-                            <button onclick="exportDay('friday')">Export Fri</button>
-                            <button onclick="exportDay('saturday')">Export Sat</button>
-                            <button onclick="exportDay('sunday')">Export Sun</button>
-                            <button onclick="exportScoresToCSV()" style="color:var(--gold-light);">Export Full Records</button>
-                        </div>
-                    </div>
-                    <div class="status-text">
-                        <div id="sync-status"><span class="sync-dot"></span>LIVE</div>
-                        <div id="par-score-display">EVEN: 0.00 PTS</div>
-                    </div>
+                <div class="status-text">
+                    <div id="sync-status"><span class="sync-dot"></span>LIVE</div>
+                    <div id="par-score-display">EVEN: 0.00 PTS</div>
                 </div>
             </div>
             
@@ -565,6 +561,34 @@
         </div>
     </div>
 
+    <!-- ADMIN EXPORT BUTTON -->
+    <div class="admin-wrapper">
+        <button class="admin-btn" onclick="attemptAdminAccess()"><span>⚙️</span> ADMIN</button>
+        <div id="export-menu" class="export-menu">
+            <button onclick="exportDay('thursday')">Export Thu</button>
+            <button onclick="exportDay('friday')">Export Fri</button>
+            <button onclick="exportDay('saturday')">Export Sat</button>
+            <button onclick="exportDay('sunday')">Export Sun</button>
+            <button onclick="exportWDsToCSV()" style="color:var(--danger);">Export Withdrawals</button>
+            <button onclick="exportScoresToCSV()" style="color:var(--gold-light);">Export Full Records</button>
+        </div>
+    </div>
+
+    <!-- ADMIN AUTH MODAL -->
+    <div id="admin-auth-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:4000; align-items:center; justify-content:center; backdrop-filter: blur(5px);">
+        <div style="background:var(--bg-body); border:1px solid var(--border-gold); padding:2rem; border-radius:16px; text-align:center; box-shadow: 0 20px 50px rgba(0,0,0,0.9); max-width: 300px; width: 90%;">
+            <h3 style="color:var(--border-gold); margin-bottom:1.5rem; font-weight:900; text-transform:uppercase; letter-spacing:0.1em;">Admin Access</h3>
+            <input type="password" id="admin-password" placeholder="Enter Password" style="width:100%; padding:12px; border-radius:8px; border:1px solid var(--glass-border); background:rgba(255,255,255,0.05); color:#fff; margin-bottom:0.5rem; outline:none; font-family:'Inter', sans-serif;" onkeydown="if(event.key === 'Enter') verifyAdminAuth()">
+            <div style="color:var(--danger); font-size:0.75rem; font-weight:bold; margin-bottom:1rem; height: 15px;">
+                <span id="admin-auth-error" style="display:none;">Incorrect Password</span>
+            </div>
+            <div style="display:flex; gap:10px; justify-content:center;">
+                <button onclick="closeAdminAuth()" style="flex:1; padding:10px; border-radius:8px; border:1px solid var(--glass-border); background:rgba(255,255,255,0.05); color:var(--text-muted); cursor:pointer; font-weight:700; text-transform:uppercase; font-size:0.7rem;">Cancel</button>
+                <button onclick="verifyAdminAuth()" style="flex:1; padding:10px; border-radius:8px; border:1px solid var(--border-gold); background:var(--border-gold); color:#000; font-weight:900; cursor:pointer; text-transform:uppercase; font-size:0.7rem;">Login</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const config = {
             usersDataUrl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRNfMOTfQ4xpIILu_IPjjOAZjUq2Tfp1UqEMOVnR2Qyz-H572bmiIWbC-GuUlEW7ogM8TUNLFWw5xz3/pub?gid=0&single=true&output=csv',
@@ -577,7 +601,7 @@
         };
 
         const DEVICE_UUID = crypto.randomUUID();
-        const REFERENCE_IDS = ['jvbb41pv', 'R37kAWO3', 'gv8D5Q0v', '9JmXRKDn'].map(id => id.toLowerCase().trim());
+        const REFERENCE_IDS = ['jvbb41pv', 'gv8D5Q0v', '9JmXRKDn', '7Jkwd1PJ', 'Gv1DK9aJ', 'PJPWjGpn'].map(id => id.toLowerCase().trim());
         
         let users = [];
         let historicalDailyDataByDate = {}; 
@@ -620,6 +644,34 @@
             const formatted = n > 0 ? `+${n}` : n;
             const cls = n < 0 ? 'under' : 'over';
             return `<div class="score-box ${cls}">${formatted}</div>`;
+        }
+
+        let isAdminAuthenticated = false;
+
+        function attemptAdminAccess() {
+            if (isAdminAuthenticated) {
+                toggleExportMenu();
+            } else {
+                document.getElementById('admin-auth-modal').style.display = 'flex';
+                document.getElementById('admin-password').value = '';
+                document.getElementById('admin-auth-error').style.display = 'none';
+                setTimeout(() => document.getElementById('admin-password').focus(), 100);
+            }
+        }
+
+        function closeAdminAuth() {
+            document.getElementById('admin-auth-modal').style.display = 'none';
+        }
+
+        function verifyAdminAuth() {
+            const pwd = document.getElementById('admin-password').value;
+            if (pwd === 'golf-2026') {
+                isAdminAuthenticated = true;
+                closeAdminAuth();
+                toggleExportMenu();
+            } else {
+                document.getElementById('admin-auth-error').style.display = 'inline-block';
+            }
         }
 
         function toggleExportMenu() {
@@ -1126,8 +1178,10 @@
         function renderDraft(u, container) {
             if (u.syncFailed) { container.innerHTML = '<div style="flex:1; text-align:center; font-size:0.7rem; color:var(--text-muted); padding:10px;">Failed to load data (Rate limited or not found). Please refresh later.</div>'; return; }
             if (!u.hasData) { container.innerHTML = '<div style="flex:1; text-align:center; font-size:0.7rem; padding:10px;">Syncing...</div>'; return; }
-            if (u.isWD || u.isDuplicate) { container.innerHTML = `<div style="flex:1; text-align:center; font-size:0.7rem; color:var(--danger); padding:10px;">${u.isWD?'PLAYER WITHDRAWN':'DUPLICATE ENTRY'}</div>`; return; }
-            container.innerHTML = u.lineup.map(g => `<div class="draft-item"><img src="${(g.avatar||g.player?.avatar) ? `https://media.realapp.link/assets/players/default/large/${g.avatar||g.player.avatar}.webp` : 'https://placehold.co/48x48/111/fff?text=?'}" class="draft-item-avatar" onerror="this.src='https://placehold.co/48x48/111/fff?text=?'"><span class="draft-item-name">${g.displayName||g.player?.displayName||'Unknown'}</span><span class="draft-item-score">${(parseFloat(g.score)||0).toFixed(2)}</span></div>`).join('');
+            if (u.isWD) { container.innerHTML = `<div style="flex:1; text-align:center; font-size:0.7rem; color:var(--danger); padding:10px;">PLAYER WITHDRAWN</div>`; return; }
+            
+            let dupWarning = u.isDuplicate ? `<div style="width:100%; text-align:center; font-size:0.75rem; color:var(--danger); font-weight:900; margin-bottom:12px; letter-spacing:0.05em; background:rgba(255,85,85,0.1); padding:8px; border-radius:6px; border:1px solid rgba(255,85,85,0.3);">DUPLICATE ENTRY - ZERO POINTS</div>` : '';
+            container.innerHTML = dupWarning + u.lineup.map(g => `<div class="draft-item"><img src="${(g.avatar||g.player?.avatar) ? `https://media.realapp.link/assets/players/default/large/${g.avatar||g.player.avatar}.webp` : 'https://placehold.co/48x48/111/fff?text=?'}" class="draft-item-avatar" onerror="this.src='https://placehold.co/48x48/111/fff?text=?'"><span class="draft-item-name">${g.displayName||g.player?.displayName||'Unknown'}</span><span class="draft-item-score">${(parseFloat(g.score)||0).toFixed(2)}</span></div>`).join('');
         }
 
         function generateCSV(rows, filename) {
@@ -1158,6 +1212,19 @@
             const rows = [["username", "user id", "raw points", "golf score", "date"]];
             currentProcessedUsers.forEach(u => rows.push([u.username, u.userId, u.actualTotalPoints.toFixed(2), u.rounds[dayName.substring(0,3)], dateStr]));
             generateCSV(rows, `golf_plug_${dayName}_${dateStr.replace(/\//g, '-')}.csv`);
+            document.getElementById('export-menu').style.display = 'none';
+        }
+
+        function exportWDsToCSV() {
+            const rows = [["username", "user id"]];
+            // Iterating over the base 'users' array preserves the exact original CSV order
+            users.forEach(u => {
+                const isWD = u.hasData && !u.syncFailed && (!u.lineup || u.lineup.length === 0);
+                if (isWD) {
+                    rows.push([u.username, u.userId]);
+                }
+            });
+            generateCSV(rows, `golf_plug_withdrawals.csv`);
             document.getElementById('export-menu').style.display = 'none';
         }
 
