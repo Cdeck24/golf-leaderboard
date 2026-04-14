@@ -333,6 +333,11 @@
           flex: 0 0 auto;
       }
 
+      .tier-badge { font-size: 0.6rem; font-weight: 900; padding: 4px 8px; border-radius: 6px; text-transform: uppercase; letter-spacing: 0.08em; display: inline-block; vertical-align: middle; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+      .tier-badge.major { background: linear-gradient(135deg, rgba(197, 160, 89, 0.2) 0%, rgba(197, 160, 89, 0.05) 100%); color: var(--gold-light); border: 1px solid rgba(197, 160, 89, 0.5); box-shadow: 0 0 10px rgba(197, 160, 89, 0.15); }
+      .tier-badge.signature { background: linear-gradient(135deg, rgba(0, 255, 136, 0.15) 0%, rgba(0, 255, 136, 0.05) 100%); color: var(--golf-green-bright); border: 1px solid rgba(0, 255, 136, 0.4); box-shadow: 0 0 10px rgba(0, 255, 136, 0.1); }
+      .tier-badge.regular { background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%); color: var(--text-muted); border: 1px solid rgba(255, 255, 255, 0.15); }
+
       @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
       @keyframes pulse { 0% { opacity: 0.4; } 50% { opacity: 1; } 100% { opacity: 0.4; } }
        
@@ -384,7 +389,10 @@
 
     <div id="tournament-banner">
         <div class="banner-content">
-            <div class="banner-label" id="display-banner-label">Tournament Status</div>
+            <div style="display: flex; justify-content: center; align-items: center; gap: 12px; margin-bottom: 0.6rem;">
+                <div class="banner-label" id="display-banner-label" style="margin-bottom: 0;">Tournament Status</div>
+                <div id="display-banner-tier" class="tier-badge" style="display:none;"></div>
+            </div>
             <div class="banner-date" id="display-banner-date"></div>
             <div class="banner-name" id="display-tournament-name">Loading Schedule...</div>
             <div class="banner-course" id="display-course-name">-</div>
@@ -439,6 +447,9 @@
         <!-- NEW POINTS KEY CARD -->
         <div class="points-key-card">
             <div class="points-key-title">Ranking Points System</div>
+            <div style="text-align: center; margin-bottom: 1.25rem; font-size: 0.65rem; color: var(--gold-light); font-weight: 800; background: rgba(197, 160, 89, 0.1); padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(197, 160, 89, 0.2); letter-spacing: 0.05em;">
+                REGULAR: 1x POINTS &nbsp;|&nbsp; SIGNATURE: 1.4x POINTS &nbsp;|&nbsp; MAJORS: 1.5x POINTS
+            </div>
             <div class="points-grid">
                 <div class="points-col">
                     <div class="points-col-title">Top 5</div>
@@ -543,10 +554,12 @@
                 <div class="rules-title">🏆 Season Rankings (Points System)</div>
                 <div class="rules-text">Every tournament finish awards "Season Points" to determine the overall champion:</div>
                 <ul class="rules-list">
-                    <li><strong>Top 5:</strong> 1st (100), 2nd (60), 3rd (45), 4th (35), 5th (30).</li>
-                    <li><strong>Top 10:</strong> Points scale down from 25 to 16.</li>
-                    <li><strong>Top 20:</strong> Points scale down from 14 to 5.</li>
-                    <li><strong>Finishing the Tournament:</strong> Made Cut (3 points), Missed Cut (2 points).</li>
+                    <li><strong>Regular Events (1x):</strong> 1st (100), 2nd (60), 3rd (45), 4th (35), 5th (30).</li>
+                    <li><strong>Signature Events (1.4x):</strong> Base points are multiplied by 1.4 (e.g., 1st gets 140 pts).</li>
+                    <li><strong>Majors & PLAYERS (1.5x):</strong> Base points are multiplied by 1.5 (e.g., 1st gets 150 pts).</li>
+                    <li><strong>Top 10:</strong> Base points scale down from 25 to 16.</li>
+                    <li><strong>Top 20:</strong> Base points scale down from 14 to 5.</li>
+                    <li><strong>Finishing the Tournament:</strong> Made Cut (3 base pts), Missed Cut (2 base pts).</li>
                     <li><strong>WD / DUP:</strong> 0 points.</li>
                 </ul>
             </div>
@@ -615,6 +628,8 @@
         let globalSeasonRanks = {}; // Memory bank for season rankings
         let globalSeasonStatsArray = []; // Ordered array for the rankings table
         let processedTournamentsCache = null; // Cache for the tournament engine
+        let globalTournamentTiers = {}; // Memory bank for tournament tier multipliers
+        let globalTournamentTypes = {}; // Memory bank for tournament tier displays
 
         function switchView(v) {
             document.querySelectorAll('.content-view').forEach(el => el.classList.remove('active'));
@@ -1023,7 +1038,7 @@
         }
 
         // --- RANKINGS LOGIC ---
-        function getSeasonPoints(pos, status) {
+        function getSeasonPoints(pos, status, multiplier = 1) {
             if (status === "WD" || status === "DUP") return 0;
             if (!pos) return 0;
             
@@ -1032,31 +1047,32 @@
             const p = parseInt(cleanPos); 
             if (isNaN(p)) return 0;
 
+            let base = 0;
             // Top 5
-            if (p === 1) return 100;
-            if (p === 2) return 60;
-            if (p === 3) return 45;
-            if (p === 4) return 35;
-            if (p === 5) return 30;
+            if (p === 1) base = 100;
+            else if (p === 2) base = 60;
+            else if (p === 3) base = 45;
+            else if (p === 4) base = 35;
+            else if (p === 5) base = 30;
 
             // 6th–10th
-            if (p === 6) return 25;
-            if (p === 7) return 22;
-            if (p === 8) return 20;
-            if (p === 9) return 18;
-            if (p === 10) return 16;
+            else if (p === 6) base = 25;
+            else if (p === 7) base = 22;
+            else if (p === 8) base = 20;
+            else if (p === 9) base = 18;
+            else if (p === 10) base = 16;
 
             // 11th–20th (Scales from 14 down to 5)
             // Formula: 14 - (position - 11)
-            if (p >= 11 && p <= 20) return 14 - (p - 11);
+            else if (p >= 11 && p <= 20) base = 14 - (p - 11);
 
             // 21st to End
-            if (p >= 21) {
-                if (status == "MADE CUT") return 3
-                else return 2        
+            else if (p >= 21) {
+                if (status == "MADE CUT") base = 3;
+                else base = 2;        
             }
 
-            return 0;
+            return Math.round(base * multiplier);
         }
 
         function getProcessedTournaments() {
@@ -1068,6 +1084,7 @@
             const uIdx = findIdx(h, ['username']);
             const uidIdx = findIdx(h, ['user id', 'userid']);
             const sIdx = findIdx(h, ['status']);
+            const epIdx = findIdx(h, ['event type', 'tier']);
 
             const tournaments = {};
 
@@ -1075,6 +1092,19 @@
             masterArchiveData.slice(1).forEach(r => {
                 const tName = r[tIdx];
                 if (!tName) return;
+                
+                const tNameKey = tName.trim().toLowerCase();
+                // Pull multiplier from schedule memory bank, default to Regular (1.0)
+                let multiplier = globalTournamentTiers[tNameKey] || 1.0;
+                
+                // Fallback: Check if they added it directly to the archive sheet
+                if (epIdx !== -1 && r[epIdx]) {
+                    const val = r[epIdx].toString().toLowerCase().trim();
+                    if (val.includes('major') || val.includes('players')) multiplier = 1.5;
+                    else if (val.includes('signature')) multiplier = 1.4;
+                    else if (val.includes('regular')) multiplier = 1.0;
+                }
+
                 if (!tournaments[tName]) tournaments[tName] = [];
                 
                 tournaments[tName].push({
@@ -1086,7 +1116,8 @@
                     madeCut: r[sIdx]?.toUpperCase() === "MADE CUT",
                     status: r[sIdx]?.toUpperCase(),
                     rounds: { thu: r[5], fri: r[6], sat: r[7], sun: r[8] },
-                    pieces: { thu: parseFloat(r[10])||0, fri: (parseFloat(r[11])||0) - (parseFloat(r[10])||0), sat: (parseFloat(r[12])||0) - (parseFloat(r[11])||0), sun: (parseFloat(r[13])||0) - (parseFloat(r[12])||0) }
+                    pieces: { thu: parseFloat(r[10])||0, fri: (parseFloat(r[11])||0) - (parseFloat(r[10])||0), sat: (parseFloat(r[12])||0) - (parseFloat(r[11])||0), sun: (parseFloat(r[13])||0) - (parseFloat(r[12])||0) },
+                    multiplier: multiplier
                 });
             });
 
@@ -1135,16 +1166,25 @@
             const tournaments = getProcessedTournaments();
             const stats = {};
 
-            Object.values(tournaments).forEach(field => {
+            Object.keys(tournaments).forEach(tName => {
+                const field = tournaments[tName];
                 field.forEach(p => {
                     if (!p.username) return;
                     const uname = p.username.toLowerCase();
-                    if (!stats[uname]) stats[uname] = { points: 0, wins: 0, starts: 0, uid: p.userId, username: p.username };
+                    if (!stats[uname]) stats[uname] = { points: 0, wins: 0, starts: 0, uid: p.userId, username: p.username, history: [] };
                     
                     if (p.status !== "WD" && p.status !== "DUP") {
                         stats[uname].starts += 1;
-                        stats[uname].points += getSeasonPoints(p.displayPos, p.status);
+                        const earnedPts = getSeasonPoints(p.displayPos, p.status, p.multiplier);
+                        stats[uname].points += earnedPts;
                         if (p.displayPos === "1" && p.status === "MADE CUT") stats[uname].wins += 1;
+                        
+                        // Record the history for the expanded view
+                        stats[uname].history.push({
+                            name: tName,
+                            pos: p.displayPos,
+                            points: earnedPts
+                        });
                     }
                 });
             });
@@ -1168,10 +1208,47 @@
             tbody.innerHTML = '';
             
             globalSeasonStatsArray.forEach((p, i) => {
-                const row = document.createElement('tr');
+                const mainRow = document.createElement('tr');
+                mainRow.className = 'main-row';
+                
+                const playerContent = `<div class="player-flex"><span class="p-name">${formatHandle(p.username)}</span><span class="toggle-icon">▼</span></div>`;
+                
                 // The season rank never has "T", always strictly sequential (i + 1)
-                row.innerHTML = `<td class="col-pos">${i+1}</td><td class="col-player"><div class="player-flex"><span class="p-name">${formatHandle(p.username)}</span></div></td><td class="col-stat">${p.points}</td><td class="col-stat">${p.wins}</td><td class="col-stat">${p.starts}</td>`;
-                tbody.appendChild(row);
+                mainRow.innerHTML = `<td class="col-pos">${i+1}</td><td class="col-player">${playerContent}</td><td class="col-stat">${p.points}</td><td class="col-stat">${p.wins}</td><td class="col-stat">${p.starts}</td>`;
+                
+                const detailRow = document.createElement('tr');
+                detailRow.className = 'draft-row';
+                
+                const historyHtml = p.history.map(h => `
+                    <div style="background: rgba(255,255,255,0.03); padding: 10px 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <span style="font-size: 0.8rem; font-weight: 700; color: #fff;">${h.name}</span>
+                        <div style="text-align: right;">
+                            <span style="font-size: 0.75rem; color: var(--text-muted); margin-right: 12px; display: inline-block; width: 55px; text-align: left;">Pos: <strong style="color: #fff;">${h.pos}</strong></span>
+                            <span style="font-size: 0.85rem; color: var(--gold-light); font-weight: 900; display: inline-block; width: 60px; text-align: right;">+${h.points}</span>
+                        </div>
+                    </div>
+                `).join('');
+                
+                detailRow.innerHTML = `<td colspan="5">
+                    <div class="expanded-container">
+                        <div style="font-size: 0.7rem; color: var(--border-gold); font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 12px;">Tournament History</div>
+                        ${historyHtml || '<div style="font-size: 0.75rem; color: var(--text-muted);">No history available.</div>'}
+                    </div>
+                </td>`;
+                
+                mainRow.onclick = () => {
+                    const isOpen = mainRow.classList.contains('open');
+                    const tbodyEl = document.getElementById('rankings-tbody');
+                    tbodyEl.querySelectorAll('.main-row').forEach(r => r.classList.remove('open'));
+                    tbodyEl.querySelectorAll('.draft-row').forEach(r => r.classList.remove('open'));
+                    if (!isOpen) { 
+                        mainRow.classList.add('open'); 
+                        detailRow.classList.add('open'); 
+                    }
+                };
+                
+                tbody.appendChild(mainRow);
+                tbody.appendChild(detailRow);
             });
         }
 
@@ -1237,7 +1314,8 @@
             const champDiv = document.getElementById('archive-champ-display');
             
             // UPDATE ARCHIVE HEADER
-            document.getElementById('archive-header-title').innerHTML = `<span style="font-weight: 900; font-size: 0.8rem; letter-spacing: 0.05em;">🏆 ${name.toUpperCase()} <span style="color:var(--text-muted); font-weight:700; font-size:0.65rem; margin-left:8px;">FINAL RESULTS</span></span>`;
+            const tTypeData = globalTournamentTypes[name.toLowerCase()] || { display: 'REGULAR', cssClass: 'regular' };
+            document.getElementById('archive-header-title').innerHTML = `<span style="font-weight: 900; font-size: 0.8rem; letter-spacing: 0.05em; display:flex; align-items:center; flex-wrap:wrap; gap:8px;">🏆 ${name.toUpperCase()} <span class="tier-badge ${tTypeData.cssClass}">${tTypeData.display}</span> <span style="color:var(--text-muted); font-weight:700; font-size:0.65rem;">FINAL RESULTS</span></span>`;
 
             const validArchive = processedArchive.filter(x => x.status !== "WD" && x.status !== "DUP");
 
@@ -1493,6 +1571,7 @@
                 const h = rows[0].map(v => v.toLowerCase().trim());
                 
                 const dIdx = findIdx(h, ['date']), nIdx = findIdx(h, ['tourn', 'tournament']), cIdx = findIdx(h, ['course']);
+                const etIdx = findIdx(h, ['event type', 'tier']); // Map the event type column
                 
                 const purseCols = [];
                 h.forEach((colName, idx) => {
@@ -1527,6 +1606,27 @@
                     const end = new Date(start); end.setDate(end.getDate() + 3);
                     const rangeStr = `${start.getMonth()+1}/${start.getDate()} - ${end.getMonth()+1}/${end.getDate()}`;
                     
+                    // Determine the Tier multiplier from the schedule and store it globally
+                    let multiplier = 1.0;
+                    let eventTypeDisplay = 'REGULAR';
+                    let safeClass = 'regular';
+                    
+                    if (etIdx !== -1 && r[etIdx]) {
+                        const rawVal = r[etIdx].toString().trim();
+                        const val = rawVal.toLowerCase();
+                        
+                        if (val.includes('major') || val.includes('players')) { multiplier = 1.5; eventTypeDisplay = rawVal.toUpperCase() || 'MAJOR'; safeClass = 'major'; }
+                        else if (val.includes('signature')) { multiplier = 1.4; eventTypeDisplay = rawVal.toUpperCase() || 'SIGNATURE'; safeClass = 'signature'; }
+                        else if (val.includes('regular')) { multiplier = 1.0; eventTypeDisplay = rawVal.toUpperCase() || 'REGULAR'; safeClass = 'regular'; }
+                        else { eventTypeDisplay = rawVal.toUpperCase(); safeClass = 'regular'; }
+                    }
+                    
+                    if (r[nIdx]) {
+                        const tKey = r[nIdx].trim().toLowerCase();
+                        globalTournamentTiers[tKey] = multiplier;
+                        globalTournamentTypes[tKey] = { display: eventTypeDisplay, cssClass: safeClass };
+                    }
+                    
                     let purseObj = null;
                     if (purseCols.length > 0) {
                         let totalNum = 0;
@@ -1552,12 +1652,12 @@
                         }
                     }
                     
-                    const obj = { name: r[nIdx], course: r[cIdx] || '-', date: rangeStr, purseObj, start };
+                    const obj = { name: r[nIdx], course: r[cIdx] || '-', date: rangeStr, purseObj, start, eventTypeDisplay, safeClass };
                     if (start <= today) { curr = obj; past.unshift(obj); } else { if (!next) next = obj; upcoming.push(obj); }
                 }
                 
-                document.getElementById('upcoming-list').innerHTML = upcoming.map(t => `<div class="schedule-card"><div class="card-date">${t.date}</div><div class="card-name">${t.name}</div><div class="card-course">${t.course}</div>${t.purseObj ? `<div class="card-purse"><div class="card-purse-total">TOTAL: ${t.purseObj.total}</div><div class="card-purse-split">${t.purseObj.splitText}</div></div>` : ''}</div>`).join('');
-                document.getElementById('past-tournament-grid').innerHTML = past.map(t => `<div class="schedule-card clickable" onclick="viewArchive('${t.name.replace(/'/g, "\\'")}')"><div class="card-date">${t.date}</div><div class="card-name">${t.name}</div><div class="card-course">${t.course}</div>${t.purseObj ? `<div class="card-purse"><div class="card-purse-total">TOTAL: ${t.purseObj.total}</div><div class="card-purse-split">${t.purseObj.splitText}</div></div>` : ''}</div>`).join('');
+                document.getElementById('upcoming-list').innerHTML = upcoming.map(t => `<div class="schedule-card"><div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:0.5rem;"><div class="card-date" style="margin-bottom:0;">${t.date}</div><div class="tier-badge ${t.safeClass}">${t.eventTypeDisplay}</div></div><div class="card-name">${t.name}</div><div class="card-course">${t.course}</div>${t.purseObj ? `<div class="card-purse"><div class="card-purse-total">TOTAL: ${t.purseObj.total}</div><div class="card-purse-split">${t.purseObj.splitText}</div></div>` : ''}</div>`).join('');
+                document.getElementById('past-tournament-grid').innerHTML = past.map(t => `<div class="schedule-card clickable" onclick="viewArchive('${t.name.replace(/'/g, "\\'")}')"><div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:0.5rem;"><div class="card-date" style="margin-bottom:0;">${t.date}</div><div class="tier-badge ${t.safeClass}">${t.eventTypeDisplay}</div></div><div class="card-name">${t.name}</div><div class="card-course">${t.course}</div>${t.purseObj ? `<div class="card-purse"><div class="card-purse-total">TOTAL: ${t.purseObj.total}</div><div class="card-purse-split">${t.purseObj.splitText}</div></div>` : ''}</div>`).join('');
                 
                 const currentDay = now.getDay();
                 let d = null;
@@ -1572,6 +1672,16 @@
                     activeTournamentStartDate = d.start; 
                     document.getElementById('display-tournament-name').innerText = d.name; 
                     document.getElementById('display-banner-label').innerText = d.label; 
+                    
+                    const tierEl = document.getElementById('display-banner-tier');
+                    if (d.eventTypeDisplay) {
+                        tierEl.innerText = d.eventTypeDisplay;
+                        tierEl.className = `tier-badge ${d.safeClass}`;
+                        tierEl.style.display = 'inline-block';
+                    } else {
+                        tierEl.style.display = 'none';
+                    }
+
                     document.getElementById('display-banner-date').innerText = d.date;
                     document.getElementById('display-course-name').innerText = d.course;
                     
