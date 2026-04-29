@@ -1383,22 +1383,27 @@
             const statusEl = document.getElementById('sync-status');
             const hasher = new Hashids("realwebapp", 16);
             const MAX_RETRIES = 10; 
-            const CONCURRENCY_LIMIT = 4; // Safely balanced 4 concurrent streams
+            const CONCURRENCY_LIMIT = 5; // Parallel network waiting
             
-            let globalDelay = 150; // Dynamic speed floor
-            let globalPauseUntil = 0; // Global Throttle Lock to stop thundering herds
+            let nextRequestTime = Date.now(); 
+            let currentPacing = 250; // Strict gap between requests (max 4 per second)
             
             // Define the worker function that processes the queue
             async function syncWorker() {
                 while (q.length > 0) {
-                    // GLOBAL THROTTLE: If the API throws a rate limit, ALL workers must wait here.
-                    if (Date.now() < globalPauseUntil) {
-                        await new Promise(r => setTimeout(r, 200));
-                        continue;
-                    }
-
                     const user = q.shift();
                     if (!user) break;
+
+                    // STRICT GLOBAL PACING: Guarantee exact millisecond gaps between outgoing requests
+                    const now = Date.now();
+                    let delay = 0;
+                    if (nextRequestTime > now) {
+                        delay = nextRequestTime - now;
+                        nextRequestTime += currentPacing;
+                    } else {
+                        nextRequestTime = now + currentPacing;
+                    }
+                    if (delay > 0) await new Promise(r => setTimeout(r, delay));
 
                     try {
                         const targetUrl = `https://web.realsports.io/games/playerratingcontest/${user.golfId}/view/${user.userId}?contestType=sport&source=home`;
@@ -1408,19 +1413,19 @@
                         const response = await fetch(proxyUrl, opts);
                         
                         if (response.status === 429 || response.status === 502) {
-                            // API RATE LIMIT TRIPPED - Throw the red light instantly
-                            globalPauseUntil = Date.now() + 2500; // Force ALL workers to stop for 2.5 seconds
-                            globalDelay = Math.min(globalDelay + 100, 1000); // Permanently slow down the cruise speed
+                            // API RATE LIMIT TRIPPED - Push the global ticket line back safely
+                            nextRequestTime = Date.now() + 3000; 
+                            currentPacing = Math.min(currentPacing + 50, 1000); 
                             
                             user.retries++;
                             if (user.retries < MAX_RETRIES) {
-                                q.unshift(user); // Put user right back at the front of the line
+                                q.unshift(user); 
                             } else { 
                                 user.hasData = true; user.syncFailed = true; loaded++; 
                             }
                         } else if (response.ok) {
                             // SUCCESS - Data retrieved
-                            globalDelay = Math.max(globalDelay - 5, 50); // Marginally increase global speed
+                            currentPacing = Math.max(currentPacing - 2, 200); // Slowly optimize speed
                             const data = await response.json();
                             
                             // Dynamically extract real gameId for Pro Board using lineup data or a deep JSON search
@@ -1483,7 +1488,7 @@
                         }
                     } catch (e) {
                         // Network error
-                        globalPauseUntil = Date.now() + 1500;
+                        nextRequestTime = Date.now() + 1500;
                         user.retries++;
                         if (user.retries < MAX_RETRIES) q.unshift(user);
                         else { user.hasData = true; user.syncFailed = true; loaded++; }
@@ -1496,9 +1501,6 @@
                         renderLeaderboard();
                         renderProLeaderboard(); 
                     }
-                    
-                    // Standard pacing delay between requests for this worker
-                    await new Promise(r => setTimeout(r, globalDelay));
                 }
             }
 
