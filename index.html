@@ -1379,18 +1379,18 @@
             validUsers.forEach(u => { u.retries = 0; u.syncFailed = false; });
             
             let q = [...validUsers];
-            const chunkS = 5; // Fixed, steady batch size
             let loaded = 0; 
-            let chunksProcessed = 0;
             const statusEl = document.getElementById('sync-status');
             const hasher = new Hashids("realwebapp", 16);
             const MAX_RETRIES = 10; 
+            const CONCURRENCY_LIMIT = 5; // Launch 5 simultaneous sync connections
             
-            while (q.length > 0) {
-                const chunk = q.splice(0, chunkS);
-                let hitRateLimit = false;
+            // Define the worker function that processes the queue
+            async function syncWorker() {
+                while (q.length > 0) {
+                    const user = q.shift();
+                    let hitRateLimit = false;
 
-                const fetchPromises = chunk.map(async (user) => {
                     try {
                         const targetUrl = `https://web.realsports.io/games/playerratingcontest/${user.golfId}/view/${user.userId}?contestType=sport&source=home`;
                         const proxyUrl = `${config.workerProxy}?url=${encodeURIComponent(targetUrl)}`;
@@ -1468,27 +1468,32 @@
                         if (user.retries < MAX_RETRIES) q.push(user);
                         else { user.hasData = true; user.syncFailed = true; loaded++; }
                     }
-                });
 
-                await Promise.all(fetchPromises);
-                
-                statusEl.innerHTML = `<span class="sync-dot"></span>${loaded}/${validUsers.length}`;
-                
-                chunksProcessed++;
-                // Throttle DOM renders to prevent browser UI freezing
-                if (chunksProcessed % 3 === 0) {
-                    renderLeaderboard();
-                    renderProLeaderboard(); 
-                }
-                
-                // Steady loading: Fixed delay, with a simple backoff if rate limited or recycling
-                const isRecycling = q.length > 0 && q[0].retries > 0;
-                if (hitRateLimit || isRecycling) {
-                    await new Promise(r => setTimeout(r, 1200)); 
-                } else {
-                    await new Promise(r => setTimeout(r, 250)); 
+                    statusEl.innerHTML = `<span class="sync-dot"></span>${loaded}/${validUsers.length}`;
+                    
+                    // Throttle DOM renders to prevent browser UI freezing
+                    if (loaded % 5 === 0 || q.length === 0) {
+                        renderLeaderboard();
+                        renderProLeaderboard(); 
+                    }
+                    
+                    // Worker pacing logic
+                    if (hitRateLimit) {
+                        await new Promise(r => setTimeout(r, 1500)); // This specific worker takes a breather if it hits a limit
+                    } else {
+                        await new Promise(r => setTimeout(r, 50));  // Fast stream: tiny gap between requests
+                    }
                 }
             }
+
+            // Launch the workers concurrently
+            const workers = [];
+            for (let i = 0; i < CONCURRENCY_LIMIT; i++) {
+                workers.push(syncWorker());
+            }
+            
+            // Wait until all workers finish processing the queue
+            await Promise.all(workers);
             
             // Final render to guarantee all data is displayed once the queue finishes
             renderLeaderboard();
