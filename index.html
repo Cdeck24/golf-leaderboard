@@ -1383,13 +1383,22 @@
             const statusEl = document.getElementById('sync-status');
             const hasher = new Hashids("realwebapp", 16);
             const MAX_RETRIES = 10; 
-            const CONCURRENCY_LIMIT = 5; // Launch 5 simultaneous sync connections
+            const CONCURRENCY_LIMIT = 4; // Safely balanced 4 concurrent streams
+            
+            let globalDelay = 150; // Dynamic speed floor
+            let globalPauseUntil = 0; // Global Throttle Lock to stop thundering herds
             
             // Define the worker function that processes the queue
             async function syncWorker() {
                 while (q.length > 0) {
+                    // GLOBAL THROTTLE: If the API throws a rate limit, ALL workers must wait here.
+                    if (Date.now() < globalPauseUntil) {
+                        await new Promise(r => setTimeout(r, 200));
+                        continue;
+                    }
+
                     const user = q.shift();
-                    let hitRateLimit = false;
+                    if (!user) break;
 
                     try {
                         const targetUrl = `https://web.realsports.io/games/playerratingcontest/${user.golfId}/view/${user.userId}?contestType=sport&source=home`;
@@ -1398,7 +1407,20 @@
                         const opts = { headers: { 'real-auth-info': config.REAL_AUTH_TOKEN, 'real-device-name': 'Chrome', 'real-device-type': 'desktop_web', 'real-device-uuid': DEVICE_UUID, 'real-request-token': hasher.encode(Date.now()), 'real-version': config.REAL_VERSION } };
                         const response = await fetch(proxyUrl, opts);
                         
-                        if (response.ok) {
+                        if (response.status === 429 || response.status === 502) {
+                            // API RATE LIMIT TRIPPED - Throw the red light instantly
+                            globalPauseUntil = Date.now() + 2500; // Force ALL workers to stop for 2.5 seconds
+                            globalDelay = Math.min(globalDelay + 100, 1000); // Permanently slow down the cruise speed
+                            
+                            user.retries++;
+                            if (user.retries < MAX_RETRIES) {
+                                q.unshift(user); // Put user right back at the front of the line
+                            } else { 
+                                user.hasData = true; user.syncFailed = true; loaded++; 
+                            }
+                        } else if (response.ok) {
+                            // SUCCESS - Data retrieved
+                            globalDelay = Math.max(globalDelay - 5, 50); // Marginally increase global speed
                             const data = await response.json();
                             
                             // Dynamically extract real gameId for Pro Board using lineup data or a deep JSON search
@@ -1454,35 +1476,29 @@
                         } else if (response.status === 404) {
                             user.hasData = true; user.syncFailed = true; loaded++;
                         } else {
-                            hitRateLimit = true;
+                            // Standard failure (500 etc)
                             user.retries++;
-                            if (user.retries < MAX_RETRIES) {
-                                q.push(user);
-                            } else { 
-                                user.hasData = true; user.syncFailed = true; loaded++; 
-                            }
+                            if (user.retries < MAX_RETRIES) q.push(user);
+                            else { user.hasData = true; user.syncFailed = true; loaded++; }
                         }
                     } catch (e) {
-                        hitRateLimit = true;
+                        // Network error
+                        globalPauseUntil = Date.now() + 1500;
                         user.retries++;
-                        if (user.retries < MAX_RETRIES) q.push(user);
+                        if (user.retries < MAX_RETRIES) q.unshift(user);
                         else { user.hasData = true; user.syncFailed = true; loaded++; }
                     }
 
                     statusEl.innerHTML = `<span class="sync-dot"></span>${loaded}/${validUsers.length}`;
                     
                     // Throttle DOM renders to prevent browser UI freezing
-                    if (loaded % 5 === 0 || q.length === 0) {
+                    if (loaded % 6 === 0 || q.length === 0) {
                         renderLeaderboard();
                         renderProLeaderboard(); 
                     }
                     
-                    // Worker pacing logic
-                    if (hitRateLimit) {
-                        await new Promise(r => setTimeout(r, 1500)); // This specific worker takes a breather if it hits a limit
-                    } else {
-                        await new Promise(r => setTimeout(r, 50));  // Fast stream: tiny gap between requests
-                    }
+                    // Standard pacing delay between requests for this worker
+                    await new Promise(r => setTimeout(r, globalDelay));
                 }
             }
 
