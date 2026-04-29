@@ -717,16 +717,6 @@
             return (d.getMonth() + 1) + '/' + d.getDate() + '/' + d.getFullYear();
         }
 
-        function base64ToText(b) {
-            try {
-                if (!b) return '';
-                const decoded = window.atob(b.replace(/-/g, '+').replace(/_/g, '/'));
-                const bytes = new Uint8Array(decoded.length);
-                for (let i = 0; i < decoded.length; i++) bytes[i] = decoded.charCodeAt(i);
-                return new TextDecoder().decode(bytes);
-            } catch(e) { return ''; }
-        }
-
         // --- SEARCH BAR LOGIC ---
         function filterLeaderboard() {
             const input = document.getElementById('player-search');
@@ -772,26 +762,14 @@
             
             try {
                 const hasher = new Hashids("realwebapp", 16);
-                const query = new URLSearchParams();
-                query.append('url', `https://web.realsports.io/games/${currentGameId}/sport/golf/stats`);
+                const targetUrl = `https://web.realsports.io/games/${currentGameId}/sport/golf/stats`;
+                const proxyUrl = `${config.workerProxy}?url=${encodeURIComponent(targetUrl)}`;
                 const opts = { headers: { 'real-auth-info': config.REAL_AUTH_TOKEN, 'real-device-name': 'Chrome', 'real-device-type': 'desktop_web', 'real-device-uuid': DEVICE_UUID, 'real-request-token': hasher.encode(Date.now()), 'real-version': config.REAL_VERSION } };
                 
-                const response = await fetch(`${config.workerProxy}?${query.toString()}`, opts);
+                const response = await fetch(proxyUrl, opts);
                 if (!response.ok) throw new Error(`Proxy error: ${response.status}`);
                 
-                const res = await response.json();
-                const r = Array.isArray(res) ? res[0] : res;
-
-                let data;
-                if (r && r.status === 200 && r.body) {
-                    data = JSON.parse(base64ToText(r.body));
-                } else if (r && (r.leaderboard || r.playerBoxScores)) {
-                    data = r;
-                } else {
-                    throw new Error(`Invalid Response Format`);
-                }
-
-                rawProLeaderboardData = data;
+                rawProLeaderboardData = await response.json();
                 renderProLeaderboard();
             } catch (error) {
                 if (tbody.innerHTML.includes('Loading')) {
@@ -1400,7 +1378,6 @@
             const validUsers = [...users].filter(u => u.golfId && u.userId);
             validUsers.forEach(u => { u.retries = 0; u.syncFailed = false; });
             
-            // Console log removed for cleaner running
             let q = [...validUsers];
             const chunkS = 5; // Fixed, steady batch size
             let loaded = 0; 
@@ -1413,120 +1390,87 @@
                 const chunk = q.splice(0, chunkS);
                 let hitRateLimit = false;
 
-                try {
-                    const query = new URLSearchParams(); 
-                    chunk.forEach(item => query.append('url', `https://web.realsports.io/games/playerratingcontest/${item.golfId}/view/${item.userId}?contestType=sport&source=home`));
-                    
-                    const opts = { headers: { 'real-auth-info': config.REAL_AUTH_TOKEN, 'real-device-name': 'Chrome', 'real-device-type': 'desktop_web', 'real-device-uuid': DEVICE_UUID, 'real-request-token': hasher.encode(Date.now()), 'real-version': config.REAL_VERSION } };
-                    const response = await fetch(`${config.workerProxy}?${query.toString()}`, opts);
-                    
-                    if (!response.ok) {
-                        hitRateLimit = true;
-                        chunk.forEach(u => {
-                            u.retries++;
-                            if (u.retries < MAX_RETRIES) q.push(u);
-                            else { u.hasData = true; u.syncFailed = true; loaded++; }
-                        });
-                    } else {
-                        let res = await response.json();
+                const fetchPromises = chunk.map(async (user) => {
+                    try {
+                        const targetUrl = `https://web.realsports.io/games/playerratingcontest/${user.golfId}/view/${user.userId}?contestType=sport&source=home`;
+                        const proxyUrl = `${config.workerProxy}?url=${encodeURIComponent(targetUrl)}`;
                         
-                        // Normalize: If the proxy returns a single object instead of an array for a 1-item chunk, wrap it
-                        if (!Array.isArray(res) && chunk.length === 1) {
-                            res = [res];
-                        }
-
-                        if (Array.isArray(res) && res.length === chunk.length) {
-                            res.forEach((r, idx) => {
-                                const user = chunk[idx];
-                                if (r.status === 200) {
-                                    try {
-                                        const data = JSON.parse(base64ToText(r.body));
-                                        
-                                        // Dynamically extract real gameId for Pro Board using lineup data or a deep JSON search
-                                        if (!currentGameId) { 
-                                            let foundId = null;
-                                            
-                                            if (data.lineup && data.lineup.length > 0) {
-                                                foundId = data.lineup[0].matchId || data.lineup[0].gameId || data.lineup[0].eventId;
-                                            }
-                                            
-                                            if (!foundId) {
-                                                JSON.stringify(data, (key, value) => {
-                                                    if (!foundId && ['gameId', 'matchId', 'eventId', 'tournamentId'].includes(key)) {
-                                                        if (/^\d{7,10}$/.test(String(value))) {
-                                                            foundId = String(value);
-                                                        }
-                                                    }
-                                                    return value;
-                                                });
-                                            }
-
-                                            if (foundId && /^\d+$/.test(String(foundId))) {
-                                                currentGameId = String(foundId);
-                                                fetchProLeaderboard();
+                        const opts = { headers: { 'real-auth-info': config.REAL_AUTH_TOKEN, 'real-device-name': 'Chrome', 'real-device-type': 'desktop_web', 'real-device-uuid': DEVICE_UUID, 'real-request-token': hasher.encode(Date.now()), 'real-version': config.REAL_VERSION } };
+                        const response = await fetch(proxyUrl, opts);
+                        
+                        if (response.ok) {
+                            const data = await response.json();
+                            
+                            // Dynamically extract real gameId for Pro Board using lineup data or a deep JSON search
+                            if (!currentGameId) { 
+                                let foundId = null;
+                                
+                                if (data.lineup && data.lineup.length > 0) {
+                                    foundId = data.lineup[0].matchId || data.lineup[0].gameId || data.lineup[0].eventId;
+                                }
+                                
+                                if (!foundId) {
+                                    JSON.stringify(data, (key, value) => {
+                                        if (!foundId && ['gameId', 'matchId', 'eventId', 'tournamentId'].includes(key)) {
+                                            if (/^\d{7,10}$/.test(String(value))) {
+                                                foundId = String(value);
                                             }
                                         }
+                                        return value;
+                                    });
+                                }
 
-                                        const apiUsername = data.owner?.username || data.user?.username || data.author?.username || data.owner?.displayName || data.user?.displayName;
-                                        if (apiUsername) user.username = apiUsername;
+                                if (foundId && /^\d+$/.test(String(foundId))) {
+                                    currentGameId = String(foundId);
+                                    fetchProLeaderboard();
+                                }
+                            }
 
-                                        user.actualTotalPoints = parseFloat((data.info?.rankDisplayInfos?.[0]?.scoreDisplay || '0').replace(/[^0-9.]/g, '')) || 0;
-                                        user.lineup = data.lineup || [];
-                                        
-                                        user.lineup.forEach(g => {
-                                            const pObj = g.player || {};
-                                            const pid = String(g.playerId || pObj.id || g.id);
-                                            if (pid && pid !== 'undefined') {
-                                                globalPlayers[pid] = {
-                                                    displayName: pObj.displayName || g.displayName || globalPlayers[pid]?.displayName,
-                                                    lastName: pObj.lastName || g.lastName || globalPlayers[pid]?.lastName,
-                                                    firstName: pObj.firstName || g.firstName || globalPlayers[pid]?.firstName,
-                                                    avatar: pObj.avatar || g.avatar || globalPlayers[pid]?.avatar,
-                                                    id: pid,
-                                                    value: (g.score !== undefined && g.score !== null) ? g.score : globalPlayers[pid]?.value,
-                                                    pickCount: (globalPlayers[pid]?.pickCount || 0) + 1
-                                                };
-                                            }
-                                        });
+                            const apiUsername = data.owner?.username || data.user?.username || data.author?.username || data.owner?.displayName || data.user?.displayName;
+                            if (apiUsername) user.username = apiUsername;
 
-                                        user.actualTodayPoints = user.lineup.reduce((acc, g) => acc + (parseFloat(g.score) || 0), 0);
-                                        user.hasData = true;
-                                        loaded++;
-                                    } catch(e) {
-                                        hitRateLimit = true;
-                                        user.retries++;
-                                        if (user.retries < MAX_RETRIES) q.push(user);
-                                        else { user.hasData = true; user.syncFailed = true; loaded++; }
-                                    }
-                                } else if (r.status === 404) {
-                                    user.hasData = true; user.syncFailed = true; loaded++;
-                                } else {
-                                    hitRateLimit = true;
-                                    user.retries++;
-                                    if (user.retries < MAX_RETRIES) {
-                                        q.push(user);
-                                    } else { 
-                                        user.hasData = true; user.syncFailed = true; loaded++; 
-                                    }
+                            user.actualTotalPoints = parseFloat((data.info?.rankDisplayInfos?.[0]?.scoreDisplay || '0').replace(/[^0-9.]/g, '')) || 0;
+                            user.lineup = data.lineup || [];
+                            
+                            user.lineup.forEach(g => {
+                                const pObj = g.player || {};
+                                const pid = String(g.playerId || pObj.id || g.id);
+                                if (pid && pid !== 'undefined') {
+                                    globalPlayers[pid] = {
+                                        displayName: pObj.displayName || g.displayName || globalPlayers[pid]?.displayName,
+                                        lastName: pObj.lastName || g.lastName || globalPlayers[pid]?.lastName,
+                                        firstName: pObj.firstName || g.firstName || globalPlayers[pid]?.firstName,
+                                        avatar: pObj.avatar || g.avatar || globalPlayers[pid]?.avatar,
+                                        id: pid,
+                                        value: (g.score !== undefined && g.score !== null) ? g.score : globalPlayers[pid]?.value,
+                                        pickCount: (globalPlayers[pid]?.pickCount || 0) + 1
+                                    };
                                 }
                             });
+
+                            user.actualTodayPoints = user.lineup.reduce((acc, g) => acc + (parseFloat(g.score) || 0), 0);
+                            user.hasData = true;
+                            loaded++;
+                        } else if (response.status === 404) {
+                            user.hasData = true; user.syncFailed = true; loaded++;
                         } else {
                             hitRateLimit = true;
-                            chunk.forEach(u => {
-                                u.retries++;
-                                if (u.retries < MAX_RETRIES) q.push(u);
-                                else { u.hasData = true; u.syncFailed = true; loaded++; }
-                            });
+                            user.retries++;
+                            if (user.retries < MAX_RETRIES) {
+                                q.push(user);
+                            } else { 
+                                user.hasData = true; user.syncFailed = true; loaded++; 
+                            }
                         }
+                    } catch (e) {
+                        hitRateLimit = true;
+                        user.retries++;
+                        if (user.retries < MAX_RETRIES) q.push(user);
+                        else { user.hasData = true; user.syncFailed = true; loaded++; }
                     }
-                } catch (e) {
-                    hitRateLimit = true;
-                    chunk.forEach(u => {
-                        u.retries++;
-                        if (u.retries < MAX_RETRIES) q.push(u);
-                        else { u.hasData = true; u.syncFailed = true; loaded++; }
-                    });
-                }
+                });
+
+                await Promise.all(fetchPromises);
                 
                 statusEl.innerHTML = `<span class="sync-dot"></span>${loaded}/${validUsers.length}`;
                 
