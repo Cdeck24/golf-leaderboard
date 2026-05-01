@@ -717,6 +717,16 @@
             return (d.getMonth() + 1) + '/' + d.getDate() + '/' + d.getFullYear();
         }
 
+        function base64ToText(b) {
+            try {
+                if (!b) return '';
+                const decoded = window.atob(b.replace(/-/g, '+').replace(/_/g, '/'));
+                const bytes = new Uint8Array(decoded.length);
+                for (let i = 0; i < decoded.length; i++) bytes[i] = decoded.charCodeAt(i);
+                return new TextDecoder().decode(bytes);
+            } catch(e) { return ''; }
+        }
+
         // --- SEARCH BAR LOGIC ---
         function filterLeaderboard() {
             const input = document.getElementById('player-search');
@@ -853,7 +863,11 @@
             if (!tbody) return;
             tbody.innerHTML = '';
             
-            const now = new Date();
+            // Adjust "now" to Eastern Time and subtract 3 hours so days rollover at 3 AM ET
+            const etString = new Date().toLocaleString("en-US", {timeZone: "America/New_York"});
+            const now = new Date(etString);
+            now.setHours(now.getHours() - 3);
+            
             const todayStr = (now.getMonth() + 1) + '/' + now.getDate() + '/' + now.getFullYear();
             const tDates = [];
             if (activeTournamentStartDate) {
@@ -1529,7 +1543,13 @@
             try {
                 const res = await fetch(config.scheduleUrl);
                 const rows = parseCSV(await res.text());
-                const now = new Date(); const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                
+                // Adjust "now" to Eastern Time and subtract 3 hours so days rollover at 3 AM ET
+                const etString = new Date().toLocaleString("en-US", {timeZone: "America/New_York"});
+                const now = new Date(etString);
+                now.setHours(now.getHours() - 3);
+                const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                
                 const h = rows[0].map(v => v.toLowerCase().trim());
                 
                 const dIdx = findIdx(h, ['date']), nIdx = findIdx(h, ['tourn', 'tournament']), cIdx = findIdx(h, ['course']);
