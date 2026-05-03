@@ -583,6 +583,7 @@
             <button onclick="exportDay('saturday')">Export Sat</button>
             <button onclick="exportDay('sunday')">Export Sun</button>
             <button onclick="exportWDsToCSV()" style="color:var(--danger);">Export Withdrawals</button>
+            <button onclick="exportNameUpdatesToCSV()" style="color:var(--golf-green-bright);">Export Name Updates</button>
             <button onclick="exportScoresToCSV()" style="color:var(--gold-light);">Export Full Records</button>
         </div>
     </div>
@@ -1162,23 +1163,34 @@
                 const field = tournaments[tName];
                 field.forEach(p => {
                     if (!p.username) return;
-                    const uname = p.username.toLowerCase();
-                    if (!stats[uname]) stats[uname] = { points: 0, wins: 0, starts: 0, uid: p.userId, username: p.username, history: [] };
+                    
+                    // Group strictly by User ID if possible to merge points when players change their usernames
+                    const key = p.userId ? p.userId.toLowerCase().trim() : p.username.toLowerCase().trim();
+                    
+                    if (!stats[key]) stats[key] = { points: 0, wins: 0, starts: 0, uid: p.userId, username: p.username, history: [] };
                     
                     if (p.status !== "WD" && p.status !== "DUP") {
-                        stats[uname].starts += 1;
+                        stats[key].starts += 1;
                         const earnedPts = getSeasonPoints(p.displayPos, p.status, p.multiplier);
-                        stats[uname].points += earnedPts;
-                        if (p.displayPos === "1" && p.status === "MADE CUT") stats[uname].wins += 1;
+                        stats[key].points += earnedPts;
+                        if (p.displayPos === "1" && p.status === "MADE CUT") stats[key].wins += 1;
                         
                         // Record the history for the expanded view
-                        stats[uname].history.push({
+                        stats[key].history.push({
                             name: tName,
                             pos: p.displayPos,
                             points: earnedPts
                         });
                     }
                 });
+            });
+
+            // Cross-reference with LIVE users to guarantee the most up-to-date username is displayed
+            Object.values(stats).forEach(s => {
+                if (s.uid) {
+                    const liveUser = users.find(u => u.userId && u.userId.toLowerCase() === s.uid.toLowerCase());
+                    if (liveUser && liveUser.username) s.username = liveUser.username;
+                }
             });
 
             // Sort without any ties using secondary metrics to ensure a strict 1, 2, 3 sequence
@@ -1188,8 +1200,9 @@
                 return b.starts - a.starts;
             });
 
+            globalSeasonRanks = {}; // Clear memory bank before rebuilding
             globalSeasonStatsArray.forEach((p, i) => {
-                globalSeasonRanks[p.username.toLowerCase()] = i + 1;
+                if (p.username) globalSeasonRanks[p.username.toLowerCase()] = i + 1;
                 if (p.uid) globalSeasonRanks[p.uid.toLowerCase()] = i + 1;
             });
         }
@@ -1297,6 +1310,22 @@
             document.getElementById('export-menu').style.display = 'none';
         }
 
+        function exportNameUpdatesToCSV() {
+            const rows = [["new username", "user id"]];
+            users.forEach(u => {
+                if (u.hasData && u.originalUsername && u.username !== u.originalUsername) {
+                    rows.push([u.username, u.userId]);
+                }
+            });
+            
+            if (rows.length === 1) {
+                rows.push(["No names were updated", ""]);
+            }
+            
+            generateCSV(rows, `golf_plug_name_updates.csv`);
+            document.getElementById('export-menu').style.display = 'none';
+        }
+
         function viewArchive(name) {
             const tournaments = getProcessedTournaments();
             const processedArchive = tournaments[name];
@@ -1311,11 +1340,16 @@
 
             const validArchive = processedArchive.filter(x => x.status !== "WD" && x.status !== "DUP");
 
-            // Guarantee the champion spotlight honors the raw score tie breaker
+            // Guarantee the champion spotlight honors the raw score tie breaker and uses LIVE username
             if (validArchive.length > 0) {
                 const winner = validArchive[0];
+                let winnerName = winner.username;
+                if (winner.userId) {
+                    const liveUser = users.find(u => u.userId.toLowerCase() === winner.userId.toLowerCase());
+                    if (liveUser && liveUser.username) winnerName = liveUser.username;
+                }
                 const displayScore = winner.totalGolf === 0 ? 'E' : (winner.totalGolf > 0 ? '+' + winner.totalGolf : winner.totalGolf);
-                champDiv.innerHTML = `<div class="champion-spotlight"><div class="champ-label">Tournament Champion</div><div class="champ-name">🏆 ${formatHandle(winner.username)}</div><div class="champ-score">Final Score: ${displayScore} (${winner.totalRaw.toFixed(2)} PTS)</div></div>`;
+                champDiv.innerHTML = `<div class="champion-spotlight"><div class="champ-label">Tournament Champion</div><div class="champ-name">🏆 ${formatHandle(winnerName)}</div><div class="champ-score">Final Score: ${displayScore} (${winner.totalRaw.toFixed(2)} PTS)</div></div>`;
             } else { champDiv.innerHTML = ''; }
 
             let cutInserted = false;
@@ -1330,10 +1364,17 @@
                 const mainRow = document.createElement('tr'); mainRow.className = 'main-row';
                 const tag = (item.status === "DUP") ? '(DUP)' : (item.status === "WD") ? '(WD)' : (!item.madeCut ? '(MC)' : '');
                 
-                const userRank = globalSeasonRanks[item.username.toLowerCase()] || (item.userId ? globalSeasonRanks[item.userId.toLowerCase()] : null);
+                // Fetch current alias for archive view
+                let displayUsername = item.username;
+                if (item.userId) {
+                    const liveUser = users.find(u => u.userId.toLowerCase() === item.userId.toLowerCase());
+                    if (liveUser && liveUser.username) displayUsername = liveUser.username;
+                }
+                
+                const userRank = globalSeasonRanks[displayUsername.toLowerCase()] || (item.userId ? globalSeasonRanks[item.userId.toLowerCase()] : null);
                 const rankBadge = userRank ? `<span class="season-rank-badge" title="Season Rank">#${userRank}</span>` : '';
                 
-                const playerContent = `<div class="player-flex">${rankBadge}<span class="p-name">${formatHandle(item.username)}</span>${tag ? `<span class="p-tag">${tag}</span>` : ''}<span class="toggle-icon">▼</span></div>`;
+                const playerContent = `<div class="player-flex">${rankBadge}<span class="p-name">${formatHandle(displayUsername)}</span>${tag ? `<span class="p-tag">${tag}</span>` : ''}<span class="toggle-icon">▼</span></div>`;
                 
                 // Fetch dynamically calculated display position
                 const displayPosition = isInv ? item.status : item.displayPos;
@@ -1399,19 +1440,33 @@
             const MAX_RETRIES = 10; 
             const CONCURRENCY_LIMIT = 8; // Aggressive parallel burst processing
             
+            let nextRequestTime = Date.now(); 
+            let currentPacing = 200; // Ticket system spacing
             let globalPauseUntil = 0; // Global red light for handling 429s efficiently
             
             // Define the worker function that processes the queue
             async function syncWorker() {
                 while (q.length > 0) {
-                    // GLOBAL THROTTLE: If the API throws a rate limit, ALL workers take a 1.2s breather here.
+                    const user = q.shift();
+                    if (!user) break;
+
+                    // Apply Global Red Light if previously 429'd
                     if (Date.now() < globalPauseUntil) {
                         await new Promise(r => setTimeout(r, 100));
+                        q.unshift(user);
                         continue;
                     }
 
-                    const user = q.shift();
-                    if (!user) break;
+                    // Apply strict pacing tickets
+                    const now = Date.now();
+                    let delay = 0;
+                    if (nextRequestTime > now) {
+                        delay = nextRequestTime - now;
+                        nextRequestTime += currentPacing;
+                    } else {
+                        nextRequestTime = now + currentPacing;
+                    }
+                    if (delay > 0) await new Promise(r => setTimeout(r, delay));
 
                     try {
                         const targetUrl = `https://web.realsports.io/games/playerratingcontest/${user.golfId}/view/${user.userId}?contestType=sport&source=home`;
@@ -1423,6 +1478,8 @@
                         if (response.status === 429 || response.status === 502) {
                             // API RATE LIMIT TRIPPED - Throw the red light instantly for 1.2s
                             globalPauseUntil = Date.now() + 1200; 
+                            nextRequestTime = Date.now() + 1200;
+                            currentPacing = Math.min(currentPacing + 50, 1000); // Slow down base speed
                             
                             user.retries++;
                             if (user.retries < MAX_RETRIES) {
@@ -1432,6 +1489,7 @@
                             }
                         } else if (response.ok) {
                             // SUCCESS - Data retrieved
+                            currentPacing = Math.max(currentPacing - 2, 125); // Accelerate safely
                             const data = await response.json();
                             
                             // Dynamically extract real gameId for Pro Board using lineup data or a deep JSON search
@@ -1459,8 +1517,63 @@
                                 }
                             }
 
-                            const apiUsername = data.owner?.username || data.user?.username || data.author?.username || data.owner?.displayName || data.user?.displayName;
-                            if (apiUsername) user.username = apiUsername;
+                            // --- EXTREME USERNAME EXTRACTION ---
+                            let foundUsername = null;
+                            const targetUid = String(user.userId).toLowerCase();
+                            
+                            // 1. Recursively search entire JSON payload for the user's ID
+                            function deepSearchName(obj) {
+                                if (foundUsername || !obj || typeof obj !== 'object') return;
+                                
+                                if (obj.id !== undefined && String(obj.id).toLowerCase() === targetUid) {
+                                    if (obj.username) foundUsername = obj.username;
+                                    else if (obj.userName) foundUsername = obj.userName;
+                                }
+                                if (!foundUsername && obj.username && (String(obj.userId).toLowerCase() === targetUid || String(obj.ownerId).toLowerCase() === targetUid)) {
+                                    foundUsername = obj.username;
+                                }
+                                
+                                if (!foundUsername) {
+                                    Object.values(obj).forEach(val => {
+                                        if (val && typeof val === 'object') deepSearchName(val);
+                                    });
+                                }
+                            }
+                            deepSearchName(data);
+
+                            // 2. Fallback: If API omitted name from lineup, fetch profile directly!
+                            if (!foundUsername) {
+                                // Must seamlessly pace this request too so we don't cause a 429 spike
+                                const now2 = Date.now();
+                                let delay2 = 0;
+                                if (nextRequestTime > now2) {
+                                    delay2 = nextRequestTime - now2;
+                                    nextRequestTime += currentPacing;
+                                } else {
+                                    nextRequestTime = now2 + currentPacing;
+                                }
+                                if (delay2 > 0) await new Promise(r => setTimeout(r, delay2));
+
+                                try {
+                                    const profUrl = `https://web.realsports.io/users/${user.userId}`;
+                                    const profProxy = `${config.workerProxy}?url=${encodeURIComponent(profUrl)}`;
+                                    const profRes = await fetch(profProxy, opts);
+                                    
+                                    if (profRes.status === 429 || profRes.status === 502) {
+                                        globalPauseUntil = Date.now() + 1200;
+                                        nextRequestTime = Date.now() + 1200;
+                                    } else if (profRes.ok) {
+                                        const profData = await profRes.json();
+                                        if (profData.username) foundUsername = profData.username;
+                                    }
+                                } catch(e) {}
+                            }
+
+                            // 3. Mutate the Live users array directly!
+                            if (foundUsername && foundUsername.trim() !== '') {
+                                user.username = foundUsername.trim();
+                            }
+                            // -----------------------------------
 
                             user.actualTotalPoints = parseFloat((data.info?.rankDisplayInfos?.[0]?.scoreDisplay || '0').replace(/[^0-9.]/g, '')) || 0;
                             user.lineup = data.lineup || [];
@@ -1495,6 +1608,7 @@
                     } catch (e) {
                         // Network error
                         globalPauseUntil = Date.now() + 1000;
+                        nextRequestTime = Date.now() + 1000;
                         user.retries++;
                         if (user.retries < MAX_RETRIES) q.unshift(user);
                         else { user.hasData = true; user.syncFailed = true; loaded++; }
@@ -1507,9 +1621,6 @@
                         renderLeaderboard();
                         renderProLeaderboard(); 
                     }
-                    
-                    // Tiny baseline delay so we don't completely lock the browser thread
-                    await new Promise(r => setTimeout(r, 25));
                 }
             }
 
@@ -1522,9 +1633,13 @@
             // Wait until all workers finish processing the queue
             await Promise.all(workers);
             
+            // Re-calculate rankings to instantly apply any dynamically fetched username changes
+            calculateGlobalRanks();
+            
             // Final render to guarantee all data is displayed once the queue finishes
             renderLeaderboard();
             renderProLeaderboard();
+            if (document.getElementById('view-rankings').classList.contains('active')) renderRankings();
             
             statusEl.innerHTML = '<span class="sync-dot"></span>LIVE';
             
@@ -1689,7 +1804,7 @@
                 const rows = parseCSV(await (await fetch(config.usersDataUrl)).text());
                 const h = rows[0].map(v => v.toLowerCase().trim());
                 const uIdx = findIdx(h, ['username']), uidIdx = findIdx(h, ['user id', 'userid']), gidIdx = findIdx(h, ['golf id', 'golfid']);
-                return rows.slice(1).map(r => ({ userId: r[uidIdx].trim(), username: r[uIdx].trim(), golfId: gidIdx !== -1 ? r[gidIdx].trim() : '', actualTotalPoints: 0, hasData: false, lineup: [] })).filter(u => u.username && u.userId);
+                return rows.slice(1).map(r => ({ userId: r[uidIdx].trim(), username: r[uIdx].trim(), originalUsername: r[uIdx].trim(), golfId: gidIdx !== -1 ? r[gidIdx].trim() : '', actualTotalPoints: 0, hasData: false, lineup: [] })).filter(u => u.username && u.userId);
             } catch (e) { return []; }
         }
 
