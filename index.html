@@ -1287,12 +1287,73 @@
             document.getElementById('export-menu').style.display = 'none';
         }
 
+        // --- NEW TAILORED DAY EXPORT FUNCTION ---
         function exportDay(dayName) {
+            const dayMap = { thursday: 0, friday: 1, saturday: 2, sunday: 3 };
+            const targetDayIdx = dayMap[dayName];
+            if (targetDayIdx === undefined) return;
+            
             const d = new Date(activeTournamentStartDate);
-            d.setDate(d.getDate() + ({thursday:0, friday:1, saturday:2, sunday:3}[dayName]||0));
+            d.setDate(d.getDate() + targetDayIdx);
             const dateStr = (d.getMonth()+1)+'/'+d.getDate()+'/'+d.getFullYear();
+
+            // 1. Determine prior day date string to subtract historical data
+            let priorDayStr = null;
+            if (targetDayIdx > 0) {
+                const pd = new Date(activeTournamentStartDate);
+                pd.setDate(pd.getDate() + targetDayIdx - 1);
+                priorDayStr = (pd.getMonth()+1)+'/'+pd.getDate()+'/'+pd.getFullYear();
+            }
+
+            const tempPool = [];
+            const tempUsers = users.map(u => {
+                const normId = u.userId.toLowerCase().trim();
+                const hist = historicalDailyDataByDate[normId] || {};
+                
+                // Cumulative raw points up to the PREVIOUS day
+                const priorCumulative = (priorDayStr && hist[priorDayStr]) ? hist[priorDayStr].raw : 0;
+                
+                // The CURRENT live total points from the API. 
+                // If a day was missed, this is still accurate for that missing day!
+                const liveCumulative = u.hasData ? u.actualTotalPoints : 0; 
+                
+                // The points scored ONLY on the requested day
+                let dailyPiece = liveCumulative - priorCumulative;
+                if (Math.abs(dailyPiece) < 0.01) dailyPiece = 0;
+
+                const sig = getLineupSignature(u.lineup);
+                
+                return { u, liveCumulative, dailyPiece, sig };
+            });
+
+            const refSigs = tempUsers.filter(x => REFERENCE_IDS.includes(x.u.userId.toLowerCase().trim()) && x.sig).map(x => x.sig);
+            
+            tempUsers.forEach(x => {
+                // If we are back-exporting a missing day on a Friday where lineups are empty, sig will be "".
+                // If sig is "", they will safely NOT be marked as duplicate.
+                x.isDup = !REFERENCE_IDS.includes(x.u.userId.toLowerCase().trim()) && x.sig !== "" && refSigs.includes(x.sig);
+                
+                // Notice we completely ignore the current 'isWD' status!
+                // We strictly build the median pool from anyone who actually scored points on the requested day.
+                if (!x.isDup && Math.abs(x.dailyPiece) > 0.01) {
+                    tempPool.push(x.dailyPiece);
+                }
+            });
+
             const rows = [["username", "user id", "raw points", "golf score", "date"]];
-            currentProcessedUsers.forEach(u => rows.push([u.username, u.userId, u.actualTotalPoints.toFixed(2), u.rounds[dayName.substring(0,3)], dateStr]));
+            
+            tempUsers.forEach(x => {
+                if (x.u.hasData) {
+                    let golfScore = 0;
+                    if (!x.isDup && Math.abs(x.dailyPiece) > 0.01) {
+                        golfScore = calculateGolfScore(x.dailyPiece, tempPool);
+                    }
+                    
+                    // We successfully export the live API total as "raw points" and the dynamically calculated day's Golf Score
+                    rows.push([x.u.username, x.u.userId, x.liveCumulative.toFixed(2), golfScore, dateStr]);
+                }
+            });
+            
             generateCSV(rows, `golf_plug_${dayName}_${dateStr.replace(/\//g, '-')}.csv`);
             document.getElementById('export-menu').style.display = 'none';
         }
