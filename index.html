@@ -632,6 +632,21 @@
         let globalTournamentTiers = {}; // Memory bank for tournament tier multipliers
         let globalTournamentTypes = {}; // Memory bank for tournament tier displays
 
+        // --- TIME TRAVEL ENGINE ---
+        function getNow() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const override = urlParams.get('date');
+            if (override) {
+                const d = new Date(override);
+                d.setHours(20); // Set to late evening so Sunday is fully complete
+                return d;
+            }
+            const etString = new Date().toLocaleString("en-US", {timeZone: "America/New_York"});
+            const now = new Date(etString);
+            now.setHours(now.getHours() - 3);
+            return now;
+        }
+
         function switchView(v) {
             document.querySelectorAll('.content-view').forEach(el => el.classList.remove('active'));
             document.getElementById(`view-${v}`).classList.add('active');
@@ -864,10 +879,8 @@
             if (!tbody) return;
             tbody.innerHTML = '';
             
-            // Adjust "now" to Eastern Time and subtract 3 hours so days rollover at 3 AM ET
-            const etString = new Date().toLocaleString("en-US", {timeZone: "America/New_York"});
-            const now = new Date(etString);
-            now.setHours(now.getHours() - 3);
+            // Fetch current time, applying Eastern Time rollover or URL Time Travel
+            const now = getNow();
             
             const todayStr = (now.getMonth() + 1) + '/' + now.getDate() + '/' + now.getFullYear();
             const tDates = [];
@@ -1720,10 +1733,8 @@
                 const res = await fetch(config.scheduleUrl);
                 const rows = parseCSV(await res.text());
                 
-                // Adjust "now" to Eastern Time and subtract 3 hours so days rollover at 3 AM ET
-                const etString = new Date().toLocaleString("en-US", {timeZone: "America/New_York"});
-                const now = new Date(etString);
-                now.setHours(now.getHours() - 3);
+                // Fetch current time, applying Eastern Time rollover or URL Time Travel
+                const now = getNow();
                 const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
                 
                 const h = rows[0].map(v => v.toLowerCase().trim());
