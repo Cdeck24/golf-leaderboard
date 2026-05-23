@@ -631,6 +631,8 @@
         let processedTournamentsCache = null; // Cache for the tournament engine
         let globalTournamentTiers = {}; // Memory bank for tournament tier multipliers
         let globalTournamentTypes = {}; // Memory bank for tournament tier displays
+        let globalTournamentCutRules = {}; // Memory bank for no-cut events
+        let activeTournamentKey = null; // Memory for current event checks
 
         // --- TIME TRAVEL ENGINE ---
         function getNow() {
@@ -874,6 +876,37 @@
             statusEl.innerHTML = '<span class="sync-dot"></span>LIVE';
         }
 
+        // --- MISSING SCORES INTERPOLATION ALGORITHM ---
+        function getInterpolatedPts(u, tDates, todayStr) {
+            const normId = u.userId.trim().toLowerCase();
+            const hist = historicalDailyDataByDate[normId] || {};
+            const pts = [0, 0, 0, 0];
+            
+            tDates.forEach((d, i) => {
+                if (hist[d]) pts[i] = hist[d].raw;
+                else if (d === todayStr && u.hasData) pts[i] = u.actualTotalPoints;
+            });
+            
+            // Bridge the gap for any missing days by averaging the point difference
+            let lastValidIdx = -1;
+            let lastValidVal = 0;
+            for (let i = 0; i < 4; i++) {
+                if (pts[i] !== 0) {
+                    if (i - lastValidIdx > 1) {
+                        const gapCount = i - lastValidIdx;
+                        const diff = pts[i] - lastValidVal;
+                        const perDay = diff / gapCount;
+                        for (let j = lastValidIdx + 1; j < i; j++) {
+                            pts[j] = (j === 0 ? 0 : pts[j - 1]) + perDay;
+                        }
+                    }
+                    lastValidIdx = i;
+                    lastValidVal = pts[i];
+                }
+            }
+            return pts;
+        }
+
         function renderLeaderboard() {
             const tbody = document.getElementById('leaderboard-tbody');
             if (!tbody) return;
@@ -897,16 +930,11 @@
             });
 
             const playerStates = users.map(u => {
-                const normId = u.userId.trim().toLowerCase();
-                const hist = historicalDailyDataByDate[normId] || {};
-                const pts = [0, 0, 0, 0];
-                
-                tDates.forEach((d, i) => {
-                    if (hist[d]) pts[i] = hist[d].raw;
-                    else if (d === todayStr && u.hasData) pts[i] = u.actualTodayPoints;
-                });
+                // Dynamically fetch and interpolate any missing scores
+                const pts = getInterpolatedPts(u, tDates, todayStr);
                 
                 const isWD = u.hasData && !u.syncFailed && (!u.lineup || u.lineup.length === 0);
+                const normId = u.userId.trim().toLowerCase();
                 const sig = getLineupSignature(u.lineup);
                 const isRef = REFERENCE_IDS.includes(normId);
                 const isDup = !isRef && sig !== "" && refSigs.includes(sig);
@@ -936,21 +964,26 @@
             const medianVal = sortedPool.length ? (sortedPool.length % 2 ? sortedPool[Math.floor(sortedPool.length/2)] : (sortedPool[sortedPool.length/2-1] + sortedPool[sortedPool.length/2])/2) : 0;
             document.getElementById('par-score-display').innerText = `EVEN: ${medianVal.toFixed(2)} ${activeIdx === 0 ? 'PTS' : 'IMPROVE'}`;
 
+            const isNoCut = globalTournamentCutRules[activeTournamentKey] || false;
+
             const friField = playerStates.map(p => {
                 const thuG = Math.abs(p.dayPieces[0]) > 0.01 ? calculateGolfScore(p.dayPieces[0], pools[0]) : 0;
                 const friG = Math.abs(p.dayPieces[1]) > 0.01 ? calculateGolfScore(p.dayPieces[1], pools[1]) : 0;
                 return { userId: p.userId, totFri: thuG + friG, isWD: p.isWD, isDup: p.isDuplicate };
             }).filter(f => !f.isWD && !f.isDup);
             friField.sort((a,b) => a.totFri - b.totFri);
+            
             const cutIdxFri = Math.floor(friField.length * 0.45);
-            globalCutScoreFri = friField.length > 0 ? friField[Math.max(0, cutIdxFri - 1)].totFri : 99;
+            globalCutScoreFri = isNoCut ? 999 : (friField.length > 0 ? friField[Math.max(0, cutIdxFri - 1)].totFri : 99);
 
             const slotKeys = ['thu', 'fri', 'sat', 'sun'];
             currentProcessedUsers = playerStates.map(p => {
                 let rounds = { thu: 0, fri: 0, sat: 0, sun: 0 };
                 rounds.thu = Math.abs(p.dayPieces[0]) > 0.01 ? calculateGolfScore(p.dayPieces[0], pools[0]) : 0;
                 rounds.fri = Math.abs(p.dayPieces[1]) > 0.01 ? calculateGolfScore(p.dayPieces[1], pools[1]) : 0;
-                const madeCut = (rounds.thu + rounds.fri) <= globalCutScoreFri;
+                
+                const madeCut = isNoCut ? true : ((rounds.thu + rounds.fri) <= globalCutScoreFri);
+                
                 if (madeCut) {
                     rounds.sat = Math.abs(p.dayPieces[2]) > 0.01 ? calculateGolfScore(p.dayPieces[2], pools[2]) : 0;
                     rounds.sun = Math.abs(p.dayPieces[3]) > 0.01 ? calculateGolfScore(p.dayPieces[3], pools[3]) : 0;
@@ -1002,7 +1035,7 @@
 
             let cutLineInserted = false;
             currentProcessedUsers.forEach((u, i) => {
-                if (!cutLineInserted && !u.madeCut && !u.isWD && !u.isDuplicate && !u.syncFailed) {
+                if (!isNoCut && !cutLineInserted && !u.madeCut && !u.isWD && !u.isDuplicate && !u.syncFailed) {
                     const row = document.createElement('tr'); row.className = 'cut-line-row';
                     row.innerHTML = `<td colspan="4">${activeIdx < 2 ? 'EXPECTED CUT LINE' : 'OFFICIAL CUT LINE'} (${formatToPar(globalCutScoreFri)})</td>`;
                     tbody.appendChild(row); cutLineInserted = true;
@@ -1113,13 +1146,15 @@
 
                 if (!tournaments[tName]) tournaments[tName] = [];
                 
+                const isNoCut = globalTournamentCutRules[tNameKey] || false;
+                
                 tournaments[tName].push({
                     r,
                     username: r[uIdx]?.trim(),
                     userId: uidIdx !== -1 ? r[uidIdx]?.trim() : null,
                     totalGolf: parseInt(r[4]) || 0,
                     totalRaw: parseFloat(r[9]) || 0,
-                    madeCut: r[sIdx]?.toUpperCase() === "MADE CUT",
+                    madeCut: isNoCut ? true : (r[sIdx]?.toUpperCase() === "MADE CUT"),
                     status: r[sIdx]?.toUpperCase(),
                     rounds: { thu: r[5], fri: r[6], sat: r[7], sun: r[8] },
                     pieces: { thu: parseFloat(r[10])||0, fri: (parseFloat(r[11])||0) - (parseFloat(r[10])||0), sat: (parseFloat(r[12])||0) - (parseFloat(r[11])||0), sun: (parseFloat(r[13])||0) - (parseFloat(r[12])||0) },
@@ -1306,68 +1341,76 @@
             const targetDayIdx = dayMap[dayName];
             if (targetDayIdx === undefined) return;
             
-            const d = new Date(activeTournamentStartDate);
-            d.setDate(d.getDate() + targetDayIdx);
-            const dateStr = (d.getMonth()+1)+'/'+d.getDate()+'/'+d.getFullYear();
+            const now = getNow();
+            const todayStr = (now.getMonth() + 1) + '/' + now.getDate() + '/' + now.getFullYear();
 
-            // 1. Determine prior day date string to subtract historical data
-            let priorDayStr = null;
-            if (targetDayIdx > 0) {
-                const pd = new Date(activeTournamentStartDate);
-                pd.setDate(pd.getDate() + targetDayIdx - 1);
-                priorDayStr = (pd.getMonth()+1)+'/'+pd.getDate()+'/'+pd.getFullYear();
+            const tDates = [];
+            for (let i = 0; i < 4; i++) tDates.push(getFormattedDate(activeTournamentStartDate, i));
+
+            const targetDateStr = tDates[targetDayIdx];
+            const rows = [["username", "user id", "raw points", "golf score", "date"]];
+
+            // Determine days to export: target day + any missing previous days
+            const daysToExport = [];
+            for (let i = 0; i <= targetDayIdx; i++) {
+                const dStr = tDates[i];
+                // Check globally if this specific date has any historical data saved yet
+                const isMissing = !Object.values(historicalDailyDataByDate).some(hist => hist[dStr] !== undefined);
+                
+                if (i === targetDayIdx || isMissing) {
+                    daysToExport.push(i);
+                }
             }
 
-            const tempPool = [];
-            const tempUsers = users.map(u => {
-                const normId = u.userId.toLowerCase().trim();
-                const hist = historicalDailyDataByDate[normId] || {};
+            daysToExport.forEach(dayIdx => {
+                const dateStr = tDates[dayIdx];
+                const tempPool = [];
                 
-                // Cumulative raw points up to the PREVIOUS day
-                const priorCumulative = (priorDayStr && hist[priorDayStr]) ? hist[priorDayStr].raw : 0;
-                
-                // The CURRENT live total points from the API. 
-                // If a day was missed, this is still accurate for that missing day!
-                const liveCumulative = u.hasData ? u.actualTotalPoints : 0; 
-                
-                // The points scored ONLY on the requested day
-                let dailyPiece = liveCumulative - priorCumulative;
-                if (Math.abs(dailyPiece) < 0.01) dailyPiece = 0;
-
-                const sig = getLineupSignature(u.lineup);
-                
-                return { u, liveCumulative, dailyPiece, sig };
-            });
-
-            const refSigs = tempUsers.filter(x => REFERENCE_IDS.includes(x.u.userId.toLowerCase().trim()) && x.sig).map(x => x.sig);
-            
-            tempUsers.forEach(x => {
-                // If we are back-exporting a missing day on a Friday where lineups are empty, sig will be "".
-                // If sig is "", they will safely NOT be marked as duplicate.
-                x.isDup = !REFERENCE_IDS.includes(x.u.userId.toLowerCase().trim()) && x.sig !== "" && refSigs.includes(x.sig);
-                
-                // Notice we completely ignore the current 'isWD' status!
-                // We strictly build the median pool from anyone who actually scored points on the requested day.
-                if (!x.isDup && Math.abs(x.dailyPiece) > 0.01) {
-                    tempPool.push(x.dailyPiece);
-                }
-            });
-
-            const rows = [["username", "user id", "raw points", "golf score", "date"]];
-            
-            tempUsers.forEach(x => {
-                if (x.u.hasData) {
-                    let golfScore = 0;
-                    if (!x.isDup && Math.abs(x.dailyPiece) > 0.01) {
-                        golfScore = calculateGolfScore(x.dailyPiece, tempPool);
-                    }
+                const tempUsers = users.map(u => {
+                    const pts = getInterpolatedPts(u, tDates, todayStr);
                     
-                    // We successfully export the live API total as "raw points" and the dynamically calculated day's Golf Score
-                    rows.push([x.u.username, x.u.userId, x.liveCumulative.toFixed(2), golfScore, dateStr]);
-                }
+                    // Cumulative raw points up to the PREVIOUS day
+                    const priorCumulative = dayIdx > 0 ? pts[dayIdx - 1] : 0;
+                    
+                    // The live total points for the evaluated day
+                    const liveCumulative = pts[dayIdx]; 
+                    
+                    // The points scored ONLY on this evaluated day
+                    let dailyPiece = liveCumulative - priorCumulative;
+                    if (Math.abs(dailyPiece) < 0.01) dailyPiece = 0;
+
+                    const sig = getLineupSignature(u.lineup);
+                    
+                    return { u, liveCumulative, dailyPiece, sig };
+                });
+
+                const refSigs = tempUsers.filter(x => REFERENCE_IDS.includes(x.u.userId.toLowerCase().trim()) && x.sig).map(x => x.sig);
+                
+                tempUsers.forEach(x => {
+                    // If we are back-exporting a missing day on a Friday where lineups are empty, sig will be "".
+                    // If sig is "", they will safely NOT be marked as duplicate.
+                    x.isDup = !REFERENCE_IDS.includes(x.u.userId.toLowerCase().trim()) && x.sig !== "" && refSigs.includes(x.sig);
+                    
+                    // We strictly build the median pool from anyone who actually scored points on the evaluated day.
+                    if (!x.isDup && Math.abs(x.dailyPiece) > 0.01) {
+                        tempPool.push(x.dailyPiece);
+                    }
+                });
+
+                tempUsers.forEach(x => {
+                    if (x.u.hasData) {
+                        let golfScore = 0;
+                        if (!x.isDup && Math.abs(x.dailyPiece) > 0.01) {
+                            golfScore = calculateGolfScore(x.dailyPiece, tempPool);
+                        }
+                        
+                        // We successfully export the interpolated/live API total as "raw points" and the calculated day's Golf Score
+                        rows.push([x.u.username, x.u.userId, x.liveCumulative.toFixed(2), golfScore, dateStr]);
+                    }
+                });
             });
             
-            generateCSV(rows, `golf_plug_${dayName}_${dateStr.replace(/\//g, '-')}.csv`);
+            generateCSV(rows, `golf_plug_${dayName}_${targetDateStr.replace(/\//g, '-')}.csv`);
             document.getElementById('export-menu').style.display = 'none';
         }
 
@@ -1740,7 +1783,8 @@
                 const h = rows[0].map(v => v.toLowerCase().trim());
                 
                 const dIdx = findIdx(h, ['date']), nIdx = findIdx(h, ['tourn', 'tournament']), cIdx = findIdx(h, ['course']);
-                const etIdx = findIdx(h, ['event type', 'tier']); // Map the event type column
+                const etIdx = findIdx(h, ['event type', 'tier']); 
+                const cutIdx = findIdx(h, ['cut', 'cut rule']); // Map the cut rule column
                 
                 const purseCols = [];
                 h.forEach((colName, idx) => {
@@ -1789,11 +1833,22 @@
                         else if (val.includes('regular')) { multiplier = 1.0; eventTypeDisplay = rawVal.toUpperCase() || 'REGULAR'; safeClass = 'regular'; }
                         else { eventTypeDisplay = rawVal.toUpperCase(); safeClass = 'regular'; }
                     }
+
+                    // Dynamically set No Cut Rule
+                    let isNoCut = false;
+                    if (cutIdx !== -1 && r[cutIdx]) {
+                        const val = r[cutIdx].toString().toLowerCase().trim();
+                        if (val.includes('no cut') || val === 'no' || val === 'false') isNoCut = true;
+                    }
+                    if (etIdx !== -1 && r[etIdx] && r[etIdx].toString().toLowerCase().trim().includes('no cut')) {
+                        isNoCut = true;
+                    }
                     
                     if (r[nIdx]) {
                         const tKey = r[nIdx].trim().toLowerCase();
                         globalTournamentTiers[tKey] = multiplier;
                         globalTournamentTypes[tKey] = { display: eventTypeDisplay, cssClass: safeClass };
+                        globalTournamentCutRules[tKey] = isNoCut;
                     }
                     
                     let purseObj = null;
@@ -1839,6 +1894,7 @@
 
                 if (d && d.name) { 
                     activeTournamentStartDate = d.start; 
+                    activeTournamentKey = d.name.trim().toLowerCase();
                     document.getElementById('display-tournament-name').innerText = d.name; 
                     document.getElementById('display-banner-label').innerText = d.label; 
                     
