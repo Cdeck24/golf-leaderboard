@@ -17,21 +17,27 @@ let masterArchiveData = [];
 let currentProcessedUsers = [];
 let activeTournamentStartDate = null;
 let globalCutScoreFri = 99;
-let currentGameId = null; // Used to fetch the pro leaderboard
-let globalPlayers = {}; // Memory bank for missing golfers
-let rawProLeaderboardData = null; // Stored to re-render when new players are discovered
-let globalSeasonRanks = {}; // Memory bank for season rankings
-let globalSeasonStatsArray = []; // Ordered array for the rankings table
-let processedTournamentsCache = null; // Cache for the tournament engine
-let globalTournamentTiers = {}; // Memory bank for tournament tier multipliers
-let globalTournamentTypes = {}; // Memory bank for tournament tier displays
-let globalTournamentCutRules = {}; // Memory bank for no-cut events
-let activeTournamentKey = null; // Memory for current event checks
+let currentGameId = null; 
+let globalPlayers = {}; 
+let rawProLeaderboardData = null; 
+let globalSeasonRanks = {}; 
+let globalSeasonStatsArray = []; 
+let processedTournamentsCache = null; 
+let globalTournamentTiers = {}; 
+let globalTournamentTypes = {}; 
+let globalTournamentCutRules = {}; 
+let activeTournamentKey = null;
 
 // --- THEME TOGGLE LOGIC ---
 function toggleTheme() {
-    const isLight = document.documentElement.classList.toggle('light-mode');
-    localStorage.setItem('golfplug_theme', isLight ? 'light' : 'dark');
+    const html = document.documentElement;
+    if (html.classList.contains('light-mode')) {
+        html.classList.remove('light-mode');
+        localStorage.setItem('golfplug_theme', 'dark');
+    } else {
+        html.classList.add('light-mode');
+        localStorage.setItem('golfplug_theme', 'light');
+    }
 }
 
 // --- TIME TRAVEL ENGINE ---
@@ -45,7 +51,7 @@ function getNow() {
     }
     const etString = new Date().toLocaleString("en-US", {timeZone: "America/New_York"});
     const now = new Date(etString);
-    now.setHours(now.getHours() - 3);
+    now.setHours(now.getHours() - 3); // Days rollover perfectly at 3 AM EST
     return now;
 }
 
@@ -226,7 +232,6 @@ function renderProLeaderboard() {
     leaderboard.forEach((l, index) => {
         const pidStr = String(l.playerId);
         
-        // Directly pull from the leaderboard array object, fallback to global memory
         const pObj = l.player || globalPlayers[pidStr] || {};
         
         let name = pObj.displayName || pObj.lastName;
@@ -238,11 +243,9 @@ function renderProLeaderboard() {
         const thru = l.thru || '-';
         const pos = l.position || '-';
         
-        // The API actually provides 'value' directly in the leaderboard object!
         const rawRating = l.value || pObj.value || (globalPlayers[pidStr] ? globalPlayers[pidStr].value : null);
         const rating = (rawRating !== null && rawRating !== undefined && !isNaN(parseFloat(rawRating))) ? parseFloat(rawRating).toFixed(2) : '-';
         
-        // Extract total pick counts from users and generate badge
         const picks = globalPlayers[pidStr] ? (globalPlayers[pidStr].pickCount || 0) : 0;
         const picksBadge = picks > 0 ? `<span style="font-size: 0.65rem; color: var(--border-gold); font-weight: 800; background: rgba(197, 160, 89, 0.1); padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(197, 160, 89, 0.2); flex: 0 0 auto; margin-left: 6px;">👥 ${picks}</span>` : '';
         
@@ -262,7 +265,6 @@ function renderProLeaderboard() {
             </tr>
         `);
 
-        // Add the cut line if the current index matches the cutLine.index
         if (cutLine && cutLine.index === (index + 1)) {
             rowsHtml.push(`
                 <tr class="cut-line-row">
@@ -312,7 +314,6 @@ function renderLeaderboard() {
     if (!tbody) return;
     tbody.innerHTML = '';
     
-    // Fetch current time, applying Eastern Time rollover or URL Time Travel
     const now = getNow();
     
     const todayStr = (now.getMonth() + 1) + '/' + now.getDate() + '/' + now.getFullYear();
@@ -330,7 +331,6 @@ function renderLeaderboard() {
     });
 
     const playerStates = users.map(u => {
-        // Dynamically fetch and interpolate any missing scores
         const pts = getInterpolatedPts(u, tDates, todayStr);
         
         const isWD = u.hasData && !u.syncFailed && (!u.lineup || u.lineup.length === 0);
@@ -402,14 +402,12 @@ function renderLeaderboard() {
         return b.actualTotalPoints - a.actualTotalPoints;
     });
 
-    // PRE-CALCULATE POSITIONS FOR TIES
     const validField = currentProcessedUsers.filter(x => !x.isWD && !x.isDuplicate && !x.syncFailed);
-    const isFinalDay = activeIdx === 3 || activeIdx === -1; // 3 = Sunday, -1 = Post-Tournament
+    const isFinalDay = activeIdx === 3 || activeIdx === -1; 
 
     let vfIdx = 0;
     while (vfIdx < validField.length) {
         let j = vfIdx;
-        // Group users that have the exact same golf score and cut status
         while (j < validField.length && validField[j].total === validField[vfIdx].total && validField[j].madeCut === validField[vfIdx].madeCut) {
             j++;
         }
@@ -417,14 +415,11 @@ function renderLeaderboard() {
         const groupSize = j - vfIdx;
 
         if (vfIdx === 0 && isFinalDay) {
-            // First place group on the FINAL day: The absolute best raw score gets "1".
             validField[0].displayPos = "1";
-            // If there are others with the same top golf score, they tie for 2nd place
             for (let k = 1; k < j; k++) {
                 validField[k].displayPos = "T2"; 
             }
         } else {
-            // Any other group, or 1st place before the final day, they just tie at their starting index + 1
             for (let k = vfIdx; k < j; k++) {
                 validField[k].displayPos = groupSize > 1 ? 'T' + (vfIdx + 1) : (vfIdx + 1).toString();
             }
@@ -443,7 +438,6 @@ function renderLeaderboard() {
         const row = document.createElement('tr'); row.className = 'main-row';
         const tag = u.isDuplicate ? '(DUP)' : (u.syncFailed ? '(ERR)' : (activeIdx >= 2 && !u.madeCut ? '(MC)' : ''));
         
-        // Fetch precalculated display pos instead of index matching
         const pos = (u.isWD) ? 'WD' : (u.isDuplicate) ? 'DUP' : (u.syncFailed ? 'ERR' : (u.hasData ? u.displayPos : '-'));
         
         const userRank = globalSeasonRanks[u.userId.toLowerCase()] || globalSeasonRanks[u.username.toLowerCase()];
@@ -451,10 +445,10 @@ function renderLeaderboard() {
         if (userRank) {
             let badgeClass = 'season-rank-badge';
             let icon = '';
-            if (userRank === 1) { badgeClass += ' rank-first'; icon = '👑 '; }
-            else if (userRank === 2) { badgeClass += ' rank-second'; icon = '🥈 '; }
-            else if (userRank === 3) { badgeClass += ' rank-third'; icon = '🥉 '; }
-            else if (userRank <= 10) { badgeClass += ' rank-top-10'; icon = '⭐ '; }
+            if (userRank === 1) { badgeClass += ' rank-1'; icon = '👑 '; }
+            else if (userRank === 2) { badgeClass += ' rank-2'; icon = '🥈 '; }
+            else if (userRank === 3) { badgeClass += ' rank-3'; icon = '🥉 '; }
+            else if (userRank <= 10) { badgeClass += ' rank-top10'; icon = '⭐ '; }
             
             rankBadge = `<span class="${badgeClass}" title="Season Rank">${icon}#${userRank}</span>`;
         }
@@ -482,7 +476,6 @@ function renderLeaderboard() {
         tbody.appendChild(row); tbody.appendChild(dr);
     });
 
-    // Re-apply the search filter after syncing new data
     filterLeaderboard();
 }
 
@@ -491,31 +484,22 @@ function getSeasonPoints(pos, status, multiplier = 1) {
     if (status === "WD" || status === "DUP") return 0;
     if (!pos) return 0;
     
-    // Strip out any "T" from the tie placements (e.g., T2 -> 2)
     const cleanPos = String(pos).replace(/\D/g, '');
     const p = parseInt(cleanPos); 
     if (isNaN(p)) return 0;
 
     let base = 0;
-    // Top 5
     if (p === 1) base = 100;
     else if (p === 2) base = 60;
     else if (p === 3) base = 45;
     else if (p === 4) base = 35;
     else if (p === 5) base = 30;
-
-    // 6th–10th
     else if (p === 6) base = 25;
     else if (p === 7) base = 22;
     else if (p === 8) base = 20;
     else if (p === 9) base = 18;
     else if (p === 10) base = 16;
-
-    // 11th–20th (Scales from 14 down to 5)
-    // Formula: 14 - (position - 11)
     else if (p >= 11 && p <= 20) base = 14 - (p - 11);
-
-    // 21st to End
     else if (p >= 21) {
         if (status == "MADE CUT") base = 3;
         else base = 2;        
@@ -537,16 +521,13 @@ function getProcessedTournaments() {
 
     const tournaments = {};
 
-    // Parse all the tournament data rows into their respective events
     masterArchiveData.slice(1).forEach(r => {
         const tName = r[tIdx];
         if (!tName) return;
         
         const tNameKey = tName.trim().toLowerCase();
-        // Pull multiplier from schedule memory bank, default to Regular (1.0)
         let multiplier = globalTournamentTiers[tNameKey] || 1.0;
         
-        // Fallback: Check if they added it directly to the archive sheet
         if (epIdx !== -1 && r[epIdx]) {
             const val = r[epIdx].toString().toLowerCase().trim();
             if (val.includes('major') || val.includes('players')) multiplier = 1.5;
@@ -572,7 +553,6 @@ function getProcessedTournaments() {
         });
     });
 
-    // Calculate the pure placements for each tournament to award points accurately
     Object.keys(tournaments).forEach(tName => {
         const field = tournaments[tName];
         
@@ -595,7 +575,6 @@ function getProcessedTournaments() {
             const groupSize = j - vfIdx;
 
             if (vfIdx === 0) {
-                // 1st place group: Absolute best raw score gets 1, the rest T2
                 validArchive[0].displayPos = "1";
                 for (let k = 1; k < j; k++) {
                     validArchive[k].displayPos = "T2"; 
@@ -622,7 +601,6 @@ function calculateGlobalRanks() {
         field.forEach(p => {
             if (!p.username) return;
             
-            // Group strictly by User ID if possible to merge points when players change their usernames
             const key = p.userId ? p.userId.toLowerCase().trim() : p.username.toLowerCase().trim();
             
             if (!stats[key]) stats[key] = { points: 0, wins: 0, starts: 0, uid: p.userId, username: p.username, history: [] };
@@ -633,7 +611,6 @@ function calculateGlobalRanks() {
                 stats[key].points += earnedPts;
                 if (p.displayPos === "1" && p.status === "MADE CUT") stats[key].wins += 1;
                 
-                // Record the history for the expanded view
                 stats[key].history.push({
                     name: tName,
                     pos: p.displayPos,
@@ -643,7 +620,6 @@ function calculateGlobalRanks() {
         });
     });
 
-    // Cross-reference with LIVE users to guarantee the most up-to-date username is displayed
     Object.values(stats).forEach(s => {
         if (s.uid) {
             const liveUser = users.find(u => u.userId && u.userId.toLowerCase() === s.uid.toLowerCase());
@@ -651,14 +627,13 @@ function calculateGlobalRanks() {
         }
     });
 
-    // Sort without any ties using secondary metrics to ensure a strict 1, 2, 3 sequence
     globalSeasonStatsArray = Object.values(stats).sort((a,b) => {
         if (b.points !== a.points) return b.points - a.points;
         if (b.wins !== a.wins) return b.wins - a.wins;
         return b.starts - a.starts;
     });
 
-    globalSeasonRanks = {}; // Clear memory bank before rebuilding
+    globalSeasonRanks = {}; 
     globalSeasonStatsArray.forEach((p, i) => {
         if (p.username) globalSeasonRanks[p.username.toLowerCase()] = i + 1;
         if (p.uid) globalSeasonRanks[p.uid.toLowerCase()] = i + 1;
@@ -676,7 +651,6 @@ function renderRankings() {
         
         const playerContent = `<div class="player-flex"><span class="p-name">${formatHandle(p.username)}</span><span class="toggle-icon">▼</span></div>`;
         
-        // The season rank never has "T", always strictly sequential (i + 1)
         mainRow.innerHTML = `<td class="col-pos">${i+1}</td><td class="col-player">${playerContent}</td><td class="col-stat">${p.points}</td><td class="col-stat">${p.wins}</td><td class="col-stat">${p.starts}</td>`;
         
         const detailRow = document.createElement('tr');
@@ -745,7 +719,6 @@ function exportScoresToCSV() {
     document.getElementById('export-menu').style.display = 'none';
 }
 
-// --- NEW TAILORED DAY EXPORT FUNCTION ---
 function exportDay(dayName) {
     const dayMap = { thursday: 0, friday: 1, saturday: 2, sunday: 3 };
     const targetDayIdx = dayMap[dayName];
@@ -760,13 +733,10 @@ function exportDay(dayName) {
     const targetDateStr = tDates[targetDayIdx];
     const rows = [["username", "user id", "raw points", "golf score", "date"]];
 
-    // Determine days to export: target day + any missing previous days
     const daysToExport = [];
     for (let i = 0; i <= targetDayIdx; i++) {
         const dStr = tDates[i];
-        // Check globally if this specific date has any historical data saved yet
         const isMissing = !Object.values(historicalDailyDataByDate).some(hist => hist[dStr] !== undefined);
-        
         if (i === targetDayIdx || isMissing) {
             daysToExport.push(i);
         }
@@ -778,30 +748,20 @@ function exportDay(dayName) {
         
         const tempUsers = users.map(u => {
             const pts = getInterpolatedPts(u, tDates, todayStr);
-            
-            // Cumulative raw points up to the PREVIOUS day
             const priorCumulative = dayIdx > 0 ? pts[dayIdx - 1] : 0;
-            
-            // The live total points for the evaluated day
             const liveCumulative = pts[dayIdx]; 
             
-            // The points scored ONLY on this evaluated day
             let dailyPiece = liveCumulative - priorCumulative;
             if (Math.abs(dailyPiece) < 0.01) dailyPiece = 0;
 
             const sig = getLineupSignature(u.lineup);
-            
             return { u, liveCumulative, dailyPiece, sig };
         });
 
         const refSigs = tempUsers.filter(x => REFERENCE_IDS.includes(x.u.userId.toLowerCase().trim()) && x.sig).map(x => x.sig);
         
         tempUsers.forEach(x => {
-            // If we are back-exporting a missing day on a Friday where lineups are empty, sig will be "".
-            // If sig is "", they will safely NOT be marked as duplicate.
             x.isDup = !REFERENCE_IDS.includes(x.u.userId.toLowerCase().trim()) && x.sig !== "" && refSigs.includes(x.sig);
-            
-            // We strictly build the median pool from anyone who actually scored points on the evaluated day.
             if (!x.isDup && Math.abs(x.dailyPiece) > 0.01) {
                 tempPool.push(x.dailyPiece);
             }
@@ -813,8 +773,6 @@ function exportDay(dayName) {
                 if (!x.isDup && Math.abs(x.dailyPiece) > 0.01) {
                     golfScore = calculateGolfScore(x.dailyPiece, tempPool);
                 }
-                
-                // We successfully export the interpolated/live API total as "raw points" and the calculated day's Golf Score
                 rows.push([x.u.username, x.u.userId, x.liveCumulative.toFixed(2), golfScore, dateStr]);
             }
         });
@@ -826,7 +784,6 @@ function exportDay(dayName) {
 
 function exportWDsToCSV() {
     const rows = [["username", "user id"]];
-    // Iterating over the base 'users' array preserves the exact original CSV order
     users.forEach(u => {
         const isWD = u.hasData && !u.syncFailed && (!u.lineup || u.lineup.length === 0);
         if (isWD) {
@@ -839,11 +796,9 @@ function exportWDsToCSV() {
 
 function exportNameUpdatesToCSV() {
     const rows = [["username", "user id"]];
-    // Iterating over the base 'users' array preserves the exact original CSV order
     users.forEach(u => {
         rows.push([u.username, u.userId]);
     });
-    
     generateCSV(rows, `golf_plug_usernames.csv`);
     document.getElementById('export-menu').style.display = 'none';
 }
@@ -856,13 +811,11 @@ function viewArchive(name) {
     const tbody = document.getElementById('archive-tbody');
     const champDiv = document.getElementById('archive-champ-display');
     
-    // UPDATE ARCHIVE HEADER
     const tTypeData = globalTournamentTypes[name.toLowerCase()] || { display: 'REGULAR', cssClass: 'regular' };
     document.getElementById('archive-header-title').innerHTML = `<span style="font-weight: 900; font-size: 0.8rem; letter-spacing: 0.05em; display:flex; align-items:center; flex-wrap:wrap; gap:8px;">🏆 ${name.toUpperCase()} <span class="tier-badge ${tTypeData.cssClass}">${tTypeData.display}</span> <span style="color:var(--text-muted); font-weight:700; font-size:0.65rem;">FINAL RESULTS</span></span>`;
 
     const validArchive = processedArchive.filter(x => x.status !== "WD" && x.status !== "DUP");
 
-    // Guarantee the champion spotlight honors the raw score tie breaker and uses LIVE username
     if (validArchive.length > 0) {
         const winner = validArchive[0];
         let winnerName = winner.username;
@@ -886,7 +839,6 @@ function viewArchive(name) {
         const mainRow = document.createElement('tr'); mainRow.className = 'main-row';
         const tag = (item.status === "DUP") ? '(DUP)' : (item.status === "WD") ? '(WD)' : (!item.madeCut ? '(MC)' : '');
         
-        // Fetch current alias for archive view
         let displayUsername = item.username;
         if (item.userId) {
             const liveUser = users.find(u => u.userId.toLowerCase() === item.userId.toLowerCase());
@@ -898,17 +850,16 @@ function viewArchive(name) {
         if (userRank) {
             let badgeClass = 'season-rank-badge';
             let icon = '';
-            if (userRank === 1) { badgeClass += ' rank-first'; icon = '👑 '; }
-            else if (userRank === 2) { badgeClass += ' rank-second'; icon = '🥈 '; }
-            else if (userRank === 3) { badgeClass += ' rank-third'; icon = '🥉 '; }
-            else if (userRank <= 10) { badgeClass += ' rank-top-10'; icon = '⭐ '; }
+            if (userRank === 1) { badgeClass += ' rank-1'; icon = '👑 '; }
+            else if (userRank === 2) { badgeClass += ' rank-2'; icon = '🥈 '; }
+            else if (userRank === 3) { badgeClass += ' rank-3'; icon = '🥉 '; }
+            else if (userRank <= 10) { badgeClass += ' rank-top10'; icon = '⭐ '; }
             
             rankBadge = `<span class="${badgeClass}" title="Season Rank">${icon}#${userRank}</span>`;
         }
         
         const playerContent = `<div class="player-flex">${rankBadge}<span class="p-name">${formatHandle(displayUsername)}</span>${tag ? `<span class="p-tag">${tag}</span>` : ''}<span class="toggle-icon">▼</span></div>`;
         
-        // Fetch dynamically calculated display position
         const displayPosition = isInv ? item.status : item.displayPos;
         
         mainRow.innerHTML = `<td class="col-pos">${displayPosition}</td><td class="col-player">${playerContent}</td><td class="col-score">${isInv?'-':formatToPar(item.totalGolf)}</td><td class="col-score">${item.totalRaw.toFixed(2)}</td>`;
@@ -953,12 +904,11 @@ async function fetchDailyHistoricalData() {
 }
 
 async function loadAllUserScores() {
-    // Explicitly handle users missing a golfId so they don't hang on "Syncing..." forever
     users.forEach(u => {
         if (!u.golfId || u.golfId.trim() === '') {
             u.hasData = true;
             u.syncFailed = false;
-            u.lineup = []; // Empty lineup translates to WD instantly
+            u.lineup = []; 
         }
     });
 
@@ -970,18 +920,16 @@ async function loadAllUserScores() {
     const statusEl = document.getElementById('sync-status');
     const hasher = new Hashids("realwebapp", 16);
     const MAX_RETRIES = 10; 
-    const CONCURRENCY_LIMIT = 5; // Parallel network waiting
+    const CONCURRENCY_LIMIT = 6; 
     
     let nextRequestTime = Date.now(); 
-    let currentPacing = 250; // Strict gap between requests (max 4 per second)
+    let currentPacing = 200; 
     
-    // Define the worker function that processes the queue
     async function syncWorker() {
         while (q.length > 0) {
             const user = q.shift();
             if (!user) break;
 
-            // STRICT GLOBAL PACING: Guarantee exact millisecond gaps between outgoing requests
             const now = Date.now();
             let delay = 0;
             if (nextRequestTime > now) {
@@ -1000,7 +948,6 @@ async function loadAllUserScores() {
                 const response = await fetch(proxyUrl, opts);
                 
                 if (response.status === 429 || response.status === 502) {
-                    // API RATE LIMIT TRIPPED - Push the global ticket line back safely
                     nextRequestTime = Date.now() + 3000; 
                     currentPacing = Math.min(currentPacing + 50, 1000); 
                     
@@ -1011,42 +958,31 @@ async function loadAllUserScores() {
                         user.hasData = true; user.syncFailed = true; loaded++; 
                     }
                 } else if (response.ok) {
-                    // SUCCESS - Data retrieved
-                    currentPacing = Math.max(currentPacing - 2, 200); // Slowly optimize speed
+                    currentPacing = Math.max(currentPacing - 5, 125); 
                     const data = await response.json();
                     
-                    // Dynamically extract real gameId for Pro Board using lineup data or a deep JSON search
                     if (!currentGameId) { 
                         let foundId = null;
-                        
-                        if (data.lineup && data.lineup.length > 0) {
-                            foundId = data.lineup[0].matchId || data.lineup[0].gameId || data.lineup[0].eventId;
-                        }
-                        
+                        if (data.lineup && data.lineup.length > 0) foundId = data.lineup[0].matchId || data.lineup[0].gameId || data.lineup[0].eventId;
                         if (!foundId) {
                             JSON.stringify(data, (key, value) => {
                                 if (!foundId && ['gameId', 'matchId', 'eventId', 'tournamentId'].includes(key)) {
-                                    if (/^\d{7,10}$/.test(String(value))) {
-                                        foundId = String(value);
-                                    }
+                                    if (/^\d{7,10}$/.test(String(value))) foundId = String(value);
                                 }
                                 return value;
                             });
                         }
-
                         if (foundId && /^\d+$/.test(String(foundId))) {
                             currentGameId = String(foundId);
                             fetchProLeaderboard();
                         }
                     }
 
-                    // --- EXTREME USERNAME EXTRACTION ---
                     let foundUsername = null;
                     const targetUid = String(user.userId).toLowerCase();
                     
                     function deepSearchName(obj) {
                         if (foundUsername || !obj || typeof obj !== 'object') return;
-                        
                         if (obj.id !== undefined && String(obj.id).toLowerCase() === targetUid) {
                             if (obj.username) foundUsername = obj.username;
                             else if (obj.userName) foundUsername = obj.userName;
@@ -1054,7 +990,6 @@ async function loadAllUserScores() {
                         if (!foundUsername && obj.username && (String(obj.userId).toLowerCase() === targetUid || String(obj.ownerId).toLowerCase() === targetUid)) {
                             foundUsername = obj.username;
                         }
-                        
                         if (!foundUsername) {
                             Object.values(obj).forEach(val => {
                                 if (val && typeof val === 'object') deepSearchName(val);
@@ -1081,7 +1016,7 @@ async function loadAllUserScores() {
                             
                             if (profRes.status === 429 || profRes.status === 502) {
                                 nextRequestTime = Date.now() + 3000;
-                                currentPacing = Math.min(currentPacing + 50, 1000);
+                                currentPacing = Math.min(currentPacing + 50, 1000); 
                             } else if (profRes.ok) {
                                 const profData = await profRes.json();
                                 if (profData.username) foundUsername = profData.username;
@@ -1092,7 +1027,6 @@ async function loadAllUserScores() {
                     if (foundUsername && foundUsername.trim() !== '') {
                         user.username = foundUsername.trim();
                     }
-                    // -----------------------------------
 
                     user.actualTotalPoints = parseFloat((data.info?.rankDisplayInfos?.[0]?.scoreDisplay || '0').replace(/[^0-9.]/g, '')) || 0;
                     user.lineup = data.lineup || [];
@@ -1132,7 +1066,7 @@ async function loadAllUserScores() {
 
             statusEl.innerHTML = `<span class="sync-dot"></span>${loaded}/${validUsers.length}`;
             
-            if (loaded % 6 === 0 || q.length === 0) {
+            if (loaded % 8 === 0 || q.length === 0) {
                 renderLeaderboard();
                 renderProLeaderboard(); 
             }
@@ -1147,6 +1081,7 @@ async function loadAllUserScores() {
     await Promise.all(workers);
     
     calculateGlobalRanks();
+    
     renderLeaderboard();
     renderProLeaderboard();
     if (document.getElementById('view-rankings').classList.contains('active')) renderRankings();
@@ -1168,7 +1103,6 @@ async function fetchTournamentSchedule() {
         const res = await fetch(config.scheduleUrl);
         const rows = parseCSV(await res.text());
         
-        // Fetch current time, applying Eastern Time rollover or URL Time Travel
         const now = getNow();
         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         
@@ -1176,7 +1110,7 @@ async function fetchTournamentSchedule() {
         
         const dIdx = findIdx(h, ['date']), nIdx = findIdx(h, ['tourn', 'tournament']), cIdx = findIdx(h, ['course']);
         const etIdx = findIdx(h, ['event type', 'tier']); 
-        const cutIdx = findIdx(h, ['cut', 'cut rule']); // Map the cut rule column
+        const cutIdx = findIdx(h, ['cut', 'cut rule']); 
         
         const purseCols = [];
         h.forEach((colName, idx) => {
@@ -1210,7 +1144,6 @@ async function fetchTournamentSchedule() {
             const end = new Date(start); end.setDate(end.getDate() + 3);
             const rangeStr = `${start.getMonth()+1}/${start.getDate()} - ${end.getMonth()+1}/${end.getDate()}`;
             
-            // Determine the Tier multiplier from the schedule and store it globally
             let multiplier = 1.0;
             let eventTypeDisplay = 'REGULAR';
             let safeClass = 'regular';
@@ -1225,7 +1158,6 @@ async function fetchTournamentSchedule() {
                 else { eventTypeDisplay = rawVal.toUpperCase(); safeClass = 'regular'; }
             }
 
-            // Dynamically set No Cut Rule
             let isNoCut = false;
             if (cutIdx !== -1 && r[cutIdx]) {
                 const val = r[cutIdx].toString().toLowerCase().trim();
@@ -1276,7 +1208,6 @@ async function fetchTournamentSchedule() {
         
         const currentDay = now.getDay();
         let d = null;
-        // Mon (1), Tue (2), Wed (3) show Upcoming. Thu-Sun show Live.
         if (currentDay >= 1 && currentDay <= 3) {
             d = next ? { ...next, label: 'Upcoming Tournament' } : (curr ? { ...curr, label: 'Live Tournament' } : null);
         } else {
@@ -1331,7 +1262,7 @@ async function initApp() {
     await fetchTournamentSchedule(); 
     try { 
         masterArchiveData = parseCSV(await (await fetch(config.archiveDataUrl)).text()); 
-        calculateGlobalRanks(); // Pre-calculate rankings from archive data
+        calculateGlobalRanks(); 
     } catch (e) {}
     await fetchDailyHistoricalData();
     users = await fetchUsers();
