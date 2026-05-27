@@ -583,7 +583,7 @@
             <button onclick="exportDay('saturday')">Export Sat</button>
             <button onclick="exportDay('sunday')">Export Sun</button>
             <button onclick="exportWDsToCSV()" style="color:var(--danger);">Export Withdrawals</button>
-            <button onclick="exportNameUpdatesToCSV()" style="color:var(--golf-green-bright);">Export Name Updates</button>
+            <button onclick="exportNameUpdatesToCSV()" style="color:var(--golf-green-bright);">Export Usernames</button>
             <button onclick="exportScoresToCSV()" style="color:var(--gold-light);">Export Full Records</button>
         </div>
     </div>
@@ -1428,18 +1428,13 @@
         }
 
         function exportNameUpdatesToCSV() {
-            const rows = [["new username", "user id"]];
+            const rows = [["username", "user id"]];
+            // Iterating over the base 'users' array preserves the exact original CSV order
             users.forEach(u => {
-                if (u.hasData && u.originalUsername && u.username !== u.originalUsername) {
-                    rows.push([u.username, u.userId]);
-                }
+                rows.push([u.username, u.userId]);
             });
             
-            if (rows.length === 1) {
-                rows.push(["No names were updated", ""]);
-            }
-            
-            generateCSV(rows, `golf_plug_name_updates.csv`);
+            generateCSV(rows, `golf_plug_usernames.csv`);
             document.getElementById('export-menu').style.display = 'none';
         }
 
