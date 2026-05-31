@@ -26,18 +26,12 @@ let processedTournamentsCache = null;
 let globalTournamentTiers = {}; 
 let globalTournamentTypes = {}; 
 let globalTournamentCutRules = {}; 
-let activeTournamentKey = null;
+let activeTournamentKey = null; 
 
 // --- THEME TOGGLE LOGIC ---
 function toggleTheme() {
-    const html = document.documentElement;
-    if (html.classList.contains('light-mode')) {
-        html.classList.remove('light-mode');
-        localStorage.setItem('golfplug_theme', 'dark');
-    } else {
-        html.classList.add('light-mode');
-        localStorage.setItem('golfplug_theme', 'light');
-    }
+    const isLight = document.documentElement.classList.toggle('light-mode');
+    localStorage.setItem('golfplug_theme', isLight ? 'light' : 'dark');
 }
 
 // --- TIME TRAVEL ENGINE ---
@@ -46,12 +40,12 @@ function getNow() {
     const override = urlParams.get('date');
     if (override) {
         const d = new Date(override);
-        d.setHours(20); // Set to late evening so Sunday is fully complete
+        d.setHours(20); 
         return d;
     }
     const etString = new Date().toLocaleString("en-US", {timeZone: "America/New_York"});
     const now = new Date(etString);
-    now.setHours(now.getHours() - 3); // Days rollover perfectly at 3 AM EST
+    now.setHours(now.getHours() - 3);
     return now;
 }
 
@@ -165,7 +159,6 @@ function filterLeaderboard() {
     for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
         
-        // Handle Cut Line
         if (row.classList.contains('cut-line-row')) {
             row.style.display = filter ? 'none' : '';
             continue;
@@ -231,7 +224,6 @@ function renderProLeaderboard() {
 
     leaderboard.forEach((l, index) => {
         const pidStr = String(l.playerId);
-        
         const pObj = l.player || globalPlayers[pidStr] || {};
         
         let name = pObj.displayName || pObj.lastName;
@@ -289,7 +281,6 @@ function getInterpolatedPts(u, tDates, todayStr) {
         else if (d === todayStr && u.hasData) pts[i] = u.actualTotalPoints;
     });
     
-    // Bridge the gap for any missing days by averaging the point difference
     let lastValidIdx = -1;
     let lastValidVal = 0;
     for (let i = 0; i < 4; i++) {
@@ -307,6 +298,16 @@ function getInterpolatedPts(u, tDates, todayStr) {
         }
     }
     return pts;
+}
+
+// --- DYNAMIC RANK BADGE COMPONENT ---
+function getRankBadge(rank) {
+    if (!rank) return '';
+    if (rank === 1) return `<span class="season-rank-badge rank-1" title="Season Rank 1">👑 #1</span>`;
+    if (rank === 2) return `<span class="season-rank-badge rank-2" title="Season Rank 2">🥈 #2</span>`;
+    if (rank === 3) return `<span class="season-rank-badge rank-3" title="Season Rank 3">🥉 #3</span>`;
+    if (rank <= 10) return `<span class="season-rank-badge rank-top10" title="Top 10 Season Rank">⭐ #${rank}</span>`;
+    return `<span class="season-rank-badge" title="Season Rank">#${rank}</span>`;
 }
 
 function renderLeaderboard() {
@@ -441,17 +442,7 @@ function renderLeaderboard() {
         const pos = (u.isWD) ? 'WD' : (u.isDuplicate) ? 'DUP' : (u.syncFailed ? 'ERR' : (u.hasData ? u.displayPos : '-'));
         
         const userRank = globalSeasonRanks[u.userId.toLowerCase()] || globalSeasonRanks[u.username.toLowerCase()];
-        let rankBadge = '';
-        if (userRank) {
-            let badgeClass = 'season-rank-badge';
-            let icon = '';
-            if (userRank === 1) { badgeClass += ' rank-1'; icon = '👑 '; }
-            else if (userRank === 2) { badgeClass += ' rank-2'; icon = '🥈 '; }
-            else if (userRank === 3) { badgeClass += ' rank-3'; icon = '🥉 '; }
-            else if (userRank <= 10) { badgeClass += ' rank-top10'; icon = '⭐ '; }
-            
-            rankBadge = `<span class="${badgeClass}" title="Season Rank">${icon}#${userRank}</span>`;
-        }
+        const rankBadge = getRankBadge(userRank);
         
         const playerContent = `<div class="player-flex">${rankBadge}<span class="p-name">${formatHandle(u.username)}</span>${tag ? `<span class="p-tag">${tag}</span>` : ''}<span class="toggle-icon">▼</span></div>`;
         row.innerHTML = `<td class="col-pos">${pos}</td><td class="col-player">${playerContent}</td><td class="col-score">${(u.isWD||u.isDuplicate||u.syncFailed)?'-':formatToPar(u.total)}</td><td class="col-score">${(u.isWD||u.isDuplicate||u.syncFailed)?'-':formatToPar(u.today)}</td>`;
@@ -657,11 +648,11 @@ function renderRankings() {
         detailRow.className = 'draft-row';
         
         const historyHtml = p.history.map(h => `
-            <div style="background: rgba(255,255,255,0.03); padding: 10px 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                <span style="font-size: 0.8rem; font-weight: 700; color: #fff;">${h.name}</span>
-                <div style="text-align: right;">
-                    <span style="font-size: 0.75rem; color: var(--text-muted); margin-right: 12px; display: inline-block; width: 55px; text-align: left;">Pos: <strong style="color: #fff;">${h.pos}</strong></span>
-                    <span style="font-size: 0.85rem; color: var(--gold-light); font-weight: 900; display: inline-block; width: 60px; text-align: right;">+${h.points}</span>
+            <div style="background: rgba(255,255,255,0.03); padding: 10px 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; gap: 10px;">
+                <span style="font-size: 0.8rem; font-weight: 700; color: #fff; flex: 1 1 auto; line-height: 1.3;">${h.name}</span>
+                <div style="text-align: right; flex: 0 0 auto; display: flex; justify-content: flex-end; align-items: center;">
+                    <span style="font-size: 0.75rem; color: var(--text-muted); margin-right: 12px; width: 55px; text-align: left;">Pos: <strong style="color: #fff;">${h.pos}</strong></span>
+                    <span style="font-size: 0.85rem; color: var(--gold-light); font-weight: 900; width: 50px; text-align: right;">+${h.points}</span>
                 </div>
             </div>
         `).join('');
@@ -737,6 +728,7 @@ function exportDay(dayName) {
     for (let i = 0; i <= targetDayIdx; i++) {
         const dStr = tDates[i];
         const isMissing = !Object.values(historicalDailyDataByDate).some(hist => hist[dStr] !== undefined);
+        
         if (i === targetDayIdx || isMissing) {
             daysToExport.push(i);
         }
@@ -748,6 +740,7 @@ function exportDay(dayName) {
         
         const tempUsers = users.map(u => {
             const pts = getInterpolatedPts(u, tDates, todayStr);
+            
             const priorCumulative = dayIdx > 0 ? pts[dayIdx - 1] : 0;
             const liveCumulative = pts[dayIdx]; 
             
@@ -755,6 +748,7 @@ function exportDay(dayName) {
             if (Math.abs(dailyPiece) < 0.01) dailyPiece = 0;
 
             const sig = getLineupSignature(u.lineup);
+            
             return { u, liveCumulative, dailyPiece, sig };
         });
 
@@ -762,6 +756,7 @@ function exportDay(dayName) {
         
         tempUsers.forEach(x => {
             x.isDup = !REFERENCE_IDS.includes(x.u.userId.toLowerCase().trim()) && x.sig !== "" && refSigs.includes(x.sig);
+            
             if (!x.isDup && Math.abs(x.dailyPiece) > 0.01) {
                 tempPool.push(x.dailyPiece);
             }
@@ -773,6 +768,7 @@ function exportDay(dayName) {
                 if (!x.isDup && Math.abs(x.dailyPiece) > 0.01) {
                     golfScore = calculateGolfScore(x.dailyPiece, tempPool);
                 }
+                
                 rows.push([x.u.username, x.u.userId, x.liveCumulative.toFixed(2), golfScore, dateStr]);
             }
         });
@@ -799,6 +795,7 @@ function exportNameUpdatesToCSV() {
     users.forEach(u => {
         rows.push([u.username, u.userId]);
     });
+    
     generateCSV(rows, `golf_plug_usernames.csv`);
     document.getElementById('export-menu').style.display = 'none';
 }
@@ -846,17 +843,7 @@ function viewArchive(name) {
         }
         
         const userRank = globalSeasonRanks[displayUsername.toLowerCase()] || (item.userId ? globalSeasonRanks[item.userId.toLowerCase()] : null);
-        let rankBadge = '';
-        if (userRank) {
-            let badgeClass = 'season-rank-badge';
-            let icon = '';
-            if (userRank === 1) { badgeClass += ' rank-1'; icon = '👑 '; }
-            else if (userRank === 2) { badgeClass += ' rank-2'; icon = '🥈 '; }
-            else if (userRank === 3) { badgeClass += ' rank-3'; icon = '🥉 '; }
-            else if (userRank <= 10) { badgeClass += ' rank-top10'; icon = '⭐ '; }
-            
-            rankBadge = `<span class="${badgeClass}" title="Season Rank">${icon}#${userRank}</span>`;
-        }
+        const rankBadge = getRankBadge(userRank);
         
         const playerContent = `<div class="player-flex">${rankBadge}<span class="p-name">${formatHandle(displayUsername)}</span>${tag ? `<span class="p-tag">${tag}</span>` : ''}<span class="toggle-icon">▼</span></div>`;
         
@@ -920,15 +907,22 @@ async function loadAllUserScores() {
     const statusEl = document.getElementById('sync-status');
     const hasher = new Hashids("realwebapp", 16);
     const MAX_RETRIES = 10; 
-    const CONCURRENCY_LIMIT = 6; 
+    const CONCURRENCY_LIMIT = 8; 
     
     let nextRequestTime = Date.now(); 
     let currentPacing = 200; 
+    let globalPauseUntil = 0; 
     
     async function syncWorker() {
         while (q.length > 0) {
             const user = q.shift();
             if (!user) break;
+
+            if (Date.now() < globalPauseUntil) {
+                await new Promise(r => setTimeout(r, 100));
+                q.unshift(user);
+                continue;
+            }
 
             const now = Date.now();
             let delay = 0;
@@ -948,7 +942,8 @@ async function loadAllUserScores() {
                 const response = await fetch(proxyUrl, opts);
                 
                 if (response.status === 429 || response.status === 502) {
-                    nextRequestTime = Date.now() + 3000; 
+                    globalPauseUntil = Date.now() + 1200; 
+                    nextRequestTime = Date.now() + 1200;
                     currentPacing = Math.min(currentPacing + 50, 1000); 
                     
                     user.retries++;
@@ -958,20 +953,27 @@ async function loadAllUserScores() {
                         user.hasData = true; user.syncFailed = true; loaded++; 
                     }
                 } else if (response.ok) {
-                    currentPacing = Math.max(currentPacing - 5, 125); 
+                    currentPacing = Math.max(currentPacing - 2, 125); 
                     const data = await response.json();
                     
                     if (!currentGameId) { 
                         let foundId = null;
-                        if (data.lineup && data.lineup.length > 0) foundId = data.lineup[0].matchId || data.lineup[0].gameId || data.lineup[0].eventId;
+                        
+                        if (data.lineup && data.lineup.length > 0) {
+                            foundId = data.lineup[0].matchId || data.lineup[0].gameId || data.lineup[0].eventId;
+                        }
+                        
                         if (!foundId) {
                             JSON.stringify(data, (key, value) => {
                                 if (!foundId && ['gameId', 'matchId', 'eventId', 'tournamentId'].includes(key)) {
-                                    if (/^\d{7,10}$/.test(String(value))) foundId = String(value);
+                                    if (/^\d{7,10}$/.test(String(value))) {
+                                        foundId = String(value);
+                                    }
                                 }
                                 return value;
                             });
                         }
+
                         if (foundId && /^\d+$/.test(String(foundId))) {
                             currentGameId = String(foundId);
                             fetchProLeaderboard();
@@ -983,6 +985,7 @@ async function loadAllUserScores() {
                     
                     function deepSearchName(obj) {
                         if (foundUsername || !obj || typeof obj !== 'object') return;
+                        
                         if (obj.id !== undefined && String(obj.id).toLowerCase() === targetUid) {
                             if (obj.username) foundUsername = obj.username;
                             else if (obj.userName) foundUsername = obj.userName;
@@ -990,6 +993,7 @@ async function loadAllUserScores() {
                         if (!foundUsername && obj.username && (String(obj.userId).toLowerCase() === targetUid || String(obj.ownerId).toLowerCase() === targetUid)) {
                             foundUsername = obj.username;
                         }
+                        
                         if (!foundUsername) {
                             Object.values(obj).forEach(val => {
                                 if (val && typeof val === 'object') deepSearchName(val);
@@ -1015,8 +1019,8 @@ async function loadAllUserScores() {
                             const profRes = await fetch(profProxy, opts);
                             
                             if (profRes.status === 429 || profRes.status === 502) {
-                                nextRequestTime = Date.now() + 3000;
-                                currentPacing = Math.min(currentPacing + 50, 1000); 
+                                globalPauseUntil = Date.now() + 1200;
+                                nextRequestTime = Date.now() + 1200;
                             } else if (profRes.ok) {
                                 const profData = await profRes.json();
                                 if (profData.username) foundUsername = profData.username;
@@ -1058,7 +1062,8 @@ async function loadAllUserScores() {
                     else { user.hasData = true; user.syncFailed = true; loaded++; }
                 }
             } catch (e) {
-                nextRequestTime = Date.now() + 1500;
+                globalPauseUntil = Date.now() + 1000;
+                nextRequestTime = Date.now() + 1000;
                 user.retries++;
                 if (user.retries < MAX_RETRIES) q.unshift(user);
                 else { user.hasData = true; user.syncFailed = true; loaded++; }
