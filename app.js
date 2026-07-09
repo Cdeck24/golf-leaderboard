@@ -9,7 +9,7 @@ const config = {
 };
 
 const DEVICE_UUID = crypto.randomUUID();
-const REFERENCE_IDS = ['jvbb41pv', 'gv8D5Q0v', '9JmXRKDn'].map(id => id.toLowerCase().trim());
+const REFERENCE_IDS = ['jvbb41pv', 'gv8D5Q0v', '9JmXRKDn', 'WJqVodLv', 'PJPWjGpn', 'Y3Kq1G8J', 'lnEw4avw', '7Jkwd1PJ', 'Gv1DK9aJ', 'xnrGDpRJ'].map(id => id.toLowerCase().trim());
 
 let users = [];
 let historicalDailyDataByDate = {}; 
