@@ -29,7 +29,6 @@ let globalTournamentCutRules = {};
 let activeTournamentKey = null; 
 let isAdminAuthenticated = false;
 
-// --- UTILITIES ---
 function toggleTheme() {
     const isLight = document.documentElement.classList.toggle('light-mode');
     localStorage.setItem('golfplug_theme', isLight ? 'light' : 'dark');
@@ -167,10 +166,8 @@ function filterLeaderboard() {
     }
 }
 
-// --- DATA FETCHING & SYNC LOGIC ---
-
 async function fetchProLeaderboard() {
-    if (!currentGameId) return;
+    if (!currentGameId || currentGameId === "undefined") return;
     const tbody = document.getElementById('pro-leaderboard-tbody');
     const statusEl = document.getElementById('pro-sync-status');
     
@@ -186,10 +183,10 @@ async function fetchProLeaderboard() {
         rawProLeaderboardData = await response.json();
         renderProLeaderboard();
     } catch (error) {
-        if (tbody.innerHTML.includes('Loading')) {
+        if (tbody && tbody.innerHTML.includes('Loading')) {
             tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 2rem; color: var(--danger);">Failed to load pro leaderboard.</td></tr>';
-            statusEl.innerHTML = '<span class="sync-dot" style="background:var(--danger); box-shadow:none;"></span>ERR';
         }
+        if (statusEl) statusEl.innerHTML = '<span class="sync-dot" style="background:var(--danger); box-shadow:none;"></span>ERR';
     }
 }
 
@@ -197,9 +194,11 @@ function renderProLeaderboard() {
     if (!rawProLeaderboardData) return;
     const tbody = document.getElementById('pro-leaderboard-tbody');
     const statusEl = document.getElementById('pro-sync-status');
+    if (!tbody) return;
     
     const data = rawProLeaderboardData;
-    const leaderboard = data.leaderboard || [];
+    // Fallback safely if API structure changes
+    const leaderboard = data.leaderboard || data.players || data.stats || [];
     
     if (leaderboard.length === 0) {
         tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 2rem; color: var(--text-muted);">Leaderboard not available yet.</td></tr>';
@@ -208,7 +207,7 @@ function renderProLeaderboard() {
 
     const rowsHtml = [];
     leaderboard.forEach((l, index) => {
-        const pidStr = String(l.playerId);
+        const pidStr = String(l.playerId || l.id);
         const pObj = l.player || globalPlayers[pidStr] || {};
         
         let name = pObj.displayName || pObj.lastName;
@@ -248,7 +247,7 @@ function renderProLeaderboard() {
     });
 
     tbody.innerHTML = rowsHtml.join('');
-    statusEl.innerHTML = '<span class="sync-dot"></span>LIVE';
+    if (statusEl) statusEl.innerHTML = '<span class="sync-dot"></span>LIVE';
 }
 
 function getInterpolatedPts(u, tDates, todayStr) {
@@ -278,6 +277,15 @@ function getInterpolatedPts(u, tDates, todayStr) {
         }
     }
     return pts;
+}
+
+function getRankBadge(rank) {
+    if (!rank) return '';
+    if (rank === 1) return `<span class="season-rank-badge rank-1" title="Season Rank 1">👑 #1</span>`;
+    if (rank === 2) return `<span class="season-rank-badge rank-2" title="Season Rank 2">🥈 #2</span>`;
+    if (rank === 3) return `<span class="season-rank-badge rank-3" title="Season Rank 3">🥉 #3</span>`;
+    if (rank <= 10) return `<span class="season-rank-badge rank-top10" title="Top 10 Season Rank">⭐ #${rank}</span>`;
+    return `<span class="season-rank-badge" title="Season Rank">#${rank}</span>`;
 }
 
 function renderLeaderboard() {
@@ -330,7 +338,9 @@ function renderLeaderboard() {
     const activeIdx = tDates.indexOf(todayStr);
     const sortedPool = [...(activeIdx !== -1 ? pools[activeIdx] : [])].sort((a,b) => a - b);
     const medianVal = sortedPool.length ? (sortedPool.length % 2 ? sortedPool[Math.floor(sortedPool.length/2)] : (sortedPool[sortedPool.length/2-1] + sortedPool[sortedPool.length/2])/2) : 0;
-    document.getElementById('par-score-display').innerText = `EVEN: ${medianVal.toFixed(2)} ${activeIdx === 0 ? 'PTS' : 'IMPROVE'}`;
+    
+    const parDisplay = document.getElementById('par-score-display');
+    if (parDisplay) parDisplay.innerText = `EVEN: ${medianVal.toFixed(2)} ${activeIdx === 0 ? 'PTS' : 'IMPROVE'}`;
 
     const isNoCut = globalTournamentCutRules[activeTournamentKey] || false;
 
@@ -406,15 +416,7 @@ function renderLeaderboard() {
         const tag = u.isDuplicate ? '(DUP)' : (u.syncFailed ? '(ERR)' : (activeIdx >= 2 && !u.madeCut ? '(MC)' : ''));
         const pos = (u.isWD) ? 'WD' : (u.isDuplicate) ? 'DUP' : (u.syncFailed ? 'ERR' : (u.hasData ? u.displayPos : '-'));
         const userRank = globalSeasonRanks[u.userId.toLowerCase()] || globalSeasonRanks[u.username.toLowerCase()];
-        
-        let rankBadge = '';
-        if (userRank) {
-            if (userRank === 1) rankBadge = `<span class="season-rank-badge rank-1" title="Season Rank 1">👑 #1</span>`;
-            else if (userRank === 2) rankBadge = `<span class="season-rank-badge rank-2" title="Season Rank 2">🥈 #2</span>`;
-            else if (userRank === 3) rankBadge = `<span class="season-rank-badge rank-3" title="Season Rank 3">🥉 #3</span>`;
-            else if (userRank <= 10) rankBadge = `<span class="season-rank-badge rank-top10" title="Top 10 Season Rank">⭐ #${userRank}</span>`;
-            else rankBadge = `<span class="season-rank-badge" title="Season Rank">#${userRank}</span>`;
-        }
+        const rankBadge = getRankBadge(userRank);
         
         const mainRow = document.createElement('tr'); 
         mainRow.className = 'main-row';
@@ -423,6 +425,7 @@ function renderLeaderboard() {
         const dr = document.createElement('tr'); 
         dr.className = 'draft-row';
         const s = (val) => (val === 0 ? 0 : val).toFixed(2);
+        
         dr.innerHTML = `<td colspan="4"><div class="expanded-container"><div class="round-breakdown"><div class="round-slot"><span class="round-label">Thu</span><span class="round-val">${(u.isWD||u.isDuplicate||u.syncFailed)?'-':formatToPar(u.rounds.thu)}</span><span class="round-piece">${s(u.dayPieces[0])} PTS</span></div><div class="round-slot"><span class="round-label">Fri</span><span class="round-val">${(u.isWD||u.isDuplicate||u.syncFailed)?'-':formatToPar(u.rounds.fri)}</span><span class="round-piece">${s(u.dayPieces[1])} PTS</span></div><div class="round-slot"><span class="round-label">Sat</span><span class="round-val">${u.madeCut?formatToPar(u.rounds.sat):'<span class="score-box mc">MC</span>'}</span><span class="round-piece">${s(u.dayPieces[2])} PTS</span></div><div class="round-slot"><span class="round-label">Sun</span><span class="round-val">${u.madeCut?formatToPar(u.rounds.sun):'<span class="score-box mc">MC</span>'}</span><span class="round-piece">${s(u.dayPieces[3])} PTS</span></div></div><div class="raw-pts-display">Total Raw Score: ${u.actualTotalPoints.toFixed(2)}</div><div class="draft-grid"></div></div></td>`;
         
         mainRow.onclick = () => { 
@@ -441,14 +444,27 @@ function renderLeaderboard() {
 }
 
 function renderDraft(u, c) {
-    if (u.syncFailed) { c.innerHTML = '<div style="width:100%; text-align:center; font-size:0.8rem; color:var(--text-muted);">Failed to sync from API.</div>'; return; }
-    if (!u.hasData) { c.innerHTML = '<div style="width:100%; text-align:center; font-size:0.8rem;">Loading...</div>'; return; }
-    if (u.isWD) { c.innerHTML = '<div style="width:100%; text-align:center; font-size:0.8rem; color:var(--danger); font-weight: 800;">WITHDRAWN</div>'; return; }
-    c.innerHTML = (u.isDuplicate ? '<div style="width:100%; color:var(--danger); font-size:0.8rem; text-align:center; font-weight:800; margin-bottom:10px;">DUPLICATE LINEUP (0 PTS)</div>' : '') + 
-        u.lineup.map(g => `<div class="draft-item"><img src="${g.avatar||g.player?.avatar ? `https://media.realapp.link/assets/players/default/large/${g.avatar||g.player.avatar}.webp` : 'https://placehold.co/40x40/eee/333?text=?'}" class="draft-item-avatar" onerror="this.src='https://placehold.co/40x40/eee/333?text=?'"><span class="draft-item-name">${g.displayName||g.player?.displayName||'Unknown'}</span><span class="draft-item-score">${(parseFloat(g.score)||0).toFixed(2)}</span></div>`).join('');
+    if (!c) return;
+    if (u.syncFailed) { c.innerHTML = '<div style="width:100%; text-align:center; font-size:0.8rem; color:var(--text-muted); padding:10px;">Failed to sync from API.</div>'; return; }
+    if (!u.hasData) { c.innerHTML = '<div style="width:100%; text-align:center; font-size:0.8rem; padding:10px;">Loading...</div>'; return; }
+    if (u.isWD) { c.innerHTML = '<div style="width:100%; text-align:center; font-size:0.8rem; color:var(--danger); font-weight: 800; padding:10px;">WITHDRAWN</div>'; return; }
+    
+    let html = (u.isDuplicate ? '<div style="width:100%; color:var(--danger); font-size:0.8rem; text-align:center; font-weight:800; margin-bottom:10px;">DUPLICATE LINEUP (0 PTS)</div>' : '');
+    
+    // Defensive check just in case the API payload is fully missing the lineup array
+    if (u.lineup && u.lineup.length > 0) {
+        html += u.lineup.map(g => {
+            const avatarSrc = (g.avatar || g.player?.avatar) ? `https://media.realapp.link/assets/players/default/large/${g.avatar || g.player.avatar}.webp` : 'https://placehold.co/40x40/eee/333?text=?';
+            const name = g.displayName || g.player?.displayName || g.lastName || g.player?.lastName || 'Unknown';
+            const score = (parseFloat(g.score) || 0).toFixed(2);
+            return `<div class="draft-item"><img src="${avatarSrc}" class="draft-item-avatar" onerror="this.src='https://placehold.co/40x40/eee/333?text=?'"><span class="draft-item-name">${name}</span><span class="draft-item-score">${score}</span></div>`;
+        }).join('');
+    } else {
+        html += '<div style="width:100%; text-align:center; font-size:0.8rem; color:var(--text-muted); padding:10px;">No lineup data found.</div>';
+    }
+    
+    c.innerHTML = html;
 }
-
-// --- RANKINGS ENGINE ---
 
 function getSeasonPoints(pos, status, mult = 1) {
     if (status === "WD" || status === "DUP" || !pos) return 0;
@@ -462,6 +478,8 @@ function getSeasonPoints(pos, status, mult = 1) {
 
 function getProcessedTournaments() {
     if (processedTournamentsCache) return processedTournamentsCache;
+    if (!masterArchiveData || masterArchiveData.length < 2) return {};
+    
     const h = masterArchiveData[0].map(v => v.toLowerCase().trim());
     const [tIdx, uIdx, uidIdx, sIdx, epIdx] = ['tournament', 'username', 'user id', 'status', 'event type'].map(k => findIdx(h, [k]));
     const tournaments = {};
@@ -514,7 +532,19 @@ function renderRankings() {
         const r = document.createElement('tr'); r.className = 'main-row';
         r.innerHTML = `<td class="col-pos">${i+1}</td><td class="col-player"><div class="player-flex"><span class="p-name">${formatHandle(p.username)}</span><span class="toggle-icon">▼</span></div></td><td class="col-stat">${p.points}</td><td class="col-stat">${p.wins}</td><td class="col-stat">${p.starts}</td>`;
         const dr = document.createElement('tr'); dr.className = 'draft-row';
-        dr.innerHTML = `<td colspan="5"><div class="expanded-container"><div style="font-size:0.7rem; font-weight:800; color:var(--text-muted); margin-bottom:8px;">HISTORY</div>${p.history.map(h => `<div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-bottom:4px; border-bottom:1px solid var(--glass-border); padding-bottom:4px;"><span>${h.name}</span><span>Pos: <strong>${h.pos}</strong> <span style="color:var(--golf-green-mid); margin-left:10px;">+${h.points}</span></span></div>`).join('')}</div></td>`;
+        
+        // Fixed Flexbox alignment for long tournament names
+        const historyHtml = p.history.map(h => `
+            <div style="background: rgba(255,255,255,0.03); padding: 10px 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; gap: 10px;">
+                <span style="font-size: 0.8rem; font-weight: 700; color: var(--text-main); flex: 1 1 auto; line-height: 1.3;">${h.name}</span>
+                <div style="text-align: right; flex: 0 0 auto; display: flex; justify-content: flex-end; align-items: center;">
+                    <span style="font-size: 0.75rem; color: var(--text-muted); margin-right: 12px; width: 55px; text-align: left;">Pos: <strong style="color: var(--text-main);">${h.pos}</strong></span>
+                    <span style="font-size: 0.85rem; color: var(--gold-light); font-weight: 900; width: 50px; text-align: right;">+${h.points}</span>
+                </div>
+            </div>
+        `).join('');
+
+        dr.innerHTML = `<td colspan="5"><div class="expanded-container"><div style="font-size:0.7rem; font-weight:900; color:var(--border-gold); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:12px;">Tournament History</div>${historyHtml}</div></td>`;
         r.onclick = () => { const o = r.classList.contains('open'); tb.querySelectorAll('.main-row, .draft-row').forEach(x => x.classList.remove('open')); if (!o) { r.classList.add('open'); dr.classList.add('open'); } };
         tb.appendChild(r); tb.appendChild(dr);
     });
@@ -554,8 +584,6 @@ function viewArchive(name) {
     document.getElementById('past-tournament-grid').style.display = 'none'; 
     document.getElementById('archive-viewer').style.display = 'block';
 }
-
-// --- ADMIN EXPORTS ---
 
 function generateCSV(rows, filename) {
     const blob = new Blob([rows.map(e => e.join(",")).join("\n")], { type: 'text/csv' });
@@ -616,21 +644,33 @@ function exportNameUpdatesToCSV() {
     generateCSV(rows, `golf_plug_usernames.csv`); document.getElementById('export-menu').style.display = 'none';
 }
 
-// --- BOOTSTRAP & SYNCING ---
-
 async function fetchDailyHistoricalData() {
     try {
         const res = await fetch(config.dailyDataUrl);
-        const rows = parseCSV(await res.text());
+        const text = await res.text();
+        const rows = parseCSV(text);
+        if (rows.length < 2) return;
+        
         const h = rows[0].map(v => v.toLowerCase().trim());
         const uIdx = findIdx(h, ['user id', 'userid']), dIdx = findIdx(h, ['date']), rIdx = findIdx(h, ['raw points']), gIdx = findIdx(h, ['golf score']);
         if (uIdx === -1 || dIdx === -1) return;
         
+        // Memory Pruning Optimization: We only care about dates matching our current tournament!
+        const validDates = [];
+        if (activeTournamentStartDate) {
+            for (let i = 0; i < 4; i++) validDates.push(getFormattedDate(activeTournamentStartDate, i));
+        }
+
         rows.slice(1).forEach(r => {
-            const uid = r[uIdx]?.trim().toLowerCase(); const date = r[dIdx]?.trim();
+            const uid = r[uIdx]?.trim().toLowerCase(); 
+            const date = r[dIdx]?.trim();
             if (!uid || !date) return;
-            if (!historicalDailyDataByDate[uid]) historicalDailyDataByDate[uid] = {};
-            historicalDailyDataByDate[uid][date] = { score: parseFloat(r[gIdx]) || 0, raw: parseFloat(r[rIdx]) || 0 };
+            
+            // Only keep memory of dates that apply to this exact week
+            if (validDates.includes(date)) {
+                if (!historicalDailyDataByDate[uid]) historicalDailyDataByDate[uid] = {};
+                historicalDailyDataByDate[uid][date] = { score: parseFloat(r[gIdx]) || 0, raw: parseFloat(r[rIdx]) || 0 };
+            }
         });
     } catch (e) {
         console.error("Failed to load historical daily data", e);
@@ -710,7 +750,7 @@ async function loadAllUserScores() {
     let q = [...vUsers]; let loaded = 0; 
     const statusEl = document.getElementById('sync-status');
     const hasher = new Hashids("realwebapp", 16);
-    let nextReq = Date.now(); let pace = 200; let globalPause = 0;
+    let nextReq = Date.now(); let pace = 250; let globalPause = 0;
     
     async function syncWorker() {
         while (q.length > 0) {
@@ -726,11 +766,28 @@ async function loadAllUserScores() {
                 const res = await fetch(`${config.workerProxy}?url=${encodeURIComponent(`https://web.realsports.io/games/playerratingcontest/${u.golfId}/view/${u.userId}?contestType=sport&source=home`)}`, opts);
                 
                 if (res.status === 429 || res.status === 502) {
-                    globalPause = Date.now() + 1200; nextReq = Date.now() + 1200; pace = Math.min(pace + 50, 1000);
+                    globalPause = Date.now() + 1500; nextReq = Date.now() + 1500; pace = Math.min(pace + 50, 1000);
                     u.retries++; if (u.retries < 10) q.unshift(u); else { u.hasData = true; u.syncFailed = true; loaded++; }
                 } else if (res.ok) {
-                    pace = Math.max(pace - 2, 125); const data = await res.json();
-                    if (!currentGameId && data.lineup && data.lineup.length > 0) { currentGameId = String(data.lineup[0].matchId || data.lineup[0].gameId); fetchProLeaderboard(); }
+                    pace = Math.max(pace - 2, 150); const data = await res.json();
+                    
+                    // Safely hunt down the currentGameId dynamically in case the API structure changes
+                    if (!currentGameId && data.lineup && data.lineup.length > 0) { 
+                        const first = data.lineup[0];
+                        let foundId = first.eventId || first.tournamentId || first.matchId || first.gameId;
+                        if (!foundId) {
+                            JSON.stringify(data, (key, value) => {
+                                if (!foundId && ['eventId', 'tournamentId', 'matchId', 'gameId'].includes(key) && value) {
+                                    if (/^\d+$/.test(String(value))) foundId = String(value);
+                                }
+                                return value;
+                            });
+                        }
+                        if (foundId && /^\d+$/.test(String(foundId))) {
+                            currentGameId = String(foundId); 
+                            fetchProLeaderboard(); 
+                        }
+                    }
                     
                     let foundName = null; const tid = String(u.userId).toLowerCase();
                     function ds(obj) {
@@ -749,8 +806,23 @@ async function loadAllUserScores() {
                     if (foundName) u.username = foundName.trim();
                     
                     u.actualTotalPoints = parseFloat((data.info?.rankDisplayInfos?.[0]?.scoreDisplay || '0').replace(/[^0-9.]/g, '')) || 0;
-                    u.lineup = data.lineup || [];
-                    u.lineup.forEach(g => { const p = g.player || {}; const pid = String(g.playerId || p.id || g.id); if (pid && pid !== 'undefined') globalPlayers[pid] = { displayName: p.displayName || g.displayName, lastName: p.lastName || g.lastName, firstName: p.firstName || g.firstName, avatar: p.avatar || g.avatar, id: pid, value: g.score, pickCount: (globalPlayers[pid]?.pickCount || 0) + 1 }; });
+                    u.lineup = data.lineup || data.picks || data.players || [];
+                    
+                    u.lineup.forEach(g => { 
+                        const p = g.player || {}; 
+                        const pid = String(g.playerId || p.id || g.id); 
+                        if (pid && pid !== 'undefined') {
+                            globalPlayers[pid] = { 
+                                displayName: p.displayName || g.displayName, 
+                                lastName: p.lastName || g.lastName, 
+                                firstName: p.firstName || g.firstName, 
+                                avatar: p.avatar || g.avatar, 
+                                id: pid, 
+                                value: g.score, 
+                                pickCount: (globalPlayers[pid]?.pickCount || 0) + 1 
+                            }; 
+                        }
+                    });
                     u.actualTodayPoints = u.lineup.reduce((acc, g) => acc + (parseFloat(g.score) || 0), 0);
                     u.hasData = true; loaded++;
                 } else { if (res.status === 404) { u.hasData = true; u.syncFailed = true; loaded++; } else { u.retries++; if (u.retries < 10) q.push(u); else { u.hasData = true; u.syncFailed = true; loaded++; } } }
@@ -762,7 +834,8 @@ async function loadAllUserScores() {
         }
     }
 
-    const wkrs = []; for (let i = 0; i < 6; i++) wkrs.push(syncWorker());
+    // Set concurrency to 4 to prevent heavy rate limits
+    const wkrs = []; for (let i = 0; i < 4; i++) wkrs.push(syncWorker());
     await Promise.all(wkrs);
     
     calculateGlobalRanks(); 
@@ -784,7 +857,8 @@ async function initApp() {
     users = await fetchUsers();
     
     // Hide the loader and start sync!
-    document.getElementById('loading-indicator').style.display = 'none';
+    const loader = document.getElementById('loading-indicator');
+    if (loader) loader.style.display = 'none';
     
     renderLeaderboard(); 
     loadAllUserScores();
