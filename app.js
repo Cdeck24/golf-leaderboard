@@ -9,7 +9,7 @@ const config = {
 };
 
 const DEVICE_UUID = crypto.randomUUID();
-const REFERENCE_IDS = ['jvbb41pv', 'gv8D5Q0v', '9JmXRKDn', 'WJqVodLv', 'PJPWjGpn', 'Y3Kq1G8J', 'lnEw4avw', '7Jkwd1PJ', 'Gv1DK9aJ', 'xnrGDpRJ'].map(id => id.toLowerCase().trim());
+const REFERENCE_IDS = ['jvbb41pv', 'gv8D5Q0v', '9JmXRKDn'].map(id => id.toLowerCase().trim());
 
 let users = [];
 let historicalDailyDataByDate = {}; 
@@ -28,11 +28,13 @@ let globalTournamentTypes = {};
 let globalTournamentCutRules = {}; 
 let activeTournamentKey = null; 
 
+// --- THEME TOGGLE LOGIC ---
 function toggleTheme() {
     const isLight = document.documentElement.classList.toggle('light-mode');
     localStorage.setItem('golfplug_theme', isLight ? 'light' : 'dark');
 }
 
+// --- TIME TRAVEL ENGINE ---
 function getNow() {
     const urlParams = new URLSearchParams(window.location.search);
     const override = urlParams.get('date');
@@ -133,6 +135,17 @@ function getFormattedDate(base, daysToAdd) {
     return (d.getMonth() + 1) + '/' + d.getDate() + '/' + d.getFullYear();
 }
 
+function base64ToText(b) {
+    try {
+        if (!b) return '';
+        const decoded = window.atob(b.replace(/-/g, '+').replace(/_/g, '/'));
+        const bytes = new Uint8Array(decoded.length);
+        for (let i = 0; i < decoded.length; i++) bytes[i] = decoded.charCodeAt(i);
+        return new TextDecoder().decode(bytes);
+    } catch(e) { return ''; }
+}
+
+// --- SEARCH BAR LOGIC ---
 function filterLeaderboard() {
     const input = document.getElementById('player-search');
     if (!input) return;
@@ -145,10 +158,12 @@ function filterLeaderboard() {
     
     for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
+        
         if (row.classList.contains('cut-line-row')) {
             row.style.display = filter ? 'none' : '';
             continue;
         }
+        
         if (row.classList.contains('main-row')) {
             currentMain = row;
             const nameEl = row.querySelector('.p-name');
@@ -166,6 +181,7 @@ function filterLeaderboard() {
     }
 }
 
+// --- PRO LEADERBOARD ---
 async function fetchProLeaderboard() {
     if (!currentGameId) return;
     const tbody = document.getElementById('pro-leaderboard-tbody');
@@ -254,6 +270,7 @@ function renderProLeaderboard() {
     statusEl.innerHTML = '<span class="sync-dot"></span>LIVE';
 }
 
+// --- MISSING SCORES INTERPOLATION ALGORITHM ---
 function getInterpolatedPts(u, tDates, todayStr) {
     const normId = u.userId.trim().toLowerCase();
     const hist = historicalDailyDataByDate[normId] || {};
@@ -283,6 +300,7 @@ function getInterpolatedPts(u, tDates, todayStr) {
     return pts;
 }
 
+// --- DYNAMIC RANK BADGE COMPONENT ---
 function getRankBadge(rank) {
     if (!rank) return '';
     if (rank === 1) return `<span class="season-rank-badge rank-1" title="Season Rank 1">👑 #1</span>`;
@@ -298,6 +316,7 @@ function renderLeaderboard() {
     tbody.innerHTML = '';
     
     const now = getNow();
+    
     const todayStr = (now.getMonth() + 1) + '/' + now.getDate() + '/' + now.getFullYear();
     const tDates = [];
     if (activeTournamentStartDate) {
@@ -393,13 +412,20 @@ function renderLeaderboard() {
         while (j < validField.length && validField[j].total === validField[vfIdx].total && validField[j].madeCut === validField[vfIdx].madeCut) {
             j++;
         }
+        
         const groupSize = j - vfIdx;
+
         if (vfIdx === 0 && isFinalDay) {
             validField[0].displayPos = "1";
-            for (let k = 1; k < j; k++) validField[k].displayPos = "T2"; 
+            for (let k = 1; k < j; k++) {
+                validField[k].displayPos = "T2"; 
+            }
         } else {
-            for (let k = vfIdx; k < j; k++) validField[k].displayPos = groupSize > 1 ? 'T' + (vfIdx + 1) : (vfIdx + 1).toString();
+            for (let k = vfIdx; k < j; k++) {
+                validField[k].displayPos = groupSize > 1 ? 'T' + (vfIdx + 1) : (vfIdx + 1).toString();
+            }
         }
+        
         vfIdx = j;
     }
 
@@ -412,7 +438,9 @@ function renderLeaderboard() {
         }
         const row = document.createElement('tr'); row.className = 'main-row';
         const tag = u.isDuplicate ? '(DUP)' : (u.syncFailed ? '(ERR)' : (activeIdx >= 2 && !u.madeCut ? '(MC)' : ''));
+        
         const pos = (u.isWD) ? 'WD' : (u.isDuplicate) ? 'DUP' : (u.syncFailed ? 'ERR' : (u.hasData ? u.displayPos : '-'));
+        
         const userRank = globalSeasonRanks[u.userId.toLowerCase()] || globalSeasonRanks[u.username.toLowerCase()];
         const rankBadge = getRankBadge(userRank);
         
@@ -423,7 +451,6 @@ function renderLeaderboard() {
         const satVal = u.madeCut ? formatToPar(u.rounds.sat) : '<div class="score-box mc">MC</div>';
         const sunVal = u.madeCut ? formatToPar(u.rounds.sun) : '<div class="score-box mc">MC</div>';
         const sanitize = (val) => (val === 0 ? 0 : val).toFixed(2);
-        
         dr.innerHTML = `<td colspan="4"><div class="expanded-container"><div class="round-breakdown">
             <div class="round-slot"><span class="round-label">Thu</span><span class="round-val">${(u.isWD||u.isDuplicate||u.syncFailed)?'-':formatToPar(u.rounds.thu)}</span><span class="round-piece">${(u.isWD||u.isDuplicate||u.syncFailed)?'-':sanitize(u.dayPieces[0])} PTS</span></div>
             <div class="round-slot"><span class="round-label">Fri</span><span class="round-val">${(u.isWD||u.isDuplicate||u.syncFailed)?'-':formatToPar(u.rounds.fri)}</span><span class="round-piece">${(u.isWD||u.isDuplicate||u.syncFailed)?'-':sanitize(u.dayPieces[1])} PTS</span></div>
@@ -431,15 +458,11 @@ function renderLeaderboard() {
             <div class="round-slot"><span class="round-label">Sun</span><span class="round-val">${(u.isWD||u.isDuplicate||u.syncFailed)?'-':sunVal}</span><span class="round-piece">${(u.isWD||u.isDuplicate||u.syncFailed)?'-':sanitize(u.dayPieces[3])} PTS</span></div>
         </div><div class="raw-pts-display">Total Raw Score: ${u.actualTotalPoints.toFixed(2)} ${u.isWD?'(WD)':(u.syncFailed?'(ERR)':'')}</div><div class="draft-grid"></div></div></td>`;
         
-        row.onclick = () => {
-            const isOpen = row.classList.contains('open');
-            document.querySelectorAll('#leaderboard-tbody .main-row').forEach(r => r.classList.remove('open'));
-            document.querySelectorAll('#leaderboard-tbody .draft-row').forEach(r => r.classList.remove('open'));
-            if (!isOpen) { 
-                row.classList.add('open'); 
-                dr.classList.add('open'); 
-                renderDraft(u, dr.querySelector('.draft-grid')); 
-            }
+        row.onclick = function() {
+            const isOpen = this.classList.contains('open');
+            document.querySelectorAll('.main-row').forEach(r => r.classList.remove('open'));
+            document.querySelectorAll('.draft-row').forEach(r => r.classList.remove('open'));
+            if (!isOpen) { this.classList.add('open'); dr.classList.add('open'); renderDraft(u, dr.querySelector('.draft-grid')); }
         };
         tbody.appendChild(row); tbody.appendChild(dr);
     });
@@ -447,36 +470,7 @@ function renderLeaderboard() {
     filterLeaderboard();
 }
 
-function renderDraft(u, container) {
-    if (!container) return;
-    if (u.syncFailed) { container.innerHTML = '<div style="flex:1; text-align:center; font-size:0.7rem; color:var(--text-muted); padding:10px;">Failed to load data (Rate limited or not found). Please refresh later.</div>'; return; }
-    if (!u.hasData) { container.innerHTML = '<div style="flex:1; text-align:center; font-size:0.7rem; padding:10px;">Syncing...</div>'; return; }
-    if (u.isWD) { container.innerHTML = `<div style="flex:1; text-align:center; font-size:0.7rem; color:var(--danger); padding:10px;">PLAYER WITHDRAWN</div>`; return; }
-    
-    let dupWarning = u.isDuplicate ? `<div style="width:100%; text-align:center; font-size:0.75rem; color:var(--danger); font-weight:900; margin-bottom:12px; letter-spacing:0.05em; background:rgba(255,85,85,0.1); padding:8px; border-radius:6px; border:1px solid rgba(255,85,85,0.3);">DUPLICATE ENTRY - ZERO POINTS</div>` : '';
-    
-    let lineupHtml = '';
-    if (u.lineup && u.lineup.length > 0) {
-        lineupHtml = u.lineup.map(g => {
-            const pObj = g.player || g || {};
-            const avatarHash = pObj.avatar || g.avatar || '';
-            const avatarStr = avatarHash ? `https://media.realapp.link/assets/players/default/large/${avatarHash}.webp` : 'https://placehold.co/48x48/111/fff?text=?';
-            const nameStr = pObj.displayName || pObj.name || pObj.lastName || g.displayName || 'Unknown';
-            const scoreStr = (parseFloat(g.score) || 0).toFixed(2);
-            
-            return `<div class="draft-item">
-                <img src="${avatarStr}" class="draft-item-avatar" onerror="this.src='https://placehold.co/48x48/111/fff?text=?'">
-                <span class="draft-item-name">${nameStr}</span>
-                <span class="draft-item-score">${scoreStr}</span>
-            </div>`;
-        }).join('');
-    } else {
-        lineupHtml = '<div style="width:100%; text-align:center; padding:10px; font-size:0.8rem; color:var(--text-muted);">Lineup data not available.</div>';
-    }
-    
-    container.innerHTML = dupWarning + lineupHtml;
-}
-
+// --- RANKINGS LOGIC ---
 function getSeasonPoints(pos, status, multiplier = 1) {
     if (status === "WD" || status === "DUP") return 0;
     if (!pos) return 0;
@@ -527,7 +521,7 @@ function getProcessedTournaments() {
         
         if (epIdx !== -1 && r[epIdx]) {
             const val = r[epIdx].toString().toLowerCase().trim();
-            if (val.includes('major') || val.includes('players')) multiplier = 1.5;
+            if (val.includes('major') || val.includes('players') || val.includes('playoff')) multiplier = 1.5;
             else if (val.includes('signature')) multiplier = 1.4;
             else if (val.includes('regular')) multiplier = 1.0;
         }
@@ -566,14 +560,20 @@ function getProcessedTournaments() {
         let vfIdx = 0;
         while (vfIdx < validArchive.length) {
             let j = vfIdx;
-            while (j < validArchive.length && validArchive[j].totalGolf === validArchive[vfIdx].totalGolf && validArchive[j].madeCut === validArchive[vfIdx].madeCut) j++;
+            while (j < validArchive.length && validArchive[j].totalGolf === validArchive[vfIdx].totalGolf && validArchive[j].madeCut === validArchive[vfIdx].madeCut) {
+                j++;
+            }
             const groupSize = j - vfIdx;
 
             if (vfIdx === 0) {
                 validArchive[0].displayPos = "1";
-                for (let k = 1; k < j; k++) validArchive[k].displayPos = "T2"; 
+                for (let k = 1; k < j; k++) {
+                    validArchive[k].displayPos = "T2"; 
+                }
             } else {
-                for (let k = vfIdx; k < j; k++) validArchive[k].displayPos = groupSize > 1 ? 'T' + (vfIdx + 1) : (vfIdx + 1).toString();
+                for (let k = vfIdx; k < j; k++) {
+                    validArchive[k].displayPos = groupSize > 1 ? 'T' + (vfIdx + 1) : (vfIdx + 1).toString();
+                }
             }
             vfIdx = j;
         }
@@ -591,7 +591,9 @@ function calculateGlobalRanks() {
         const field = tournaments[tName];
         field.forEach(p => {
             if (!p.username) return;
+            
             const key = p.userId ? p.userId.toLowerCase().trim() : p.username.toLowerCase().trim();
+            
             if (!stats[key]) stats[key] = { points: 0, wins: 0, starts: 0, uid: p.userId, username: p.username, history: [] };
             
             if (p.status !== "WD" && p.status !== "DUP") {
@@ -599,7 +601,12 @@ function calculateGlobalRanks() {
                 const earnedPts = getSeasonPoints(p.displayPos, p.status, p.multiplier);
                 stats[key].points += earnedPts;
                 if (p.displayPos === "1" && p.status === "MADE CUT") stats[key].wins += 1;
-                stats[key].history.push({ name: tName, pos: p.displayPos, points: earnedPts });
+                
+                stats[key].history.push({
+                    name: tName,
+                    pos: p.displayPos,
+                    points: earnedPts
+                });
             }
         });
     });
@@ -632,7 +639,9 @@ function renderRankings() {
     globalSeasonStatsArray.forEach((p, i) => {
         const mainRow = document.createElement('tr');
         mainRow.className = 'main-row';
+        
         const playerContent = `<div class="player-flex"><span class="p-name">${formatHandle(p.username)}</span><span class="toggle-icon">▼</span></div>`;
+        
         mainRow.innerHTML = `<td class="col-pos">${i+1}</td><td class="col-player">${playerContent}</td><td class="col-stat">${p.points}</td><td class="col-stat">${p.wins}</td><td class="col-stat">${p.starts}</td>`;
         
         const detailRow = document.createElement('tr');
@@ -660,12 +669,45 @@ function renderRankings() {
             const tbodyEl = document.getElementById('rankings-tbody');
             tbodyEl.querySelectorAll('.main-row').forEach(r => r.classList.remove('open'));
             tbodyEl.querySelectorAll('.draft-row').forEach(r => r.classList.remove('open'));
-            if (!isOpen) { mainRow.classList.add('open'); detailRow.classList.add('open'); }
+            if (!isOpen) { 
+                mainRow.classList.add('open'); 
+                detailRow.classList.add('open'); 
+            }
         };
         
         tbody.appendChild(mainRow);
         tbody.appendChild(detailRow);
     });
+}
+
+function renderDraft(u, container) {
+    if (!container) return;
+    if (u.syncFailed) { container.innerHTML = '<div style="flex:1; text-align:center; font-size:0.7rem; color:var(--text-muted); padding:10px;">Failed to load data (Rate limited or not found). Please refresh later.</div>'; return; }
+    if (!u.hasData) { container.innerHTML = '<div style="flex:1; text-align:center; font-size:0.7rem; padding:10px;">Syncing...</div>'; return; }
+    if (u.isWD) { container.innerHTML = `<div style="flex:1; text-align:center; font-size:0.7rem; color:var(--danger); padding:10px;">PLAYER WITHDRAWN</div>`; return; }
+    
+    let dupWarning = u.isDuplicate ? `<div style="width:100%; text-align:center; font-size:0.75rem; color:var(--danger); font-weight:900; margin-bottom:12px; letter-spacing:0.05em; background:rgba(255,85,85,0.1); padding:8px; border-radius:6px; border:1px solid rgba(255,85,85,0.3);">DUPLICATE ENTRY - ZERO POINTS</div>` : '';
+    
+    let lineupHtml = '';
+    if (u.lineup && u.lineup.length > 0) {
+        lineupHtml = u.lineup.map(g => {
+            const pObj = g.player || g || {};
+            const avatarHash = pObj.avatar || g.avatar || '';
+            const avatarStr = avatarHash ? `https://media.realapp.link/assets/players/default/large/${avatarHash}.webp` : 'https://placehold.co/48x48/111/fff?text=?';
+            const nameStr = pObj.displayName || pObj.name || pObj.lastName || g.displayName || 'Unknown';
+            const scoreStr = (parseFloat(g.score) || 0).toFixed(2);
+            
+            return `<div class="draft-item">
+                <img src="${avatarStr}" class="draft-item-avatar" onerror="this.src='https://placehold.co/48x48/111/fff?text=?'">
+                <span class="draft-item-name">${nameStr}</span>
+                <span class="draft-item-score">${scoreStr}</span>
+            </div>`;
+        }).join('');
+    } else {
+        lineupHtml = '<div style="width:100%; text-align:center; padding:10px; font-size:0.8rem; color:var(--text-muted);">Lineup data not available.</div>';
+    }
+    
+    container.innerHTML = dupWarning + lineupHtml;
 }
 
 function generateCSV(rows, filename) {
@@ -679,7 +721,9 @@ function exportScoresToCSV() {
         if(u.hasData) {
             let status = u.madeCut ? "MADE CUT" : "MISSED CUT";
             if (u.isWD) status = "WD"; else if (u.isDuplicate) status = "DUP";
+            
             const exportPos = u.isWD ? 'WD' : (u.isDuplicate ? 'DUP' : (u.syncFailed ? 'ERR' : u.displayPos));
+            
             rows.push([ exportPos, u.username, u.userId, status, u.total, u.rounds.thu, u.rounds.fri, u.rounds.sat, u.rounds.sun, u.actualTotalPoints.toFixed(2), u.pts[0].toFixed(2), u.pts[1].toFixed(2), u.pts[2].toFixed(2), u.pts[3].toFixed(2) ]); 
         }
     });
@@ -705,7 +749,10 @@ function exportDay(dayName) {
     for (let i = 0; i <= targetDayIdx; i++) {
         const dStr = tDates[i];
         const isMissing = !Object.values(historicalDailyDataByDate).some(hist => hist[dStr] !== undefined);
-        if (i === targetDayIdx || isMissing) daysToExport.push(i);
+        
+        if (i === targetDayIdx || isMissing) {
+            daysToExport.push(i);
+        }
     }
 
     daysToExport.forEach(dayIdx => {
@@ -714,11 +761,15 @@ function exportDay(dayName) {
         
         const tempUsers = users.map(u => {
             const pts = getInterpolatedPts(u, tDates, todayStr);
+            
             const priorCumulative = dayIdx > 0 ? pts[dayIdx - 1] : 0;
             const liveCumulative = pts[dayIdx]; 
+            
             let dailyPiece = liveCumulative - priorCumulative;
             if (Math.abs(dailyPiece) < 0.01) dailyPiece = 0;
+
             const sig = getLineupSignature(u.lineup);
+            
             return { u, liveCumulative, dailyPiece, sig };
         });
 
@@ -726,13 +777,19 @@ function exportDay(dayName) {
         
         tempUsers.forEach(x => {
             x.isDup = !REFERENCE_IDS.includes(x.u.userId.toLowerCase().trim()) && x.sig !== "" && refSigs.includes(x.sig);
-            if (!x.isDup && Math.abs(x.dailyPiece) > 0.01) tempPool.push(x.dailyPiece);
+            
+            if (!x.isDup && Math.abs(x.dailyPiece) > 0.01) {
+                tempPool.push(x.dailyPiece);
+            }
         });
 
         tempUsers.forEach(x => {
             if (x.u.hasData) {
                 let golfScore = 0;
-                if (!x.isDup && Math.abs(x.dailyPiece) > 0.01) golfScore = calculateGolfScore(x.dailyPiece, tempPool);
+                if (!x.isDup && Math.abs(x.dailyPiece) > 0.01) {
+                    golfScore = calculateGolfScore(x.dailyPiece, tempPool);
+                }
+                
                 rows.push([x.u.username, x.u.userId, x.liveCumulative.toFixed(2), golfScore, dateStr]);
             }
         });
@@ -746,7 +803,9 @@ function exportWDsToCSV() {
     const rows = [["username", "user id"]];
     users.forEach(u => {
         const isWD = u.hasData && !u.syncFailed && (!u.lineup || u.lineup.length === 0);
-        if (isWD) rows.push([u.username, u.userId]);
+        if (isWD) {
+            rows.push([u.username, u.userId]);
+        }
     });
     generateCSV(rows, `golf_plug_withdrawals.csv`);
     document.getElementById('export-menu').style.display = 'none';
@@ -754,7 +813,10 @@ function exportWDsToCSV() {
 
 function exportNameUpdatesToCSV() {
     const rows = [["username", "user id"]];
-    users.forEach(u => rows.push([u.username, u.userId]));
+    users.forEach(u => {
+        rows.push([u.username, u.userId]);
+    });
+    
     generateCSV(rows, `golf_plug_usernames.csv`);
     document.getElementById('export-menu').style.display = 'none';
 }
@@ -805,10 +867,10 @@ function viewArchive(name) {
         const rankBadge = getRankBadge(userRank);
         
         const playerContent = `<div class="player-flex">${rankBadge}<span class="p-name">${formatHandle(displayUsername)}</span>${tag ? `<span class="p-tag">${tag}</span>` : ''}<span class="toggle-icon">▼</span></div>`;
+        
         const displayPosition = isInv ? item.status : item.displayPos;
         
         mainRow.innerHTML = `<td class="col-pos">${displayPosition}</td><td class="col-player">${playerContent}</td><td class="col-score">${isInv?'-':formatToPar(item.totalGolf)}</td><td class="col-score">${item.totalRaw.toFixed(2)}</td>`;
-        
         const detailRow = document.createElement('tr'); detailRow.className = 'draft-row';
         const satDisp = item.madeCut ? formatToPar(item.rounds.sat) : (isInv ? '-' : '<div class="score-box mc">MC</div>');
         const sunDisp = item.madeCut ? formatToPar(item.rounds.sun) : (isInv ? '-' : '<div class="score-box mc">MC</div>');
@@ -818,11 +880,10 @@ function viewArchive(name) {
             <div class="round-slot"><span class="round-label">Sat</span><span class="round-val">${satDisp}</span><span class="round-piece">${isInv?'-':item.pieces.sat.toFixed(2)} PTS</span></div>
             <div class="round-slot"><span class="round-label">Sun</span><span class="round-val">${sunDisp}</span><span class="round-piece">${isInv?'-':item.pieces.sun.toFixed(2)} PTS</span></div>
         </div><div class="raw-pts-display">Final Raw Score: ${item.totalRaw.toFixed(2)}</div></div></td>`;
-        
         mainRow.onclick = () => {
             const isOpen = mainRow.classList.contains('open');
-            document.querySelectorAll('#archive-tbody .main-row').forEach(r => r.classList.remove('open'));
-            document.querySelectorAll('#archive-tbody .draft-row').forEach(r => r.classList.remove('open'));
+            document.querySelectorAll('.main-row').forEach(r => r.classList.remove('open'));
+            document.querySelectorAll('.draft-row').forEach(r => r.classList.remove('open'));
             if (!isOpen) { mainRow.classList.add('open'); detailRow.classList.add('open'); }
         };
         tbody.appendChild(mainRow); tbody.appendChild(detailRow);
@@ -833,6 +894,7 @@ function viewArchive(name) {
 
 const findIdx = (h, n) => { for(const name of n) { const i = h.findIndex(x => x.toLowerCase().trim().includes(name.toLowerCase())); if(i !== -1) return i; } return -1; };
 
+// --- MEMORY PRUNING DATA LOADER ---
 async function fetchDailyHistoricalData() {
     try {
         const res = await fetch(config.dailyDataUrl);
@@ -841,11 +903,23 @@ async function fetchDailyHistoricalData() {
         const h = rows[0].map(v => v.toLowerCase().trim());
         const uIdx = findIdx(h, ['user id', 'userid']), dIdx = findIdx(h, ['date']), rIdx = findIdx(h, ['raw points', 'raw pts']), gIdx = findIdx(h, ['golf score']);
         if (uIdx === -1 || dIdx === -1) return;
+        
+        const validDates = new Set();
+        if (activeTournamentStartDate) {
+            for (let i = 0; i < 4; i++) {
+                validDates.add(getFormattedDate(activeTournamentStartDate, i));
+            }
+        }
+
         rows.slice(1).forEach(r => {
-            const uid = r[uIdx]?.trim().toLowerCase(); const date = r[dIdx]?.trim();
+            const uid = r[uIdx]?.trim().toLowerCase(); 
+            const date = r[dIdx]?.trim();
             if (!uid || !date) return;
-            if (!historicalDailyDataByDate[uid]) historicalDailyDataByDate[uid] = {};
-            historicalDailyDataByDate[uid][date] = { score: parseFloat(r[gIdx]) || 0, raw: parseFloat(r[rIdx]) || 0 };
+            
+            if (validDates.size === 0 || validDates.has(date)) {
+                if (!historicalDailyDataByDate[uid]) historicalDailyDataByDate[uid] = {};
+                historicalDailyDataByDate[uid][date] = { score: parseFloat(r[gIdx]) || 0, raw: parseFloat(r[rIdx]) || 0 };
+            }
         });
     } catch (e) {}
 }
@@ -905,23 +979,35 @@ async function loadAllUserScores() {
                     globalPauseUntil = Date.now() + 1200; 
                     nextRequestTime = Date.now() + 1200;
                     currentPacing = Math.min(currentPacing + 50, 1000); 
+                    
                     user.retries++;
-                    if (user.retries < MAX_RETRIES) { q.unshift(user); } else { user.hasData = true; user.syncFailed = true; loaded++; }
+                    if (user.retries < MAX_RETRIES) {
+                        q.unshift(user); 
+                    } else { 
+                        user.hasData = true; user.syncFailed = true; loaded++; 
+                    }
                 } else if (response.ok) {
                     currentPacing = Math.max(currentPacing - 2, 125); 
                     const data = await response.json();
                     
                     if (!currentGameId) { 
                         let foundId = null;
-                        if (data.lineup && data.lineup.length > 0) foundId = data.lineup[0].matchId || data.lineup[0].gameId || data.lineup[0].eventId;
+                        
+                        if (data.lineup && data.lineup.length > 0) {
+                            foundId = data.lineup[0].matchId || data.lineup[0].gameId || data.lineup[0].eventId;
+                        }
+                        
                         if (!foundId) {
                             JSON.stringify(data, (key, value) => {
                                 if (!foundId && ['gameId', 'matchId', 'eventId', 'tournamentId'].includes(key)) {
-                                    if (/^\d{7,10}$/.test(String(value))) foundId = String(value);
+                                    if (/^\d{7,10}$/.test(String(value))) {
+                                        foundId = String(value);
+                                    }
                                 }
                                 return value;
                             });
                         }
+
                         if (foundId && /^\d+$/.test(String(foundId))) {
                             currentGameId = String(foundId);
                             fetchProLeaderboard();
@@ -930,8 +1016,10 @@ async function loadAllUserScores() {
 
                     let foundUsername = null;
                     const targetUid = String(user.userId).toLowerCase();
+                    
                     function deepSearchName(obj) {
                         if (foundUsername || !obj || typeof obj !== 'object') return;
+                        
                         if (obj.id !== undefined && String(obj.id).toLowerCase() === targetUid) {
                             if (obj.username) foundUsername = obj.username;
                             else if (obj.userName) foundUsername = obj.userName;
@@ -939,8 +1027,11 @@ async function loadAllUserScores() {
                         if (!foundUsername && obj.username && (String(obj.userId).toLowerCase() === targetUid || String(obj.ownerId).toLowerCase() === targetUid)) {
                             foundUsername = obj.username;
                         }
+                        
                         if (!foundUsername) {
-                            Object.values(obj).forEach(val => { if (val && typeof val === 'object') deepSearchName(val); });
+                            Object.values(obj).forEach(val => {
+                                if (val && typeof val === 'object') deepSearchName(val);
+                            });
                         }
                     }
                     deepSearchName(data);
@@ -948,15 +1039,22 @@ async function loadAllUserScores() {
                     if (!foundUsername) {
                         const now2 = Date.now();
                         let delay2 = 0;
-                        if (nextRequestTime > now2) { delay2 = nextRequestTime - now2; nextRequestTime += currentPacing; } else nextRequestTime = now2 + currentPacing;
+                        if (nextRequestTime > now2) {
+                            delay2 = nextRequestTime - now2;
+                            nextRequestTime += currentPacing;
+                        } else {
+                            nextRequestTime = now2 + currentPacing;
+                        }
                         if (delay2 > 0) await new Promise(r => setTimeout(r, delay2));
 
                         try {
                             const profUrl = `https://web.realsports.io/users/${user.userId}`;
                             const profProxy = `${config.workerProxy}?url=${encodeURIComponent(profUrl)}`;
                             const profRes = await fetch(profProxy, opts);
+                            
                             if (profRes.status === 429 || profRes.status === 502) {
-                                globalPauseUntil = Date.now() + 1200; nextRequestTime = Date.now() + 1200;
+                                globalPauseUntil = Date.now() + 1200;
+                                nextRequestTime = Date.now() + 1200;
                             } else if (profRes.ok) {
                                 const profData = await profRes.json();
                                 if (profData.username) foundUsername = profData.username;
@@ -964,7 +1062,9 @@ async function loadAllUserScores() {
                         } catch(e) {}
                     }
 
-                    if (foundUsername && foundUsername.trim() !== '') user.username = foundUsername.trim();
+                    if (foundUsername && foundUsername.trim() !== '') {
+                        user.username = foundUsername.trim();
+                    }
 
                     user.actualTotalPoints = parseFloat((data.info?.rankDisplayInfos?.[0]?.scoreDisplay || '0').replace(/[^0-9.]/g, '')) || 0;
                     user.lineup = data.lineup || [];
@@ -986,35 +1086,47 @@ async function loadAllUserScores() {
                     });
 
                     user.actualTodayPoints = user.lineup.reduce((acc, g) => acc + (parseFloat(g.score) || 0), 0);
-                    user.hasData = true; loaded++;
+                    user.hasData = true;
+                    loaded++;
                 } else if (response.status === 404) {
                     user.hasData = true; user.syncFailed = true; loaded++;
                 } else {
                     user.retries++;
-                    if (user.retries < MAX_RETRIES) q.push(user); else { user.hasData = true; user.syncFailed = true; loaded++; }
+                    if (user.retries < MAX_RETRIES) q.push(user);
+                    else { user.hasData = true; user.syncFailed = true; loaded++; }
                 }
             } catch (e) {
                 globalPauseUntil = Date.now() + 1000;
                 nextRequestTime = Date.now() + 1000;
                 user.retries++;
-                if (user.retries < MAX_RETRIES) q.unshift(user); else { user.hasData = true; user.syncFailed = true; loaded++; }
+                if (user.retries < MAX_RETRIES) q.unshift(user);
+                else { user.hasData = true; user.syncFailed = true; loaded++; }
             }
 
             statusEl.innerHTML = `<span class="sync-dot"></span>${loaded}/${validUsers.length}`;
-            if (loaded % 8 === 0 || q.length === 0) { renderLeaderboard(); renderProLeaderboard(); }
+            
+            if (loaded % 8 === 0 || q.length === 0) {
+                renderLeaderboard();
+                renderProLeaderboard(); 
+            }
         }
     }
 
     const workers = [];
-    for (let i = 0; i < CONCURRENCY_LIMIT; i++) workers.push(syncWorker());
+    for (let i = 0; i < CONCURRENCY_LIMIT; i++) {
+        workers.push(syncWorker());
+    }
+    
     await Promise.all(workers);
     
     calculateGlobalRanks();
+    
     renderLeaderboard();
     renderProLeaderboard();
     if (document.getElementById('view-rankings').classList.contains('active')) renderRankings();
     
     statusEl.innerHTML = '<span class="sync-dot"></span>LIVE';
+    
     if (!currentGameId) {
         const proTbody = document.getElementById('pro-leaderboard-tbody');
         const proStatus = document.getElementById('pro-sync-status');
@@ -1032,25 +1144,35 @@ async function fetchTournamentSchedule() {
         
         const now = getNow();
         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        
         const h = rows[0].map(v => v.toLowerCase().trim());
+        
         const dIdx = findIdx(h, ['date']), nIdx = findIdx(h, ['tourn', 'tournament']), cIdx = findIdx(h, ['course']);
-        const etIdx = findIdx(h, ['event type', 'tier']), cutIdx = findIdx(h, ['cut', 'cut rule']); 
+        const etIdx = findIdx(h, ['event type', 'tier']); 
+        const cutIdx = findIdx(h, ['cut', 'cut rule']); 
         
         const purseCols = [];
         h.forEach((colName, idx) => {
             const match = colName.match(/^purse\s+(\d+)$/);
-            if (match) purseCols.push({ index: idx, pos: parseInt(match[1], 10) });
+            if (match) {
+                purseCols.push({ index: idx, pos: parseInt(match[1], 10) });
+            }
         });
         purseCols.sort((a, b) => a.pos - b.pos);
         
-        const getOrdinal = (n) => { const s = ["TH", "ST", "ND", "RD"]; const v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); };
+        const getOrdinal = (n) => {
+            const s = ["TH", "ST", "ND", "RD"];
+            const v = n % 100;
+            return n + (s[(v - 20) % 10] || s[v] || s[0]);
+        };
         
         const parseCurrency = (str) => {
             let clean = String(str).toLowerCase().trim();
             let mult = 1;
             if (clean.includes('k')) mult = 1000;
             if (clean.includes('m')) mult = 1000000;
-            return (parseFloat(clean.replace(/[^0-9.-]+/g, "")) || 0) * mult;
+            let num = parseFloat(clean.replace(/[^0-9.-]+/g, "")) || 0;
+            return num * mult;
         };
         const formatCurrency = (num) => num.toLocaleString('en-US', {maximumFractionDigits: 0}) + ' RAX';
 
@@ -1062,12 +1184,18 @@ async function fetchTournamentSchedule() {
             const rangeStr = `${start.getMonth()+1}/${start.getDate()} - ${end.getMonth()+1}/${end.getDate()}`;
             
             let multiplier = 1.0;
-            let eventTypeDisplay = 'REGULAR', safeClass = 'regular';
+            let eventTypeDisplay = 'REGULAR';
+            let safeClass = 'regular';
             
             if (etIdx !== -1 && r[etIdx]) {
                 const rawVal = r[etIdx].toString().trim();
                 const val = rawVal.toLowerCase();
-                if (val.includes('major') || val.includes('players')) { multiplier = 1.5; eventTypeDisplay = rawVal.toUpperCase() || 'MAJOR'; safeClass = 'major'; }
+                
+                if (val.includes('major') || val.includes('players') || val.includes('playoff')) { 
+                    multiplier = 1.5; 
+                    eventTypeDisplay = rawVal.toUpperCase() || 'PLAYOFF'; 
+                    safeClass = 'major'; 
+                }
                 else if (val.includes('signature')) { multiplier = 1.4; eventTypeDisplay = rawVal.toUpperCase() || 'SIGNATURE'; safeClass = 'signature'; }
                 else if (val.includes('regular')) { multiplier = 1.0; eventTypeDisplay = rawVal.toUpperCase() || 'REGULAR'; safeClass = 'regular'; }
                 else { eventTypeDisplay = rawVal.toUpperCase(); safeClass = 'regular'; }
@@ -1078,7 +1206,10 @@ async function fetchTournamentSchedule() {
                 const val = r[cutIdx].toString().toLowerCase().trim();
                 if (val.includes('no cut') || val === 'no' || val === 'false') isNoCut = true;
             }
-            if (etIdx !== -1 && r[etIdx] && r[etIdx].toString().toLowerCase().trim().includes('no cut')) isNoCut = true;
+            if (etIdx !== -1 && r[etIdx]) {
+                const etVal = r[etIdx].toString().toLowerCase().trim();
+                if (etVal.includes('no cut') || etVal.includes('playoff')) isNoCut = true;
+            }
             
             if (r[nIdx]) {
                 const tKey = r[nIdx].trim().toLowerCase();
@@ -1089,17 +1220,25 @@ async function fetchTournamentSchedule() {
             
             let purseObj = null;
             if (purseCols.length > 0) {
-                let totalNum = 0, splits = [];
+                let totalNum = 0;
+                let splits = [];
+                
                 purseCols.forEach(pc => {
                     const valStr = r[pc.index] ? r[pc.index].trim() : '';
                     const num = parseCurrency(valStr);
-                    if (valStr !== '') { totalNum += num; splits.push({ pos: pc.pos, valStr, num }); }
+                    if (valStr !== '') {
+                        totalNum += num;
+                        splits.push({ pos: pc.pos, valStr, num });
+                    }
                 });
+                
                 if (splits.length > 0) {
                     const totalStr = formatCurrency(totalNum);
                     const isWinnerTakeAll = splits.length === 1 && splits[0].pos === 1;
+                    
                     const splitText = isWinnerTakeAll ? `WINNER TAKE ALL: ${splits[0].valStr}` : splits.map(s => `${getOrdinal(s.pos)}: ${s.valStr}`).join(' • ');
                     const splitHtml = isWinnerTakeAll ? `WINNER TAKE ALL: ${splits[0].valStr}` : splits.map(s => `${getOrdinal(s.pos)}: ${s.valStr}`).join(' &nbsp;•&nbsp; ');
+                    
                     purseObj = { total: totalStr, splitText, splitHtml };
                 }
             }
@@ -1112,22 +1251,46 @@ async function fetchTournamentSchedule() {
         document.getElementById('past-tournament-grid').innerHTML = past.map(t => `<div class="schedule-card clickable" onclick="viewArchive('${t.name.replace(/'/g, "\\'")}')"><div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:0.5rem;"><div class="card-date" style="margin-bottom:0;">${t.date}</div><div class="tier-badge ${t.safeClass}">${t.eventTypeDisplay}</div></div><div class="card-name">${t.name}</div><div class="card-course">${t.course}</div>${t.purseObj ? `<div class="card-purse"><div class="card-purse-total">TOTAL: ${t.purseObj.total}</div><div class="card-purse-split">${t.purseObj.splitText}</div></div>` : ''}</div>`).join('');
         
         const currentDay = now.getDay();
-        let d = (currentDay >= 1 && currentDay <= 3) ? (next ? { ...next, label: 'Upcoming Tournament' } : (curr ? { ...curr, label: 'Live Tournament' } : null)) : (curr ? { ...curr, label: 'Live Tournament' } : null);
+        let d = null;
+        if (currentDay >= 1 && currentDay <= 3) {
+            d = next ? { ...next, label: 'Upcoming Tournament' } : (curr ? { ...curr, label: 'Live Tournament' } : null);
+        } else {
+            d = curr ? { ...curr, label: 'Live Tournament' } : null;
+        }
 
         if (d && d.name) { 
             activeTournamentStartDate = d.start; 
             activeTournamentKey = d.name.trim().toLowerCase();
             document.getElementById('display-tournament-name').innerText = d.name; 
             document.getElementById('display-banner-label').innerText = d.label; 
+            
             const tierEl = document.getElementById('display-banner-tier');
-            if (d.eventTypeDisplay) { tierEl.innerText = d.eventTypeDisplay; tierEl.className = `tier-badge ${d.safeClass}`; tierEl.style.display = 'inline-block'; } else tierEl.style.display = 'none';
+            if (d.eventTypeDisplay) {
+                tierEl.innerText = d.eventTypeDisplay;
+                tierEl.className = `tier-badge ${d.safeClass}`;
+                tierEl.style.display = 'inline-block';
+            } else {
+                tierEl.style.display = 'none';
+            }
+
             document.getElementById('display-banner-date').innerText = d.date;
             document.getElementById('display-course-name').innerText = d.course;
+            
             const purseEl = document.getElementById('display-purse');
-            if (d.purseObj) { purseEl.innerHTML = `<div class="banner-purse-total">TOTAL PURSE: ${d.purseObj.total}</div><div class="banner-purse-split">${d.purseObj.splitHtml}</div>`; purseEl.style.display = 'inline-block'; } else purseEl.style.display = 'none';
-            if (['view-live', 'view-upcoming', 'view-pro'].some(v => document.getElementById(v).classList.contains('active'))) document.getElementById('tournament-banner').style.display = 'block'; 
+            if (d.purseObj) {
+                purseEl.innerHTML = `<div class="banner-purse-total">TOTAL PURSE: ${d.purseObj.total}</div><div class="banner-purse-split">${d.purseObj.splitHtml}</div>`;
+                purseEl.style.display = 'inline-block';
+            } else {
+                purseEl.style.display = 'none';
+            }
+            
+            if (document.getElementById('view-live').classList.contains('active') || document.getElementById('view-upcoming').classList.contains('active') || document.getElementById('view-pro').classList.contains('active')) {
+                document.getElementById('tournament-banner').style.display = 'block'; 
+            }
         }
-    } catch (e) { console.error("Error fetching schedule:", e); }
+    } catch (e) {
+        console.error("Error fetching schedule:", e);
+    }
 }
 
 async function fetchUsers() {
@@ -1141,7 +1304,10 @@ async function fetchUsers() {
 
 async function initApp() {
     await fetchTournamentSchedule(); 
-    try { masterArchiveData = parseCSV(await (await fetch(config.archiveDataUrl)).text()); calculateGlobalRanks(); } catch (e) {}
+    try { 
+        masterArchiveData = parseCSV(await (await fetch(config.archiveDataUrl)).text()); 
+        calculateGlobalRanks(); 
+    } catch (e) {}
     await fetchDailyHistoricalData();
     users = await fetchUsers();
     document.getElementById('loading-indicator').style.display = 'none';
