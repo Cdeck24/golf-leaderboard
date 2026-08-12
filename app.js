@@ -181,6 +181,36 @@ function filterLeaderboard() {
     }
 }
 
+function filterRankings() {
+    const input = document.getElementById('rankings-search');
+    if (!input) return;
+    const filter = input.value.toLowerCase();
+    const tbody = document.getElementById('rankings-tbody');
+    if (!tbody) return;
+    
+    const rows = tbody.children;
+    let currentMain = null;
+    
+    for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        
+        if (row.classList.contains('main-row')) {
+            currentMain = row;
+            const nameEl = row.querySelector('.p-name');
+            if (nameEl && nameEl.textContent.toLowerCase().includes(filter)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+                row.classList.remove('open');
+            }
+        } else if (row.classList.contains('draft-row')) {
+            if (currentMain && currentMain.style.display === 'none') {
+                row.classList.remove('open');
+            }
+        }
+    }
+}
+
 // --- PRO LEADERBOARD ---
 async function fetchProLeaderboard() {
     if (!currentGameId) return;
@@ -1313,4 +1343,29 @@ async function initApp() {
     document.getElementById('loading-indicator').style.display = 'none';
     renderLeaderboard(); loadAllUserScores();
 }
+
+function forceRefresh() {
+    const btn = document.querySelector('.refresh-btn');
+    if (btn) btn.classList.add('spinning');
+    
+    // Change dot to yellow while syncing
+    document.getElementById('sync-status').innerHTML = '<span class="sync-dot" style="background:var(--border-gold); box-shadow:0 0 10px var(--border-gold);"></span>SYNCING';
+    
+    // Reset all users to force a fresh pull from the API
+    users.forEach(u => {
+        u.hasData = false;
+        u.syncFailed = false;
+        u.retries = 0;
+        u.lineup = [];
+    });
+    
+    // Refresh Pro Board
+    if (currentGameId) fetchProLeaderboard();
+    
+    // Restart the background sync queue
+    loadAllUserScores().then(() => {
+        if (btn) btn.classList.remove('spinning');
+    });
+}
+
 initApp();
