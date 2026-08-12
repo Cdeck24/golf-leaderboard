@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <title>Golf Plug Leaderboard</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0, viewport-fit=cover">
+    <meta name="theme-color" content="#061a13">
     
     <!-- Link to external stylesheet -->
     <link rel="stylesheet" href="style.css">
@@ -57,17 +58,34 @@
     <div id="view-live" class="content-view active">
         <div class="leaderboard-panel">
             <div class="leaderboard-header">
-                <span style="font-weight: 800; font-size: 0.8rem; color: var(--golf-green-dark);">LIVE STANDINGS</span>
-                <div style="display: flex; align-items: center; gap: 12px;">
-                    <button onclick="forceRefresh()" class="refresh-btn" title="Refresh Live Data">🔄</button>
-                    <div class="status-text">
+                <span style="font-weight: 900; font-size: 0.8rem; letter-spacing: 0.05em;"><span style="margin-right: 8px;">⛳</span>USER STANDINGS</span>
+                <div class="status-text">
+                    <div style="display: flex; align-items: center; justify-content: flex-end; gap: 6px;">
                         <div id="sync-status"><span class="sync-dot"></span>LIVE</div>
-                        <div id="par-score-display" style="color:var(--text-main);">EVEN: 0.00 PTS</div>
+                        <button class="refresh-btn" onclick="forceRefresh()" title="Refresh Standings">🔄</button>
                     </div>
+                    <div id="par-score-display">EVEN: 0.00 PTS</div>
                 </div>
             </div>
+            
+            <!-- SEARCH BAR -->
             <div class="search-container">
-                <input type="text" id="player-search" class="player-search-input" placeholder="Search players..." oninput="filterLeaderboard()">
+                <input type="text" id="player-search" class="player-search-input" placeholder="Search for a player..." oninput="filterLeaderboard()">
+            </div>
+
+            <table class="golf-table">
+                <thead><tr><th class="col-pos">Pos</th><th class="col-player">Player</th><th class="col-score">Total</th><th class="col-score">Today</th></tr></thead>
+                <tbody id="leaderboard-tbody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- PRO LEADERBOARD VIEW -->
+    <div id="view-pro" class="content-view">
+        <div class="leaderboard-panel">
+            <div class="leaderboard-header">
+                <span style="font-weight: 900; font-size: 0.8rem; letter-spacing: 0.05em;"><span style="margin-right: 8px;">🏌️‍♂️</span>PRO LEADERBOARD</span>
+                <div class="status-text" id="pro-sync-status"><span class="sync-dot"></span>LIVE</div>
             </div>
             <table class="golf-table">
                 <thead><tr><th class="col-pos">Pos</th><th class="col-player">Player</th><th class="col-score">Total</th><th class="col-score">Rating</th><th class="col-stat">Thru</th></tr></thead>
@@ -80,14 +98,70 @@
 
     <!-- RANKINGS VIEW -->
     <div id="view-rankings" class="content-view">
+        
+        <!-- NEW POINTS KEY CARD -->
+        <div class="points-key-card">
+            <div class="points-key-title">Ranking Points System</div>
+            <div style="text-align: center; margin-bottom: 1.25rem; font-size: 0.65rem; color: var(--gold-light); font-weight: 800; background: rgba(197, 160, 89, 0.1); padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(197, 160, 89, 0.2); letter-spacing: 0.05em;">
+                REGULAR: 1x POINTS &nbsp;|&nbsp; SIGNATURE: 1.4x POINTS &nbsp;|&nbsp; MAJORS: 1.5x POINTS
+            </div>
+            <div class="points-grid">
+                <div class="points-col">
+                    <div class="points-col-title">Top 5</div>
+                    <div class="points-col-val">
+                        <div class="pt-row"><span>1st</span> <span class="pt-badge">100</span></div>
+                        <div class="pt-row"><span>2nd</span> <span class="pt-badge">60</span></div>
+                        <div class="pt-row"><span>3rd</span> <span class="pt-badge">45</span></div>
+                        <div class="pt-row"><span>4th</span> <span class="pt-badge">35</span></div>
+                        <div class="pt-row"><span>5th</span> <span class="pt-badge">30</span></div>
+                    </div>
+                </div>
+                <div class="points-col">
+                    <div class="points-col-title">6th–10th</div>
+                    <div class="points-col-val">
+                        <div class="pt-row"><span>6th</span> <span class="pt-badge">25</span></div>
+                        <div class="pt-row"><span>7th</span> <span class="pt-badge">22</span></div>
+                        <div class="pt-row"><span>8th</span> <span class="pt-badge">20</span></div>
+                        <div class="pt-row"><span>9th</span> <span class="pt-badge">18</span></div>
+                        <div class="pt-row"><span>10th</span> <span class="pt-badge">16</span></div>
+                    </div>
+                </div>
+                <div class="points-col">
+                    <div class="points-col-title">11th–20th</div>
+                    <div class="points-col-val">
+                        <div class="pt-row"><span>11th</span> <span class="pt-badge">14</span></div>
+                        <div class="pt-row"><span>12th</span> <span class="pt-badge">13</span></div>
+                        <div class="pt-note">↓ -1 pt / pos ↓</div>
+                        <div class="pt-row"><span>20th</span> <span class="pt-badge">5</span></div>
+                    </div>
+                </div>
+                <div class="points-col">
+                    <div class="points-col-title">21st to End</div>
+                    <div class="points-col-val" style="gap: 8px;">
+                        <div class="pt-row wide"><span>Made Cut</span> <span class="pt-badge">3</span></div>
+                        <div class="pt-row wide"><span>Missed Cut</span> <span class="pt-badge">2</span></div>
+                    </div>
+                </div>
+                <div class="points-col" style="border-top-color: var(--danger);">
+                    <div class="points-col-title">WD / DUP</div>
+                    <div class="points-col-val">
+                        <span class="pt-badge danger-badge">0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="leaderboard-panel">
             <div class="leaderboard-header">
-                <span style="font-weight: 800; font-size: 0.8rem; color: var(--golf-green-dark);">SEASON RANKINGS</span>
+                <span style="font-weight: 900; font-size: 0.8rem; letter-spacing: 0.05em;">🏆 SEASON RANKINGS</span>
                 <div class="status-text">BY PLACEMENT</div>
             </div>
+            
+            <!-- RANKINGS SEARCH BAR -->
             <div class="search-container">
                 <input type="text" id="rankings-search" class="player-search-input" placeholder="Search for a player..." oninput="filterRankings()">
             </div>
+
             <table class="golf-table">
                 <thead><tr><th class="col-pos">Pos</th><th class="col-player">Player</th><th class="col-stat">Points</th><th class="col-stat">Wins</th><th class="col-stat">Starts</th></tr></thead>
                 <tbody id="rankings-tbody"></tbody>
