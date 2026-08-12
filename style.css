@@ -263,8 +263,36 @@ h1 {
 .export-menu button:last-child { border-bottom: none; }
 .export-menu button:hover { background: var(--nav-tab-hover); padding-left: 20px; }
 
-.status-text { text-align: right; font-size: 0.65rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
+.status-text { text-align: right; font-size: 0.65rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; display: flex; align-items: center; justify-content: flex-end; }
 .sync-dot { display: inline-block; width: 8px; height: 8px; background: var(--golf-green-bright); border-radius: 50%; margin-right: 6px; box-shadow: 0 0 10px var(--golf-green-bright); }
+
+/* Refresh Button */
+.refresh-btn {
+  background: transparent;
+  border: none;
+  color: var(--border-gold);
+  cursor: pointer;
+  font-size: 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  margin-left: 8px;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+}
+.refresh-btn:hover {
+  background: var(--nav-tab-hover);
+  transform: scale(1.1);
+}
+.refresh-btn.spinning {
+  animation: spin 1s linear infinite;
+  color: var(--golf-green-bright);
+}
+
+@keyframes spin { 
+  100% { transform: rotate(360deg); } 
+}
 
 /* Search Bar */
 .search-container { padding: 1rem; background: var(--search-bg); border-bottom: 1px solid var(--glass-border); }
@@ -472,4 +500,3 @@ h1 {
     .search-container { padding: 0.75rem; }
     .player-search-input { padding: 8px 12px; font-size: 0.8rem; }
 }
-```
