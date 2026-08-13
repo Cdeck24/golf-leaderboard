@@ -181,6 +181,7 @@ function filterLeaderboard() {
     }
 }
 
+// --- RANKINGS SEARCH LOGIC ---
 function filterRankings() {
     const input = document.getElementById('rankings-search');
     if (!input) return;
@@ -209,6 +210,27 @@ function filterRankings() {
             }
         }
     }
+}
+
+// --- REFRESH BUTTON LOGIC ---
+function forceRefresh() {
+    const btn = document.querySelector('.refresh-btn');
+    if (btn) btn.classList.add('spinning');
+    
+    document.getElementById('sync-status').innerHTML = '<span class="sync-dot" style="background:var(--border-gold); box-shadow:0 0 10px var(--border-gold);"></span>SYNCING';
+    
+    users.forEach(u => {
+        u.hasData = false;
+        u.syncFailed = false;
+        u.retries = 0;
+        u.lineup = [];
+    });
+    
+    if (currentGameId) fetchProLeaderboard();
+    
+    loadAllUserScores().then(() => {
+        if (btn) btn.classList.remove('spinning');
+    });
 }
 
 // --- PRO LEADERBOARD ---
@@ -617,14 +639,43 @@ function calculateGlobalRanks() {
     const tournaments = getProcessedTournaments();
     const stats = {};
 
+    // 1. Build a universal resolver to map any known username to a User ID
+    const usernameResolver = {};
+    
+    // Check live users first
+    users.forEach(u => {
+        if (u.userId) {
+            if (u.username) usernameResolver[u.username.toLowerCase().trim()] = u.userId.toLowerCase().trim();
+            if (u.originalUsername) usernameResolver[u.originalUsername.toLowerCase().trim()] = u.userId.toLowerCase().trim();
+        }
+    });
+    
+    // Check archive for any historical username -> ID mappings
+    Object.keys(tournaments).forEach(tName => {
+        tournaments[tName].forEach(p => {
+            if (p.username && p.userId) {
+                usernameResolver[p.username.toLowerCase().trim()] = p.userId.toLowerCase().trim();
+            }
+        });
+    });
+
     Object.keys(tournaments).forEach(tName => {
         const field = tournaments[tName];
         field.forEach(p => {
-            if (!p.username) return;
+            if (!p.username && !p.userId) return; // Must have at least one to map
             
-            const key = p.userId ? p.userId.toLowerCase().trim() : p.username.toLowerCase().trim();
+            const lowerName = p.username ? p.username.toLowerCase().trim() : '';
+            let uid = p.userId ? p.userId.toLowerCase().trim() : null;
             
-            if (!stats[key]) stats[key] = { points: 0, wins: 0, starts: 0, uid: p.userId, username: p.username, history: [] };
+            // 2. If the archive row is missing a User ID, try to find it using the resolver!
+            if (!uid && lowerName && usernameResolver[lowerName]) {
+                uid = usernameResolver[lowerName];
+            }
+            
+            // 3. Group strictly by User ID. Only fallback to username if we have absolutely no ID anywhere.
+            const key = uid ? uid : lowerName;
+            
+            if (!stats[key]) stats[key] = { points: 0, wins: 0, starts: 0, uid: uid, username: p.username, history: [] };
             
             if (p.status !== "WD" && p.status !== "DUP") {
                 stats[key].starts += 1;
@@ -708,6 +759,9 @@ function renderRankings() {
         tbody.appendChild(mainRow);
         tbody.appendChild(detailRow);
     });
+    
+    // Apply filtering immediately in case user already typed something in the search bar
+    filterRankings();
 }
 
 function renderDraft(u, container) {
@@ -924,7 +978,6 @@ function viewArchive(name) {
 
 const findIdx = (h, n) => { for(const name of n) { const i = h.findIndex(x => x.toLowerCase().trim().includes(name.toLowerCase())); if(i !== -1) return i; } return -1; };
 
-// --- MEMORY PRUNING DATA LOADER ---
 async function fetchDailyHistoricalData() {
     try {
         const res = await fetch(config.dailyDataUrl);
@@ -1342,30 +1395,6 @@ async function initApp() {
     users = await fetchUsers();
     document.getElementById('loading-indicator').style.display = 'none';
     renderLeaderboard(); loadAllUserScores();
-}
-
-function forceRefresh() {
-    const btn = document.querySelector('.refresh-btn');
-    if (btn) btn.classList.add('spinning');
-    
-    // Change dot to yellow while syncing
-    document.getElementById('sync-status').innerHTML = '<span class="sync-dot" style="background:var(--border-gold); box-shadow:0 0 10px var(--border-gold);"></span>SYNCING';
-    
-    // Reset all users to force a fresh pull from the API
-    users.forEach(u => {
-        u.hasData = false;
-        u.syncFailed = false;
-        u.retries = 0;
-        u.lineup = [];
-    });
-    
-    // Refresh Pro Board
-    if (currentGameId) fetchProLeaderboard();
-    
-    // Restart the background sync queue
-    loadAllUserScores().then(() => {
-        if (btn) btn.classList.remove('spinning');
-    });
 }
 
 initApp();
