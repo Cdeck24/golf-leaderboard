@@ -465,6 +465,45 @@ flex: 0 0 auto;
 .tier-badge.signature { background: var(--tier-sig-bg); color: var(--golf-green-bright); border: 1px solid rgba(0, 255, 136, 0.4); }
 .tier-badge.regular { background: var(--tier-reg-bg); color: var(--text-muted); border: 1px solid var(--glass-border); }
 
+@keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes pulse { 0% { opacity: 0.4; } 50% { opacity: 1; } 100% { opacity: 0.4; } }
+
+/* 🚨 FIX FOR USERNAME CUTOFF ON MOBILE 🚨 /
+@media (max-width: 600px) {
+h1 { font-size: 1.5rem; margin-bottom: 1.25rem; }
+/ Significantly shrink the Total/Today col widths to give the Username more horizontal space! /
+.col-pos { width: 28px; }
+.col-score { width: 50px; }
+.col-stat { width: 45px; }
+/ Slim down the table padding globally on mobile */
+.golf-table th { padding: 0.8rem 0.2rem; font-size: 0.55rem; }
+.golf-table td { padding: 0.8rem 0.2rem; font-size: 0.85rem; }
+
+.score-box { font-size: 0.95rem; }
+.score-box.mc { font-size: 0.8rem; }
+.p-name { font-size: 0.8rem; }
+.nav-tab { padding: 8px 12px; font-size: 0.6rem; } 
+.player-flex { gap: 4px; }
+.toggle-icon { margin-left: 2px; }
+.round-breakdown { gap: 4px; padding: 12px 6px; }
+.round-val { font-size: 1rem; }
+.round-piece { font-size: 0.55rem; padding: 2px 4px; }
+
+/* Points Card Mobile Fixes */
+.points-key-card { padding: 1rem 0.75rem; }
+.points-grid { gap: 8px; }
+.points-col { padding: 0.85rem 0.5rem; flex: 1 1 calc(50% - 8px); }
+.pt-row { max-width: 90px; font-size: 0.85rem; }
+.pt-row.wide { max-width: 130px; font-size: 0.8rem; }
+.pt-badge { padding: 1px 5px; font-size: 0.75rem; }
+
+/* Search Bar */
+.search-container { padding: 0.75rem; }
+.player-search-input { padding: 8px 12px; font-size: 0.8rem; }
+
+
+}
+
 /* --- SUB-NAVIGATION (RECORD BOOK TOGGLE) --- */
 .segmented-control {
 display: flex;
@@ -584,63 +623,3 @@ font-weight: 900;
 width: 100%;
 background: var(--nav-tab-bg) !important;
 color: var(--text-muted) !important;
-border: 1px solid var(--glass-border) !important;
-padding: 12px !important;
-border-radius: 8px !important;
-font-weight: 800 !important;
-text-transform: uppercase;
-transition: all 0.2s;
-}
-.profile-close-btn:hover {
-background: var(--card-hover) !important;
-color: var(--text-main) !important;
-}
-
-/* --- CLICKABLE NAMES --- */
-.clickable-name {
-cursor: pointer;
-transition: color 0.2s;
-}
-.clickable-name:hover {
-color: var(--border-gold);
-text-decoration: underline;
-}
-
-@keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes pulse { 0% { opacity: 0.4; } 50% { opacity: 1; } 100% { opacity: 0.4; } }
-
-/* 🚨 FIX FOR USERNAME CUTOFF ON MOBILE 🚨 /
-@media (max-width: 600px) {
-h1 { font-size: 1.5rem; margin-bottom: 1.25rem; }
-/ Significantly shrink the Total/Today col widths to give the Username more horizontal space! /
-.col-pos { width: 28px; }
-.col-score { width: 50px; }
-.col-stat { width: 45px; }
-/ Slim down the table padding globally on mobile */
-.golf-table th { padding: 0.8rem 0.2rem; font-size: 0.55rem; }
-.golf-table td { padding: 0.8rem 0.2rem; font-size: 0.85rem; }
-
-.score-box { font-size: 0.95rem; }
-.score-box.mc { font-size: 0.8rem; }
-.p-name { font-size: 0.8rem; }
-.nav-tab { padding: 8px 12px; font-size: 0.6rem; } 
-.player-flex { gap: 4px; }
-.toggle-icon { margin-left: 2px; }
-.round-breakdown { gap: 4px; padding: 12px 6px; }
-.round-val { font-size: 1rem; }
-.round-piece { font-size: 0.55rem; padding: 2px 4px; }
-
-/* Points Card Mobile Fixes */
-.points-key-card { padding: 1rem 0.75rem; }
-.points-grid { gap: 8px; }
-.points-col { padding: 0.85rem 0.5rem; flex: 1 1 calc(50% - 8px); }
-.pt-row { max-width: 90px; font-size: 0.85rem; }
-.pt-row.wide { max-width: 130px; font-size: 0.8rem; }
-.pt-badge { padding: 1px 5px; font-size: 0.75rem; }
-
-/* Search Bar */
-.search-container { padding: 0.75rem; }
-.player-search-input { padding: 8px 12px; font-size: 0.8rem; }
-
-
-}
