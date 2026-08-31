@@ -765,7 +765,6 @@ function calculateGlobalRanks() {
 }
 
 function calculateRecords() {
-    let bestGolf = { val: 999, user: '', tourn: '' };
     let bestRaw = { val: -999, user: '', tourn: '' };
 
     const t = getProcessedTournaments();
@@ -778,12 +777,7 @@ function calculateRecords() {
                 const isWeekend = (d === 'sat' || d === 'sun');
                 if (isWeekend && !p.madeCut) return; 
 
-                const g = parseInt(p.rounds[d]);
                 const r = parseFloat(p.pieces[d]);
-                
-                if (!isNaN(g) && g < bestGolf.val && Math.abs(r) > 0.01) { 
-                    bestGolf = { val: g, user: p.username, tourn: tName };
-                }
                 if (!isNaN(r) && r > bestRaw.val && Math.abs(r) > 0.01) {
                     bestRaw = { val: r, user: p.username, tourn: tName };
                 }
@@ -799,10 +793,20 @@ function calculateRecords() {
         if (s.top10s > mostTop10s.val) { mostTop10s.val = s.top10s; mostTop10s.user = s.username; }
     });
 
-    document.getElementById('rec-best-golf').innerHTML = `<span style="color:var(--golf-green-bright); font-weight:900;">${bestGolf.val > 0 ? '+'+bestGolf.val : bestGolf.val}</span> by <span class="clickable-name" onclick="openPlayerProfile('${bestGolf.user}')">${formatHandle(bestGolf.user)}</span>`;
-    document.getElementById('rec-best-raw').innerHTML = `<span style="color:var(--gold-light); font-weight:900;">+${bestRaw.val.toFixed(2)}</span> by <span class="clickable-name" onclick="openPlayerProfile('${bestRaw.user}')">${formatHandle(bestRaw.user)}</span>`;
-    document.getElementById('rec-iron-man').innerHTML = `<span style="font-weight:900; color:#fff;">${ironMan.val}</span> Events by <span class="clickable-name" onclick="openPlayerProfile('${ironMan.user}')">${formatHandle(ironMan.user)}</span>`;
-    document.getElementById('rec-top10s').innerHTML = `<span style="font-weight:900; color:#fff;">${mostTop10s.val}</span> Finishes by <span class="clickable-name" onclick="openPlayerProfile('${mostTop10s.user}')">${formatHandle(mostTop10s.user)}</span>`;
+    const bestRawEl = document.getElementById('rec-best-raw');
+    if (bestRawEl) {
+        bestRawEl.innerHTML = `<span style="color:var(--gold-light); font-weight:900;">+${bestRaw.val.toFixed(2)}</span> by <span class="clickable-name" onclick="openPlayerProfile('${bestRaw.user}')">${formatHandle(bestRaw.user)}</span>`;
+    }
+    
+    const ironManEl = document.getElementById('rec-iron-man');
+    if (ironManEl) {
+        ironManEl.innerHTML = `<span style="font-weight:900; color:#fff;">${ironMan.val}</span> Events by <span class="clickable-name" onclick="openPlayerProfile('${ironMan.user}')">${formatHandle(ironMan.user)}</span>`;
+    }
+    
+    const top10sEl = document.getElementById('rec-top10s');
+    if (top10sEl) {
+        top10sEl.innerHTML = `<span style="font-weight:900; color:#fff;">${mostTop10s.val}</span> Finishes by <span class="clickable-name" onclick="openPlayerProfile('${mostTop10s.user}')">${formatHandle(mostTop10s.user)}</span>`;
+    }
 }
 
 function renderRankings() {
