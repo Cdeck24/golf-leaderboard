@@ -499,4 +499,144 @@ h1 {
     /* Search Bar */
     .search-container { padding: 0.75rem; }
     .player-search-input { padding: 8px 12px; font-size: 0.8rem; }
+  /* --- SUB-NAVIGATION (RECORD BOOK TOGGLE) --- */
+.segmented-control {
+display: flex;
+background: var(--nav-tab-bg);
+border: 1px solid var(--glass-border);
+border-radius: 12px;
+padding: 6px;
+margin-bottom: 1.5rem;
+gap: 6px;
+}
+.seg-btn {
+flex: 1;
+background: transparent;
+border: none;
+color: var(--text-muted);
+font-weight: 800;
+font-size: 0.75rem;
+text-transform: uppercase;
+padding: 10px;
+border-radius: 8px;
+cursor: pointer;
+transition: all 0.2s;
+font-family: 'Inter', sans-serif;
+letter-spacing: 0.05em;
+}
+.seg-btn.active {
+background: var(--card-bg);
+color: var(--border-gold);
+box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+border: 1px solid rgba(197, 160, 89, 0.2);
+}
+
+/* --- RECORD BOOK CARDS --- */
+.record-grid {
+display: grid;
+grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+gap: 15px;
+}
+.record-card {
+background: var(--panel-bg);
+border: 1px solid var(--glass-border);
+border-left: 4px solid var(--border-gold);
+border-radius: 12px;
+padding: 1.5rem;
+box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+display: flex;
+flex-direction: column;
+justify-content: center;
+}
+.record-icon {
+font-size: 1.5rem;
+margin-bottom: 8px;
+}
+.record-title {
+font-size: 0.7rem;
+text-transform: uppercase;
+font-weight: 900;
+color: var(--text-muted);
+letter-spacing: 0.05em;
+margin-bottom: 6px;
+}
+.record-val {
+font-size: 1.2rem;
+color: var(--text-main);
+font-weight: 600;
+}
+
+/* --- PLAYER PROFILE MODAL (TROPHY CASE) --- */
+.profile-modal {
+max-width: 400px !important;
+background: var(--key-card-bg) !important;
+border: 1px solid rgba(197, 160, 89, 0.4) !important;
+padding: 2rem 1.5rem !important;
+position: relative;
+}
+.profile-header {
+display: flex;
+flex-direction: column;
+align-items: center;
+margin-bottom: 1.5rem;
+}
+#profile-name {
+font-size: 1.6rem;
+font-weight: 900;
+color: var(--gold-light);
+margin-bottom: 8px;
+letter-spacing: -0.02em;
+}
+.profile-stats-grid {
+display: grid;
+grid-template-columns: 1fr 1fr;
+gap: 12px;
+margin-bottom: 1.5rem;
+}
+.profile-stat-box {
+background: var(--card-bg);
+border: 1px solid var(--glass-border);
+border-radius: 12px;
+padding: 1rem;
+text-align: center;
+box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+.stat-label {
+font-size: 0.65rem;
+color: var(--text-muted);
+font-weight: 900;
+text-transform: uppercase;
+letter-spacing: 0.05em;
+margin-bottom: 4px;
+}
+.stat-val {
+font-size: 1.4rem;
+color: var(--text-main);
+font-weight: 900;
+}
+.profile-close-btn {
+width: 100%;
+background: var(--nav-tab-bg) !important;
+color: var(--text-muted) !important;
+border: 1px solid var(--glass-border) !important;
+padding: 12px !important;
+border-radius: 8px !important;
+font-weight: 800 !important;
+text-transform: uppercase;
+transition: all 0.2s;
+}
+.profile-close-btn:hover {
+background: var(--card-hover) !important;
+color: var(--text-main) !important;
+}
+
+/* --- CLICKABLE NAMES --- */
+.clickable-name {
+cursor: pointer;
+transition: color 0.2s;
+}
+.clickable-name:hover {
+color: var(--border-gold);
+text-decoration: underline;
+}
 }
