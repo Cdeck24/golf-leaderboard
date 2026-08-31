@@ -22,6 +22,7 @@ let globalPlayers = {};
 let rawProLeaderboardData = null; 
 let globalSeasonRanks = {}; 
 let globalSeasonStatsArray = []; 
+let globalUserStatsMap = {}; // NEW: Used for the Player Profile Modal
 let processedTournamentsCache = null; 
 let globalTournamentTiers = {}; 
 let globalTournamentTypes = {}; 
@@ -64,6 +65,43 @@ function switchView(v) {
 
     if (v === 'past') closeArchive();
     if (v === 'rankings') renderRankings();
+}
+
+// --- RECORD BOOK TOGGLE LOGIC ---
+function switchRankingsTab(tab) {
+    document.querySelectorAll('.seg-btn').forEach(btn => btn.classList.remove('active'));
+    document.getElementById(`seg-${tab}`).classList.add('active');
+    
+    if (tab === 'rankings') {
+        document.getElementById('rankings-list-view').style.display = 'block';
+        document.getElementById('record-book-view').style.display = 'none';
+    } else {
+        document.getElementById('rankings-list-view').style.display = 'none';
+        document.getElementById('record-book-view').style.display = 'block';
+        calculateRecords();
+    }
+}
+
+// --- TROPHY CASE MODAL LOGIC ---
+function openPlayerProfile(usernameOrId) {
+    const stats = globalUserStatsMap[usernameOrId.toLowerCase()];
+    if (!stats) return; 
+
+    document.getElementById('profile-name').innerText = formatHandle(stats.username);
+    document.getElementById('profile-wins').innerText = stats.wins;
+    document.getElementById('profile-top10s').innerText = stats.top10s;
+    document.getElementById('profile-cut-streak').innerText = stats.currentCutStreak;
+    document.getElementById('profile-avg-finish').innerText = stats.avgFinish;
+    
+    const rank = globalSeasonRanks[stats.uid ? stats.uid.toLowerCase() : stats.username.toLowerCase()];
+    document.getElementById('profile-rank-badge').innerHTML = getRankBadge(rank);
+    
+    document.getElementById('player-profile-modal').style.display = 'flex';
+}
+
+function closePlayerProfile(event) {
+    if (event) event.stopPropagation();
+    document.getElementById('player-profile-modal').style.display = 'none';
 }
 
 function closeArchive() {
@@ -181,7 +219,6 @@ function filterLeaderboard() {
     }
 }
 
-// --- RANKINGS SEARCH LOGIC ---
 function filterRankings() {
     const input = document.getElementById('rankings-search');
     if (!input) return;
@@ -496,7 +533,10 @@ function renderLeaderboard() {
         const userRank = globalSeasonRanks[u.userId.toLowerCase()] || globalSeasonRanks[u.username.toLowerCase()];
         const rankBadge = getRankBadge(userRank);
         
-        const playerContent = `<div class="player-flex">${rankBadge}<span class="p-name">${formatHandle(u.username)}</span>${tag ? `<span class="p-tag">${tag}</span>` : ''}<span class="toggle-icon">▼</span></div>`;
+        // Grab Streak Icon from the global stats map
+        const sIcon = (globalUserStatsMap[u.userId.toLowerCase()] || globalUserStatsMap[u.username.toLowerCase()] || {}).streakIcon || '';
+        
+        const playerContent = `<div class="player-flex">${rankBadge}<span class="p-name clickable-name" onclick="openPlayerProfile('${u.userId || u.username}'); event.stopPropagation();">${formatHandle(u.username)}</span>${sIcon} ${tag ? `<span class="p-tag">${tag}</span>` : ''}<span class="toggle-icon">▼</span></div>`;
         row.innerHTML = `<td class="col-pos">${pos}</td><td class="col-player">${playerContent}</td><td class="col-score">${(u.isWD||u.isDuplicate||u.syncFailed)?'-':formatToPar(u.total)}</td><td class="col-score">${(u.isWD||u.isDuplicate||u.syncFailed)?'-':formatToPar(u.today)}</td>`;
         
         const dr = document.createElement('tr'); dr.className = 'draft-row';
@@ -638,11 +678,8 @@ function getProcessedTournaments() {
 function calculateGlobalRanks() {
     const tournaments = getProcessedTournaments();
     const stats = {};
-
-    // 1. Build a universal resolver to map any known username to a User ID
     const usernameResolver = {};
     
-    // Check live users first
     users.forEach(u => {
         if (u.userId) {
             if (u.username) usernameResolver[u.username.toLowerCase().trim()] = u.userId.toLowerCase().trim();
@@ -650,53 +687,68 @@ function calculateGlobalRanks() {
         }
     });
     
-    // Check archive for any historical username -> ID mappings
     Object.keys(tournaments).forEach(tName => {
         tournaments[tName].forEach(p => {
-            if (p.username && p.userId) {
-                usernameResolver[p.username.toLowerCase().trim()] = p.userId.toLowerCase().trim();
-            }
+            if (p.username && p.userId) usernameResolver[p.username.toLowerCase().trim()] = p.userId.toLowerCase().trim();
         });
     });
 
     Object.keys(tournaments).forEach(tName => {
         const field = tournaments[tName];
         field.forEach(p => {
-            if (!p.username && !p.userId) return; // Must have at least one to map
+            if (!p.username) return;
             
-            const lowerName = p.username ? p.username.toLowerCase().trim() : '';
+            const lowerName = p.username.toLowerCase().trim();
             let uid = p.userId ? p.userId.toLowerCase().trim() : null;
-            
-            // 2. If the archive row is missing a User ID, try to find it using the resolver!
-            if (!uid && lowerName && usernameResolver[lowerName]) {
-                uid = usernameResolver[lowerName];
-            }
-            
-            // 3. Group strictly by User ID. Only fallback to username if we have absolutely no ID anywhere.
+            if (!uid && usernameResolver[lowerName]) uid = usernameResolver[lowerName];
             const key = uid ? uid : lowerName;
             
-            if (!stats[key]) stats[key] = { points: 0, wins: 0, starts: 0, uid: uid, username: p.username, history: [] };
+            if (!stats[key]) stats[key] = { points: 0, wins: 0, top10s: 0, starts: 0, currentCutStreak: 0, sumPos: 0, uid: uid, username: p.username, history: [] };
             
             if (p.status !== "WD" && p.status !== "DUP") {
                 stats[key].starts += 1;
                 const earnedPts = getSeasonPoints(p.displayPos, p.status, p.multiplier);
                 stats[key].points += earnedPts;
-                if (p.displayPos === "1" && p.status === "MADE CUT") stats[key].wins += 1;
+                
+                const cleanPos = parseInt(String(p.displayPos).replace(/\D/g, '')) || 0;
+                if (cleanPos > 0) stats[key].sumPos += cleanPos;
+                if (cleanPos === 1 && p.status === "MADE CUT") stats[key].wins += 1;
+                if (cleanPos >= 1 && cleanPos <= 10) stats[key].top10s += 1;
+                
+                if (p.madeCut) stats[key].currentCutStreak += 1;
+                else stats[key].currentCutStreak = 0;
                 
                 stats[key].history.push({
                     name: tName,
                     pos: p.displayPos,
-                    points: earnedPts
+                    points: earnedPts,
+                    madeCut: p.madeCut,
+                    cleanPos: cleanPos
                 });
             }
         });
     });
 
+    // Finalize Averages and Streaks
     Object.values(stats).forEach(s => {
+        s.avgFinish = s.starts > 0 ? (s.sumPos / s.starts).toFixed(1) : '-';
+        s.streakIcon = '';
+        
+        if (s.history.length >= 2) {
+            const l1 = s.history[s.history.length-1];
+            const l2 = s.history[s.history.length-2];
+            if (l1.cleanPos > 0 && l1.cleanPos <= 10 && l2.cleanPos > 0 && l2.cleanPos <= 10) s.streakIcon = '🔥';
+            else if (!l1.madeCut && !l2.madeCut) s.streakIcon = '🧊';
+        }
+        
         if (s.uid) {
             const liveUser = users.find(u => u.userId && u.userId.toLowerCase() === s.uid.toLowerCase());
             if (liveUser && liveUser.username) s.username = liveUser.username;
         }
+        
+        // Map to global dictionary for the Trophy Case modal
+        globalUserStatsMap[s.uid ? s.uid.toLowerCase() : s.username.toLowerCase()] = s;
+        if (s.username) globalUserStatsMap[s.username.toLowerCase()] = s;
     });
 
     globalSeasonStatsArray = Object.values(stats).sort((a,b) => {
@@ -712,6 +764,47 @@ function calculateGlobalRanks() {
     });
 }
 
+function calculateRecords() {
+    let bestGolf = { val: 999, user: '', tourn: '' };
+    let bestRaw = { val: -999, user: '', tourn: '' };
+
+    const t = getProcessedTournaments();
+    Object.keys(t).forEach(tName => {
+        t[tName].forEach(p => {
+            if (p.status === 'WD' || p.status === 'DUP') return;
+            
+            const days = ['thu', 'fri', 'sat', 'sun'];
+            days.forEach(d => {
+                const isWeekend = (d === 'sat' || d === 'sun');
+                if (isWeekend && !p.madeCut) return; 
+
+                const g = parseInt(p.rounds[d]);
+                const r = parseFloat(p.pieces[d]);
+                
+                if (!isNaN(g) && g < bestGolf.val && Math.abs(r) > 0.01) { 
+                    bestGolf = { val: g, user: p.username, tourn: tName };
+                }
+                if (!isNaN(r) && r > bestRaw.val && Math.abs(r) > 0.01) {
+                    bestRaw = { val: r, user: p.username, tourn: tName };
+                }
+            });
+        });
+    });
+
+    let ironMan = { val: 0, user: '' };
+    let mostTop10s = { val: 0, user: '' };
+
+    globalSeasonStatsArray.forEach(s => {
+        if (s.currentCutStreak > ironMan.val) { ironMan.val = s.currentCutStreak; ironMan.user = s.username; }
+        if (s.top10s > mostTop10s.val) { mostTop10s.val = s.top10s; mostTop10s.user = s.username; }
+    });
+
+    document.getElementById('rec-best-golf').innerHTML = `<span style="color:var(--golf-green-bright); font-weight:900;">${bestGolf.val > 0 ? '+'+bestGolf.val : bestGolf.val}</span> by <span class="clickable-name" onclick="openPlayerProfile('${bestGolf.user}')">${formatHandle(bestGolf.user)}</span>`;
+    document.getElementById('rec-best-raw').innerHTML = `<span style="color:var(--gold-light); font-weight:900;">+${bestRaw.val.toFixed(2)}</span> by <span class="clickable-name" onclick="openPlayerProfile('${bestRaw.user}')">${formatHandle(bestRaw.user)}</span>`;
+    document.getElementById('rec-iron-man').innerHTML = `<span style="font-weight:900; color:#fff;">${ironMan.val}</span> Events by <span class="clickable-name" onclick="openPlayerProfile('${ironMan.user}')">${formatHandle(ironMan.user)}</span>`;
+    document.getElementById('rec-top10s').innerHTML = `<span style="font-weight:900; color:#fff;">${mostTop10s.val}</span> Finishes by <span class="clickable-name" onclick="openPlayerProfile('${mostTop10s.user}')">${formatHandle(mostTop10s.user)}</span>`;
+}
+
 function renderRankings() {
     const tbody = document.getElementById('rankings-tbody');
     if (!tbody || globalSeasonStatsArray.length === 0) return;
@@ -721,7 +814,8 @@ function renderRankings() {
         const mainRow = document.createElement('tr');
         mainRow.className = 'main-row';
         
-        const playerContent = `<div class="player-flex"><span class="p-name">${formatHandle(p.username)}</span><span class="toggle-icon">▼</span></div>`;
+        const sIcon = p.streakIcon || '';
+        const playerContent = `<div class="player-flex"><span class="p-name clickable-name" onclick="openPlayerProfile('${p.uid || p.username}'); event.stopPropagation();">${formatHandle(p.username)}</span>${sIcon}<span class="toggle-icon">▼</span></div>`;
         
         mainRow.innerHTML = `<td class="col-pos">${i+1}</td><td class="col-player">${playerContent}</td><td class="col-stat">${p.points}</td><td class="col-stat">${p.wins}</td><td class="col-stat">${p.starts}</td>`;
         
@@ -760,7 +854,6 @@ function renderRankings() {
         tbody.appendChild(detailRow);
     });
     
-    // Apply filtering immediately in case user already typed something in the search bar
     filterRankings();
 }
 
@@ -926,7 +1019,7 @@ function viewArchive(name) {
             if (liveUser && liveUser.username) winnerName = liveUser.username;
         }
         const displayScore = winner.totalGolf === 0 ? 'E' : (winner.totalGolf > 0 ? '+' + winner.totalGolf : winner.totalGolf);
-        champDiv.innerHTML = `<div class="champion-spotlight"><div class="champ-label">Tournament Champion</div><div class="champ-name">🏆 ${formatHandle(winnerName)}</div><div class="champ-score">Final Score: ${displayScore} (${winner.totalRaw.toFixed(2)} PTS)</div></div>`;
+        champDiv.innerHTML = `<div class="champion-spotlight"><div class="champ-label">Tournament Champion</div><div class="champ-name clickable-name" onclick="openPlayerProfile('${winner.userId || winner.username}')">🏆 ${formatHandle(winnerName)}</div><div class="champ-score">Final Score: ${displayScore} (${winner.totalRaw.toFixed(2)} PTS)</div></div>`;
     } else { champDiv.innerHTML = ''; }
 
     let cutInserted = false;
@@ -942,15 +1035,18 @@ function viewArchive(name) {
         const tag = (item.status === "DUP") ? '(DUP)' : (item.status === "WD") ? '(WD)' : (!item.madeCut ? '(MC)' : '');
         
         let displayUsername = item.username;
-        if (item.userId) {
-            const liveUser = users.find(u => u.userId.toLowerCase() === item.userId.toLowerCase());
+        let uid = item.userId;
+        if (uid) {
+            const liveUser = users.find(u => u.userId.toLowerCase() === uid.toLowerCase());
             if (liveUser && liveUser.username) displayUsername = liveUser.username;
         }
         
-        const userRank = globalSeasonRanks[displayUsername.toLowerCase()] || (item.userId ? globalSeasonRanks[item.userId.toLowerCase()] : null);
+        const userRank = globalSeasonRanks[displayUsername.toLowerCase()] || (uid ? globalSeasonRanks[uid.toLowerCase()] : null);
         const rankBadge = getRankBadge(userRank);
         
-        const playerContent = `<div class="player-flex">${rankBadge}<span class="p-name">${formatHandle(displayUsername)}</span>${tag ? `<span class="p-tag">${tag}</span>` : ''}<span class="toggle-icon">▼</span></div>`;
+        const sIcon = (globalUserStatsMap[uid ? uid.toLowerCase() : displayUsername.toLowerCase()] || {}).streakIcon || '';
+        
+        const playerContent = `<div class="player-flex">${rankBadge}<span class="p-name clickable-name" onclick="openPlayerProfile('${uid || displayUsername}'); event.stopPropagation();">${formatHandle(displayUsername)}</span>${sIcon} ${tag ? `<span class="p-tag">${tag}</span>` : ''}<span class="toggle-icon">▼</span></div>`;
         
         const displayPosition = isInv ? item.status : item.displayPos;
         
@@ -1202,7 +1298,7 @@ async function loadAllUserScores() {
     
     await Promise.all(workers);
     
-    calculateGlobalRanks();
+    // We don't recalculate ranks here anymore, because they are pre-calculated by the fast-fetch
     
     renderLeaderboard();
     renderProLeaderboard();
@@ -1386,26 +1482,24 @@ async function fetchUsers() {
 }
 
 async function initApp() {
-    // Kick off critical fetch requests SIMULTANEOUSLY to slash load times
+    // 1. Fire off the critical structural fetches instantly
     const schedulePromise = fetchTournamentSchedule();
     const dailyPromise = fetchDailyHistoricalData();
     const usersPromise = fetchUsers();
 
-    // 🚨 MASSIVE SPEED BOOST 🚨
-    // Load the massive 2300+ line Archive Data silently in the background
-    // so it doesn't block the Live Leaderboard from rendering instantly!
+    // 2. Fire the massive archive fetch in the background
+    // We attach the calculation logic directly to the promise chain!
     fetch(config.archiveDataUrl)
         .then(res => res.text())
         .then(text => {
             masterArchiveData = parseCSV(text); 
             calculateGlobalRanks(); 
             if (document.getElementById('view-rankings').classList.contains('active')) renderRankings();
-            // Re-render leaderboard once history finishes to pop the rank badges in
-            renderLeaderboard(); 
+            renderLeaderboard(); // Re-render to pop badges in
         })
         .catch(e => console.error("Archive fetch error:", e));
 
-    // Wait only for the fast, critical data to finish parallel loading
+    // 3. Only wait for the lightweight arrays before booting the live board
     users = await usersPromise;
     await schedulePromise;
     await dailyPromise;
