@@ -1386,15 +1386,33 @@ async function fetchUsers() {
 }
 
 async function initApp() {
-    await fetchTournamentSchedule(); 
-    try { 
-        masterArchiveData = parseCSV(await (await fetch(config.archiveDataUrl)).text()); 
-        calculateGlobalRanks(); 
-    } catch (e) {}
-    await fetchDailyHistoricalData();
-    users = await fetchUsers();
+    // Kick off critical fetch requests SIMULTANEOUSLY to slash load times
+    const schedulePromise = fetchTournamentSchedule();
+    const dailyPromise = fetchDailyHistoricalData();
+    const usersPromise = fetchUsers();
+
+    // 🚨 MASSIVE SPEED BOOST 🚨
+    // Load the massive 2300+ line Archive Data silently in the background
+    // so it doesn't block the Live Leaderboard from rendering instantly!
+    fetch(config.archiveDataUrl)
+        .then(res => res.text())
+        .then(text => {
+            masterArchiveData = parseCSV(text); 
+            calculateGlobalRanks(); 
+            if (document.getElementById('view-rankings').classList.contains('active')) renderRankings();
+            // Re-render leaderboard once history finishes to pop the rank badges in
+            renderLeaderboard(); 
+        })
+        .catch(e => console.error("Archive fetch error:", e));
+
+    // Wait only for the fast, critical data to finish parallel loading
+    users = await usersPromise;
+    await schedulePromise;
+    await dailyPromise;
+
     document.getElementById('loading-indicator').style.display = 'none';
-    renderLeaderboard(); loadAllUserScores();
+    renderLeaderboard(); 
+    loadAllUserScores();
 }
 
 initApp();
