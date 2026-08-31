@@ -99,73 +99,91 @@
     <!-- RANKINGS VIEW -->
     <div id="view-rankings" class="content-view">
         
-        <!-- NEW POINTS KEY CARD -->
-        <div class="points-key-card">
-            <div class="points-key-title">Ranking Points System</div>
-            <div style="text-align: center; margin-bottom: 1.25rem; font-size: 0.65rem; color: var(--gold-light); font-weight: 800; background: rgba(197, 160, 89, 0.1); padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(197, 160, 89, 0.2); letter-spacing: 0.05em;">
-                REGULAR: 1x POINTS &nbsp;|&nbsp; SIGNATURE: 1.4x POINTS &nbsp;|&nbsp; MAJORS: 1.5x POINTS
+        <!-- Segmented Control for Rankings vs Record Book -->
+        <div class="segmented-control">
+            <button id="seg-rankings" class="seg-btn active" onclick="switchRankingsTab('rankings')">Season Rankings</button>
+            <button id="seg-records" class="seg-btn" onclick="switchRankingsTab('records')">Record Book</button>
+        </div>
+
+        <div id="rankings-list-view">
+            <!-- NEW POINTS KEY CARD -->
+            <div class="points-key-card">
+                <div class="points-key-title">Ranking Points System</div>
+                <div style="text-align: center; margin-bottom: 1.25rem; font-size: 0.65rem; color: var(--gold-light); font-weight: 800; background: rgba(197, 160, 89, 0.1); padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(197, 160, 89, 0.2); letter-spacing: 0.05em;">
+                    REGULAR: 1x POINTS &nbsp;|&nbsp; SIGNATURE: 1.4x POINTS &nbsp;|&nbsp; MAJORS & PLAYOFFS: 1.5x POINTS
+                </div>
+                <div class="points-grid">
+                    <div class="points-col">
+                        <div class="points-col-title">Top 5</div>
+                        <div class="points-col-val">
+                            <div class="pt-row"><span>1st</span> <span class="pt-badge">100</span></div>
+                            <div class="pt-row"><span>2nd</span> <span class="pt-badge">60</span></div>
+                            <div class="pt-row"><span>3rd</span> <span class="pt-badge">45</span></div>
+                            <div class="pt-row"><span>4th</span> <span class="pt-badge">35</span></div>
+                            <div class="pt-row"><span>5th</span> <span class="pt-badge">30</span></div>
+                        </div>
+                    </div>
+                    <div class="points-col">
+                        <div class="points-col-title">6th–10th</div>
+                        <div class="points-col-val">
+                            <div class="pt-row"><span>6th</span> <span class="pt-badge">25</span></div>
+                            <div class="pt-row"><span>7th</span> <span class="pt-badge">22</span></div>
+                            <div class="pt-row"><span>8th</span> <span class="pt-badge">20</span></div>
+                            <div class="pt-row"><span>9th</span> <span class="pt-badge">18</span></div>
+                            <div class="pt-row"><span>10th</span> <span class="pt-badge">16</span></div>
+                        </div>
+                    </div>
+                    <div class="points-col">
+                        <div class="points-col-title">11th–20th</div>
+                        <div class="points-col-val">
+                            <div class="pt-row"><span>11th</span> <span class="pt-badge">14</span></div>
+                            <div class="pt-row"><span>12th</span> <span class="pt-badge">13</span></div>
+                            <div class="pt-note">↓ -1 pt / pos ↓</div>
+                            <div class="pt-row"><span>20th</span> <span class="pt-badge">5</span></div>
+                        </div>
+                    </div>
+                    <div class="points-col">
+                        <div class="points-col-title">21st to End</div>
+                        <div class="points-col-val" style="gap: 8px;">
+                            <div class="pt-row wide"><span>Made Cut</span> <span class="pt-badge">3</span></div>
+                            <div class="pt-row wide"><span>Missed Cut</span> <span class="pt-badge">2</span></div>
+                        </div>
+                    </div>
+                    <div class="points-col" style="border-top-color: var(--danger);">
+                        <div class="points-col-title">WD / DUP</div>
+                        <div class="points-col-val">
+                            <span class="pt-badge danger-badge">0</span>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="points-grid">
-                <div class="points-col">
-                    <div class="points-col-title">Top 5</div>
-                    <div class="points-col-val">
-                        <div class="pt-row"><span>1st</span> <span class="pt-badge">100</span></div>
-                        <div class="pt-row"><span>2nd</span> <span class="pt-badge">60</span></div>
-                        <div class="pt-row"><span>3rd</span> <span class="pt-badge">45</span></div>
-                        <div class="pt-row"><span>4th</span> <span class="pt-badge">35</span></div>
-                        <div class="pt-row"><span>5th</span> <span class="pt-badge">30</span></div>
-                    </div>
+
+            <div class="leaderboard-panel">
+                <div class="leaderboard-header">
+                    <span style="font-weight: 900; font-size: 0.8rem; letter-spacing: 0.05em;">🏆 SEASON RANKINGS</span>
+                    <div class="status-text">BY PLACEMENT</div>
                 </div>
-                <div class="points-col">
-                    <div class="points-col-title">6th–10th</div>
-                    <div class="points-col-val">
-                        <div class="pt-row"><span>6th</span> <span class="pt-badge">25</span></div>
-                        <div class="pt-row"><span>7th</span> <span class="pt-badge">22</span></div>
-                        <div class="pt-row"><span>8th</span> <span class="pt-badge">20</span></div>
-                        <div class="pt-row"><span>9th</span> <span class="pt-badge">18</span></div>
-                        <div class="pt-row"><span>10th</span> <span class="pt-badge">16</span></div>
-                    </div>
+                
+                <!-- RANKINGS SEARCH BAR -->
+                <div class="search-container">
+                    <input type="text" id="rankings-search" class="player-search-input" placeholder="Search for a player..." oninput="filterRankings()">
                 </div>
-                <div class="points-col">
-                    <div class="points-col-title">11th–20th</div>
-                    <div class="points-col-val">
-                        <div class="pt-row"><span>11th</span> <span class="pt-badge">14</span></div>
-                        <div class="pt-row"><span>12th</span> <span class="pt-badge">13</span></div>
-                        <div class="pt-note">↓ -1 pt / pos ↓</div>
-                        <div class="pt-row"><span>20th</span> <span class="pt-badge">5</span></div>
-                    </div>
-                </div>
-                <div class="points-col">
-                    <div class="points-col-title">21st to End</div>
-                    <div class="points-col-val" style="gap: 8px;">
-                        <div class="pt-row wide"><span>Made Cut</span> <span class="pt-badge">3</span></div>
-                        <div class="pt-row wide"><span>Missed Cut</span> <span class="pt-badge">2</span></div>
-                    </div>
-                </div>
-                <div class="points-col" style="border-top-color: var(--danger);">
-                    <div class="points-col-title">WD / DUP</div>
-                    <div class="points-col-val">
-                        <span class="pt-badge danger-badge">0</span>
-                    </div>
-                </div>
+
+                <table class="golf-table">
+                    <thead><tr><th class="col-pos">Pos</th><th class="col-player">Player</th><th class="col-stat">Points</th><th class="col-stat">Wins</th><th class="col-stat">Starts</th></tr></thead>
+                    <tbody id="rankings-tbody"></tbody>
+                </table>
             </div>
         </div>
 
-        <div class="leaderboard-panel">
-            <div class="leaderboard-header">
-                <span style="font-weight: 900; font-size: 0.8rem; letter-spacing: 0.05em;">🏆 SEASON RANKINGS</span>
-                <div class="status-text">BY PLACEMENT</div>
+        <div id="record-book-view" style="display:none;">
+            <div class="record-grid">
+                <!-- Records will be injected here by app.js -->
+                <div class="record-card"><div class="record-icon">🔥</div><div class="record-title">Lowest Single-Day Golf Score</div><div class="record-val" id="rec-best-golf">Loading...</div></div>
+                <div class="record-card"><div class="record-icon">🚀</div><div class="record-title">Highest Single-Day Raw Points</div><div class="record-val" id="rec-best-raw">Loading...</div></div>
+                <div class="record-card"><div class="record-icon">🛡️</div><div class="record-title">The Iron Man (Cut Streak)</div><div class="record-val" id="rec-iron-man">Loading...</div></div>
+                <div class="record-card"><div class="record-icon">⭐</div><div class="record-title">Most Top 10 Finishes</div><div class="record-val" id="rec-top10s">Loading...</div></div>
             </div>
-            
-            <!-- RANKINGS SEARCH BAR -->
-            <div class="search-container">
-                <input type="text" id="rankings-search" class="player-search-input" placeholder="Search for a player..." oninput="filterRankings()">
-            </div>
-
-            <table class="golf-table">
-                <thead><tr><th class="col-pos">Pos</th><th class="col-player">Player</th><th class="col-stat">Points</th><th class="col-stat">Wins</th><th class="col-stat">Starts</th></tr></thead>
-                <tbody id="rankings-tbody"></tbody>
-            </table>
         </div>
     </div>
 
@@ -217,7 +235,7 @@
                 <ul class="rules-list">
                     <li><strong>Regular Events (1x):</strong> 1st (100), 2nd (60), 3rd (45), 4th (35), 5th (30).</li>
                     <li><strong>Signature Events (1.4x):</strong> Base points are multiplied by 1.4 (e.g., 1st gets 140 pts).</li>
-                    <li><strong>Majors & PLAYERS (1.5x):</strong> Base points are multiplied by 1.5 (e.g., 1st gets 150 pts).</li>
+                    <li><strong>Majors & PLAYOFFS (1.5x):</strong> Base points are multiplied by 1.5 (e.g., 1st gets 150 pts).</li>
                     <li><strong>Top 10:</strong> Base points scale down from 25 to 16.</li>
                     <li><strong>Top 20:</strong> Base points scale down from 14 to 5.</li>
                     <li><strong>Finishing the Tournament:</strong> Made Cut (3 base pts), Missed Cut (2 base pts).</li>
@@ -232,6 +250,35 @@
                     <li><strong>No Withdrawals:</strong> If a player withdraws (WD) or fails to submit data, they earn 0 points and do not count as a "start" toward season stats.</li>
                 </ul>
             </div>
+        </div>
+    </div>
+
+    <!-- PLAYER PROFILE MODAL (TROPHY CASE) -->
+    <div id="player-profile-modal" class="modal-overlay" onclick="closePlayerProfile(event)">
+        <div class="modal-box profile-modal" onclick="event.stopPropagation()">
+            <div class="profile-header">
+                <h2 id="profile-name">@username</h2>
+                <div id="profile-rank-badge"></div>
+            </div>
+            <div class="profile-stats-grid">
+                <div class="profile-stat-box">
+                    <div class="stat-label">Wins</div>
+                    <div class="stat-val" id="profile-wins">0</div>
+                </div>
+                <div class="profile-stat-box">
+                    <div class="stat-label">Top 10s</div>
+                    <div class="stat-val" id="profile-top10s">0</div>
+                </div>
+                <div class="profile-stat-box">
+                    <div class="stat-label">Cut Streak</div>
+                    <div class="stat-val" id="profile-cut-streak">0</div>
+                </div>
+                <div class="profile-stat-box">
+                    <div class="stat-label">Avg Finish</div>
+                    <div class="stat-val" id="profile-avg-finish">-</div>
+                </div>
+            </div>
+            <button class="profile-close-btn" onclick="closePlayerProfile(event)">Close</button>
         </div>
     </div>
 
