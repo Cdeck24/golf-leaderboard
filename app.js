@@ -1249,7 +1249,9 @@ async function loadAllUserScores() {
                         user.username = foundUsername.trim();
                     }
 
-                    user.actualTotalPoints = parseFloat((data.info?.rankDisplayInfos?.[0]?.scoreDisplay || '0').replace(/[^0-9.]/g, '')) || 0;
+                    // NEW:
+const rawScoreDisplay = (data.info?.rankDisplayInfos?.[0]?.scoreDisplay || '0').replace(/[\u2212\u2013\u2014]/g, '-');
+user.actualTotalPoints = parseFloat(rawScoreDisplay.replace(/[^0-9.-]/g, '')) || 0;
                     user.lineup = data.lineup || [];
                     
                     user.lineup.forEach(g => {
