@@ -1123,11 +1123,13 @@ async function loadAllUserScores() {
     let loaded = 0; 
     const statusEl = document.getElementById('sync-status');
     const hasher = new Hashids("realwebapp", 16);
-    const MAX_RETRIES = 10; 
-    const CONCURRENCY_LIMIT = 8; 
+    
+    // Controlled limits to prevent 429 cascades
+    const MAX_RETRIES = 3; 
+    const CONCURRENCY_LIMIT = 3; 
     
     let nextRequestTime = Date.now(); 
-    let currentPacing = 200; 
+    let currentPacing = 250; 
     let globalPauseUntil = 0; 
     
     async function syncWorker() {
@@ -1136,9 +1138,7 @@ async function loadAllUserScores() {
             if (!user) break;
 
             if (Date.now() < globalPauseUntil) {
-                await new Promise(r => setTimeout(r, 100));
-                q.unshift(user);
-                continue;
+                await new Promise(r => setTimeout(r, Math.max(100, globalPauseUntil - Date.now())));
             }
 
             const now = Date.now();
@@ -1155,27 +1155,39 @@ async function loadAllUserScores() {
                 const targetUrl = `https://web.realsports.io/games/playerratingcontest/${user.golfId}/view/${user.userId}?contestType=sport&source=home`;
                 const proxyUrl = `${config.workerProxy}?url=${encodeURIComponent(targetUrl)}`;
                 
-                const opts = { headers: { 'real-auth-info': config.REAL_AUTH_TOKEN, 'real-device-name': 'Chrome', 'real-device-type': 'desktop_web', 'real-device-uuid': DEVICE_UUID, 'real-request-token': hasher.encode(Date.now()), 'real-version': config.REAL_VERSION } };
+                const opts = { 
+                    headers: { 
+                        'real-auth-info': config.REAL_AUTH_TOKEN, 
+                        'real-device-name': 'Chrome', 
+                        'real-device-type': 'desktop_web', 
+                        'real-device-uuid': DEVICE_UUID, 
+                        'real-request-token': hasher.encode(Date.now()), 
+                        'real-version': config.REAL_VERSION 
+                    } 
+                };
+                
                 const response = await fetch(proxyUrl, opts);
                 
                 if (response.status === 429 || response.status === 502) {
-                    globalPauseUntil = Date.now() + 1200; 
-                    nextRequestTime = Date.now() + 1200;
-                    currentPacing = Math.min(currentPacing + 50, 1000); 
+                    // Back off for 3 seconds to clear the rate limit
+                    globalPauseUntil = Date.now() + 3000; 
+                    nextRequestTime = Date.now() + 3000;
+                    currentPacing = Math.min(currentPacing + 100, 800); 
                     
                     user.retries++;
                     if (user.retries < MAX_RETRIES) {
-                        q.unshift(user); 
+                        q.push(user); // Send to back of queue
                     } else { 
-                        user.hasData = true; user.syncFailed = true; loaded++; 
+                        user.hasData = true; 
+                        user.syncFailed = true; 
+                        loaded++; 
                     }
                 } else if (response.ok) {
-                    currentPacing = Math.max(currentPacing - 2, 125); 
+                    currentPacing = Math.max(currentPacing - 5, 180); 
                     const data = await response.json();
                     
                     if (!currentGameId) { 
                         let foundId = null;
-                        
                         if (data.lineup && data.lineup.length > 0) {
                             foundId = data.lineup[0].matchId || data.lineup[0].gameId || data.lineup[0].eventId;
                         }
@@ -1197,61 +1209,9 @@ async function loadAllUserScores() {
                         }
                     }
 
-                    let foundUsername = null;
-                    const targetUid = String(user.userId).toLowerCase();
-                    
-                    function deepSearchName(obj) {
-                        if (foundUsername || !obj || typeof obj !== 'object') return;
-                        
-                        if (obj.id !== undefined && String(obj.id).toLowerCase() === targetUid) {
-                            if (obj.username) foundUsername = obj.username;
-                            else if (obj.userName) foundUsername = obj.userName;
-                        }
-                        if (!foundUsername && obj.username && (String(obj.userId).toLowerCase() === targetUid || String(obj.ownerId).toLowerCase() === targetUid)) {
-                            foundUsername = obj.username;
-                        }
-                        
-                        if (!foundUsername) {
-                            Object.values(obj).forEach(val => {
-                                if (val && typeof val === 'object') deepSearchName(val);
-                            });
-                        }
-                    }
-                    deepSearchName(data);
-
-                    if (!foundUsername) {
-                        const now2 = Date.now();
-                        let delay2 = 0;
-                        if (nextRequestTime > now2) {
-                            delay2 = nextRequestTime - now2;
-                            nextRequestTime += currentPacing;
-                        } else {
-                            nextRequestTime = now2 + currentPacing;
-                        }
-                        if (delay2 > 0) await new Promise(r => setTimeout(r, delay2));
-
-                        try {
-                            const profUrl = `https://web.realsports.io/users/${user.userId}`;
-                            const profProxy = `${config.workerProxy}?url=${encodeURIComponent(profUrl)}`;
-                            const profRes = await fetch(profProxy, opts);
-                            
-                            if (profRes.status === 429 || profRes.status === 502) {
-                                globalPauseUntil = Date.now() + 1200;
-                                nextRequestTime = Date.now() + 1200;
-                            } else if (profRes.ok) {
-                                const profData = await profRes.json();
-                                if (profData.username) foundUsername = profData.username;
-                            }
-                        } catch(e) {}
-                    }
-
-                    if (foundUsername && foundUsername.trim() !== '') {
-                        user.username = foundUsername.trim();
-                    }
-
-                    // NEW:
-const rawScoreDisplay = (data.info?.rankDisplayInfos?.[0]?.scoreDisplay || '0').replace(/[\u2212\u2013\u2014]/g, '-');
-user.actualTotalPoints = parseFloat(rawScoreDisplay.replace(/[^0-9.-]/g, '')) || 0;
+                    // Preserve negative score parsing logic
+                    const rawScoreDisplay = (data.info?.rankDisplayInfos?.[0]?.scoreDisplay || '0').replace(/[\u2212\u2013\u2014]/g, '-');
+                    user.actualTotalPoints = parseFloat(rawScoreDisplay.replace(/[^0-9.-]/g, '')) || 0;
                     user.lineup = data.lineup || [];
                     
                     user.lineup.forEach(g => {
@@ -1274,23 +1234,25 @@ user.actualTotalPoints = parseFloat(rawScoreDisplay.replace(/[^0-9.-]/g, '')) ||
                     user.hasData = true;
                     loaded++;
                 } else if (response.status === 404) {
-                    user.hasData = true; user.syncFailed = true; loaded++;
+                    user.hasData = true; 
+                    user.syncFailed = true; 
+                    loaded++;
                 } else {
                     user.retries++;
                     if (user.retries < MAX_RETRIES) q.push(user);
                     else { user.hasData = true; user.syncFailed = true; loaded++; }
                 }
             } catch (e) {
-                globalPauseUntil = Date.now() + 1000;
-                nextRequestTime = Date.now() + 1000;
+                globalPauseUntil = Date.now() + 2000;
+                nextRequestTime = Date.now() + 2000;
                 user.retries++;
-                if (user.retries < MAX_RETRIES) q.unshift(user);
+                if (user.retries < MAX_RETRIES) q.push(user);
                 else { user.hasData = true; user.syncFailed = true; loaded++; }
             }
 
             statusEl.innerHTML = `<span class="sync-dot"></span>${loaded}/${validUsers.length}`;
             
-            if (loaded % 8 === 0 || q.length === 0) {
+            if (loaded % 6 === 0 || q.length === 0) {
                 renderLeaderboard();
                 renderProLeaderboard(); 
             }
@@ -1303,8 +1265,6 @@ user.actualTotalPoints = parseFloat(rawScoreDisplay.replace(/[^0-9.-]/g, '')) ||
     }
     
     await Promise.all(workers);
-    
-    // We don't recalculate ranks here anymore, because they are pre-calculated by the fast-fetch
     
     renderLeaderboard();
     renderProLeaderboard();
